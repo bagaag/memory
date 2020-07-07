@@ -9,24 +9,28 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-  "memory/app"
+	"memory/app"
+	"strings"
 )
 
-// adds a new Note 
+// adds a new Note
 var noteCmd = &cobra.Command{
 	Use:   "note",
 	Short: "Adds a new Note",
-	Long: `Adds a new Note. Notes store unstructured information for later use.`,
+	Long:  `Adds a new Note. Notes store unstructured information for later use.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("note -d %s -t %s\n", cmd.Flag("description").Value, cmd.Flag("tags").Value)
-    note := app.NewNote("hey now", []string{"one","two"})
-    app.PutNote(note)
+		desc := cmd.Flag("description").Value.String()
+		tags := strings.Split(cmd.Flag("tags").Value.String(), ",")
+		note := app.NewNote(desc, tags)
+		app.PutNote(note)
+		save()
+		fmt.Printf("Added %s.\n", note.Id)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(noteCmd)
-  noteCmd.Flags().StringP("description", "d", "", "Enter a description or omit to launch text editor")
-  noteCmd.Flags().StringSliceP("tags", "t", []string{}, "Enter comma-separated tags")
-  //noteCmd.MarkFlagRequired("description")
+	noteCmd.Flags().StringP("description", "d", "", "Enter a description or omit to launch text editor")
+	noteCmd.Flags().StringSliceP("tags", "t", []string{}, "Enter comma-separated tags")
+	//noteCmd.MarkFlagRequired("description")
 }

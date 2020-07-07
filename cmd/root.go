@@ -8,13 +8,18 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"os"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"memory/app"
+	"memory/app/config"
+	"memory/app/persist"
+	"os"
 )
 
-var cfgFile string
+var memoryHome string
+var memoryHomeName = ".memory"
+var settingsFile = "settings.yml"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -25,7 +30,7 @@ things and events that make up human experience and links them together
 in interesting ways.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -44,41 +49,72 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/memory/config.yml)")
+	//TODO: This isn't getting set when specified
+	rootCmd.PersistentFlags().StringVar(&memoryHome, "home", "", "Config and save folder, default is $HOME/.memory")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 
-  // TODO: Move viper setup to a config package.
-  var memoryHome string = "."
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-    // Set memory home folder to ~/memory
-    memoryHome = home + string(os.PathSeparator) + "memory"
+	// Set default settings in viper
+	viper.SetDefault("bagaag", "kneeg")
 
-		// Search config in home directory with name "memory/config" (without extension).
-		viper.AddConfigPath(memoryHome)
-		viper.SetConfigName("config.yml")
+	// Find home directory.
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Println("Could not find home directory:", err)
+		// Fail gracefully and use current working directory if home can't be located
+		if home, err = os.Getwd(); err != nil {
+			fmt.Println("Could not find working directory:", err)
+			home = "."
+		}
 	}
 
+	slash := string(os.PathSeparator)
+
+	// Set home location if not set in flag
+	if memoryHome == "" {
+		memoryHome = home + slash + memoryHomeName
+	}
+
+	// Create MemoryHome folder if it doesn't exist
+	if !persist.PathExists(memoryHome) {
+		os.Mkdir(memoryHome, os.ModeDir+0700)
+		fmt.Println("Created save folder:", memoryHome)
+	}
+
+	// Populate viper settings
+	viper.SetConfigFile(memoryHome + slash + settingsFile)
 	viper.AutomaticEnv() // read in environment variables that match
 
-	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
+		// If a config file is found, read it in.
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	} else {
+		fmt.Println(err)
+		// Otherwise, save the defaults
+		saveAs := memoryHome + slash + settingsFile
+		viper.SafeWriteConfigAs(saveAs)
+		fmt.Println("Created default settings file:", saveAs)
+	}
+
+	// Set app config values from viper
+	config.MemoryHome = memoryHome
+
+	// Initialize app state
+	if err := app.Init(); err != nil {
+		panic("Failed to initialize application state: " + err.Error())
 	}
 }
 
+// Shared function for use by commands to save data to config.Savepath.
+func save() {
+	if err := app.Save(); err != nil {
+		fmt.Println("Failed to save data:", err)
+	}
+}

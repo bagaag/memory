@@ -10,29 +10,32 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package app
 
 import (
-  "memory/app/model"
-  "memory/app/persist"
+	"memory/app/config"
+	"memory/app/model"
+	"memory/app/persist"
 )
 
 type root struct {
-  Notes map[string]model.Note
-  //Tags  map[string]model.Tag
+	Notes map[string]model.Note
+	//Tags  map[string]model.Tag
 }
 
 // The data variable stores all the things that get saved.
-var data root
+var data = root{Notes: make(map[string]model.Note)}
 
 // Init reads data stored on the file system
 // and initializes application variable.
 func Init() error {
 
-  data := root{ Notes: make(map[string]model.Note) }
+	if persist.PathExists(config.SavePath()) {
+		if err := persist.Load(config.SavePath(), &data); err != nil {
+			return err
+		}
+	}
 
-  //TODO: use config for path
-  if err := persist.Load("~/memory/data.json", &data); err != nil {
-    return err
-  }
-
-  return nil
+	return nil
 }
 
+func Save() error {
+	return persist.Save(config.SavePath(), data)
+}

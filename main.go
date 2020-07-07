@@ -6,7 +6,9 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 package main
 
-import "memory/cmd"
+import (
+	"memory/cmd"
+)
 
 func main() {
 	cmd.Execute()
