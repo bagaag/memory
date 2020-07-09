@@ -22,10 +22,24 @@ var MemoryHome = "~/.memory"
 // DataFile is the name of the file storing entries
 var DataFile = "memory.json"
 
+// HistoryFile is the name of the file storing command line history
+var HistoryFile = "history"
+
 // MaxNameLen is the maximum length for entry identifier values
 var MaxNameLen = 50
+
+// Prompt is used in readline mode
+var Prompt = "\033[1;32mmemory\033[0m> "
+
+// TruncateAt is the length that values are truncated to with an ... during display
+var TruncateAt = 50
 
 // SavePath returns the full path to the data file
 func SavePath() string {
 	return MemoryHome + slash + DataFile
+}
+
+// HistoryPath returns the full path to the history file
+func HistoryPath() string {
+	return MemoryHome + slash + HistoryFile
 }

@@ -12,13 +12,17 @@ CRUD methods for Notes
 package app
 
 import (
+	"errors"
 	"memory/app/model"
 )
 
 // GetNote retrieves and returns the specified note from the collection.
-func GetNote(id string) model.Note {
+func GetNote(id string) (model.Note, error) {
 	//TODO: implement GetNote
-	return model.NewNote("not implemented", "", []string{})
+	if id == "" {
+		return model.Note{}, errors.New("Note not found")
+	}
+	return model.Note{}, nil
 }
 
 // PutNote adds or replaces the given note in the collection.

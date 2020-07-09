@@ -5,6 +5,11 @@ Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
+/*
+This file contains variables and functions used by the
+`add note` command in both command line and interactive modes.
+*/
+
 package cmd
 
 import (
@@ -17,9 +22,9 @@ import (
 )
 
 // flag values
-var flagName string
-var flagDescription string
-var flagTags []string
+var flagAddNoteName string
+var flagAddNoteDescription string
+var flagAddNoteTags []string
 
 // addNoteCmd adds a new Note
 var addNoteCmd = &cobra.Command{
@@ -27,11 +32,11 @@ var addNoteCmd = &cobra.Command{
 	Short: "Adds a new Note",
 	Long:  `Adds a new Note. Notes store unstructured information for later use.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if flagName == "" || len(flagName) > config.MaxNameLen {
+		if flagAddNoteName == "" || len(flagAddNoteName) > config.MaxNameLen {
 			fmt.Println("Cannot add note: Name is required and must not exceed 50 characters.")
 			return
 		}
-		note := model.NewNote(flagName, flagDescription, flagTags)
+		note := model.NewNote(flagAddNoteName, flagAddNoteDescription, flagAddNoteTags)
 		app.PutNote(note)
 		save()
 		fmt.Printf("Added note: %s.\n", note.Name())
@@ -42,10 +47,29 @@ var addNoteCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(addNoteCmd)
 
-	addNoteCmd.Flags().StringVarP(&flagName, "name", "n", "",
+	addNoteCmd.Flags().StringVarP(&flagAddNoteName, "name", "n", "",
 		"Enter a unique name of no more than 50 characters")
-	addNoteCmd.Flags().StringVarP(&flagDescription, "description", "d", "",
+	addNoteCmd.Flags().StringVarP(&flagAddNoteDescription, "description", "d", "",
 		"Enter a description or omit to launch text editor")
-	addNoteCmd.Flags().StringSliceVarP(&flagTags, "tags", "t", []string{},
+	addNoteCmd.Flags().StringSliceVarP(&flagAddNoteTags, "tags", "t", []string{},
 		"Enter comma-separated tags")
+}
+
+// addInteractive takes the user through the sequence of prompts to add an item
+func addInteractive(sargs string) {
+	switch sargs {
+	case "note":
+		name := subPrompt("Enter a name: ", validateNoteName)
+		desc := subPrompt("Enter a description: ", emptyValidator)
+		tags := subPrompt("Enter one or more tags separated by commas: ", emptyValidator)
+		tagSlice := processTags(tags)
+		if name != "" {
+			note := model.NewNote(name, desc, tagSlice)
+			app.PutNote(note)
+			app.Save()
+			fmt.Println("Note added.")
+		}
+	default:
+		fmt.Printf("%s is not a valid entry type.\n", sargs)
+	}
 }

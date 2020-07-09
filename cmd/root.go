@@ -5,21 +5,27 @@ Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
+/*
+This file contains variables and functions to handle the default
+command line behavior (interactive mode) or to pass sub-commands
+to one of the cobra commands defined in other files within this
+package, such as add_note.go.
+*/
+
 package cmd
 
 import (
 	"fmt"
+	"io"
 	"memory/app"
 	"memory/app/config"
-	"memory/app/model"
 	"memory/app/persist"
 	"os"
 	"strings"
 
-	"github.com/buger/goterm"
+	"github.com/chzyer/readline"
 
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -28,6 +34,33 @@ var memoryHome string
 var memoryHomeName = ".memory"
 var settingsFile = "settings.yml"
 
+// completer dictates the readline tab completion options
+var completer = readline.NewPrefixCompleter(
+	readline.PcItem("add",
+		readline.PcItem("note"),
+		readline.PcItem("event"),
+		readline.PcItem("person"),
+		readline.PcItem("place"),
+		readline.PcItem("thing"),
+	),
+	readline.PcItem("ls",
+		readline.PcItem("--types"),
+	),
+)
+
+// filterInput allows certain keys to be intercepted during readline
+func filterInput(r rune) (rune, bool) {
+	switch r {
+	// block CtrlZ feature
+	case readline.CharCtrlZ:
+		return r, false
+	}
+	return r, true
+}
+
+// the rl library provides bash-like completion in interactive mode
+var rl *readline.Instance
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "memory",
@@ -35,9 +68,73 @@ var rootCmd = &cobra.Command{
 	Long: `Memory is a CLI application that captures and stores the people, places, 
 things and events that make up human experience and links them together 
 in interesting ways.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+		// readline setup
+		var err error
+		rl, err = readline.NewEx(&readline.Config{
+			Prompt:              config.Prompt,
+			HistoryFile:         config.HistoryPath(),
+			AutoComplete:        completer,
+			InterruptPrompt:     "^C",
+			EOFPrompt:           "exit",
+			HistorySearchFold:   true,
+			FuncFilterInputRune: filterInput,
+		})
+		if err != nil {
+			panic(err)
+		}
+		defer rl.Close()
+		// input loop
+		for {
+			line, err := rl.Readline()
+			if err == readline.ErrInterrupt {
+				if len(line) == 0 {
+					break
+				} else {
+					continue
+				}
+			} else if err == io.EOF {
+				break
+			}
+			line = strings.TrimSpace(line)
+			switch {
+			case line == "exit" || line == "quit":
+				os.Exit(0)
+			case strings.HasPrefix(line, "add "):
+				addInteractive(line[4:]) // in add_note.go
+			case line == "ls" || strings.HasPrefix(line, "ls "):
+				args := ""
+				if len(line) > 3 {
+					args = line[3:]
+				}
+				lsInteractive(args) // in ls.go
+			default:
+				fmt.Println("Sorry, I don't understand. Try 'help'.")
+			}
+		}
+	},
+}
+
+// subPrompt asks for additional info within a command.
+func subPrompt(prompt string, validate validator) string {
+	rl.HistoryDisable()
+	rl.SetPrompt(prompt)
+	var err error
+	var input = ""
+	for {
+		input, err = rl.ReadlineWithDefault(input)
+		if err != nil {
+			break
+		}
+		if msg := validate(input); msg != "" {
+			fmt.Println(msg)
+		} else {
+			break
+		}
+	}
+	rl.HistoryEnable()
+	rl.SetPrompt(config.Prompt)
+	return strings.TrimSpace(input)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -117,51 +214,4 @@ func initConfig() {
 	if err := app.Init(); err != nil {
 		panic("Failed to initialize application state: " + err.Error())
 	}
-}
-
-// Shared function for use by commands to save data to config.Savepath.
-func save() {
-	if err := app.Save(); err != nil {
-		fmt.Println("Failed to save data:", err)
-	}
-}
-
-// Displays a table of entries
-func displayEntries(entries []model.Entry, full bool) {
-	width := goterm.Width() - 30
-	fmt.Println("")
-	for ix, entry := range entries {
-		switch entry.(type) {
-		case model.Note:
-			data := [][]string{}
-			note := entry.(model.Note)
-			data = append(data, []string{"Name", note.Name()})
-			desc := note.Description()
-			if !full && len(desc) > 100 {
-				desc = desc[:100] + "..."
-			}
-			if desc != "" {
-				data = append(data, []string{"Description", desc})
-			}
-			if len(note.Tags()) > 0 {
-				data = append(data, []string{"Tags", strings.Join(note.Tags(), ", ")})
-			}
-			table := tablewriter.NewWriter(os.Stdout)
-			// add border to top unless this is the first
-			if ix > 0 {
-				table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: false})
-			} else {
-				table.SetBorders(tablewriter.Border{Left: false, Top: false, Right: false, Bottom: false})
-			}
-			table.SetRowLine(false)
-			table.SetColMinWidth(0, 12)
-			table.SetColMinWidth(1, width)
-			table.SetColWidth(width)
-			table.SetAutoWrapText(true)
-			table.SetReflowDuringAutoWrap(true)
-			table.AppendBulk(data)
-			table.Render()
-		}
-	}
-	fmt.Println("")
 }
