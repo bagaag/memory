@@ -16,9 +16,16 @@ import (
 
 const slash = string(os.PathSeparator)
 
+// MemoryHome is the folder path where memory stores settings and data
 var MemoryHome = "~/.memory"
+
+// DataFile is the name of the file storing entries
 var DataFile = "memory.json"
 
+// MaxNameLen is the maximum length for entry identifier values
+var MaxNameLen = 50
+
+// SavePath returns the full path to the data file
 func SavePath() string {
 	return MemoryHome + slash + DataFile
 }

@@ -12,31 +12,21 @@ CRUD methods for Notes
 package app
 
 import (
-	"fmt"
 	"memory/app/model"
-	"time"
 )
 
-func NewNote(description string, tags []string) model.Note {
-	id := string(fmt.Sprintf("note-%d", len(data.Notes)+1))
-	now := time.Now()
-	note := model.Note{
-		Id:          id,
-		Description: description,
-		Tags:        tags,
-		Created:     now,
-		Modified:    now,
-	}
-	return note
-}
-
+// GetNote retrieves and returns the specified note from the collection.
 func GetNote(id string) model.Note {
-	return data.Notes[id]
+	//TODO: implement GetNote
+	return model.NewNote("not implemented", "", []string{})
 }
 
+// PutNote adds or replaces the given note in the collection.
 func PutNote(note model.Note) {
-	data.Notes[note.Id] = note
+	//TODO: check for existing name in PutNote
+	data.Notes = append(data.Notes, note)
 }
 
+// DeleteNote removes the specified note from the collection.
 func DeleteNote(id string) {
 }

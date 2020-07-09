@@ -1,1 +1,2 @@
 - Make backup of data file before saving
+- Version json to support migrations

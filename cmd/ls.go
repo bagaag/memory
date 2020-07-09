@@ -4,34 +4,54 @@ See https://github.com/bagaag/memory
 Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
+
 package cmd
 
 import (
-	"fmt"
+	"memory/app"
+
 	"github.com/spf13/cobra"
 )
 
-// lsCmd represents the ls command
+// flag values
+var flagStartsWith string
+var flagContains string
+var flagLimit int = 10
+var flagSortModifiedDesc bool
+var flagSortName bool
+var flagFull bool
+
+// lsCmd lists notes
 var lsCmd = &cobra.Command{
 	Use:   "ls",
-	Short: "List notes",
-	Long: `By default, lists 10 most recent notes. Use flags to
-modify the listing. See memory ls -h`,
+	Short: "Displays and lists entries",
+	Long:  `By default, lists 10 most recent entries of any type. Use flags to modify the listing.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ls called")
+		sort := app.SortRecent
+		if flagSortName {
+			sort = app.SortName
+		}
+		//TODO: Implement types flag
+		entries := app.GetEntries(app.EntryTypes{Note: true}, flagStartsWith, flagContains, "", []string{}, sort, flagLimit)
+		displayEntries(entries, flagFull)
 	},
 }
 
 func init() {
-	noteCmd.AddCommand(lsCmd)
+	rootCmd.AddCommand(lsCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// lsCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// lsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	lsCmd.Flags().StringVar(&flagStartsWith, "starts-with", "",
+		"Filter output with case-insensitive prefix")
+	lsCmd.Flags().StringVarP(&flagContains, "contains", "c", "",
+		"Filter output with case-insensitive substring")
+	lsCmd.Flags().IntVarP(&flagLimit, "limit", "l", 10,
+		"Specify maximum number of results to return, default is 10")
+	lsCmd.Flags().BoolVar(&flagSortModifiedDesc, "sort-modified-desc", false,
+		"Sort results with most recently modified entries at the top (default)")
+	lsCmd.Flags().BoolVar(&flagSortName, "sort-name", false,
+		"Sort results by name")
+	lsCmd.Flags().StringVarP(&flagName, "name", "n", "",
+		"Display a single note with the given name")
+	lsCmd.Flags().BoolVar(&flagFull, "full", false,
+		"Display full values instead of truncating long strings")
 }
