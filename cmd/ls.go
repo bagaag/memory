@@ -29,6 +29,19 @@ var flagLsSortName bool
 var flagLsFull bool
 var flagLsTags []string
 
+// resetFlags returns all flag values to their defaults after being set via
+// an interactive command (see lsInteractive).
+func resetLsFlags() {
+	flagLsName = ""
+	flagLsStartsWith = ""
+	flagLsContains = ""
+	flagLsLimit = 10
+	flagLsSortModifiedDesc = false
+	flagLsSortName = false
+	flagLsFull = false
+	flagLsTags = []string{}
+}
+
 // sortOrder translates the various bool sort flags into a SortOrder value
 func sortOrder() app.SortOrder {
 	sort := app.SortRecent
@@ -77,4 +90,5 @@ func lsInteractive(sargs string) {
 	lsCmd.Flags().Parse(args)
 	entries := app.GetEntries(app.EntryTypes{Note: true}, flagLsStartsWith, flagLsContains, "", flagLsTags, sortOrder(), flagLsLimit)
 	displayEntries(entries, flagLsFull)
+	resetLsFlags()
 }

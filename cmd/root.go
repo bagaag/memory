@@ -101,7 +101,10 @@ in interesting ways.`,
 			case line == "exit" || line == "quit":
 				os.Exit(0)
 			case strings.HasPrefix(line, "add "):
-				addInteractive(line[4:]) // in add_note.go
+				switch strings.TrimSpace(line[4:]) {
+				case "note":
+					addNoteInteractive(line[4:]) // in add_note.go
+				}
 			case line == "ls" || strings.HasPrefix(line, "ls "):
 				args := ""
 				if len(line) > 3 {
@@ -196,10 +199,7 @@ func initConfig() {
 	viper.SetConfigFile(memoryHome + slash + settingsFile)
 	viper.AutomaticEnv() // read in environment variables that match
 
-	if err := viper.ReadInConfig(); err == nil {
-		// If a config file is found, read it in.
-		//fmt.Println("Using config file:", viper.ConfigFileUsed())
-	} else {
+	if err := viper.ReadInConfig(); err != nil {
 		fmt.Println(err)
 		// Otherwise, save the defaults
 		saveAs := memoryHome + slash + settingsFile
@@ -209,6 +209,8 @@ func initConfig() {
 
 	// Set app config values from viper
 	config.MemoryHome = memoryHome
+
+	//TODO: Add config settings to settings file
 
 	// Initialize app state
 	if err := app.Init(); err != nil {

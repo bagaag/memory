@@ -26,6 +26,14 @@ var flagAddNoteName string
 var flagAddNoteDescription string
 var flagAddNoteTags []string
 
+// resetFlags returns all flag values to their defaults after being set via
+// an interactive command (see addNoteInteractive).
+func resetAddNoteFlags() {
+	flagAddNoteName = ""
+	flagAddNoteDescription = ""
+	flagAddNoteTags = []string{}
+}
+
 // addNoteCmd adds a new Note
 var addNoteCmd = &cobra.Command{
 	Use:   "add-note",
@@ -56,7 +64,7 @@ func init() {
 }
 
 // addInteractive takes the user through the sequence of prompts to add an item
-func addInteractive(sargs string) {
+func addNoteInteractive(sargs string) {
 	switch sargs {
 	case "note":
 		name := subPrompt("Enter a name: ", validateNoteName)
@@ -72,4 +80,5 @@ func addInteractive(sargs string) {
 	default:
 		fmt.Printf("%s is not a valid entry type.\n", sargs)
 	}
+	resetAddNoteFlags()
 }
