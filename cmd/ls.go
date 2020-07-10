@@ -76,5 +76,5 @@ func lsInteractive(sargs string) {
 	args := strings.Split(sargs, " ")
 	lsCmd.Flags().Parse(args)
 	entries := app.GetEntries(app.EntryTypes{Note: true}, flagLsStartsWith, flagLsContains, "", flagLsTags, sortOrder(), flagLsLimit)
-	displayEntries(entries, true)
+	displayEntries(entries, flagLsFull)
 }
