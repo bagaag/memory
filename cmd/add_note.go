@@ -68,7 +68,7 @@ func addNoteInteractive(sargs string) {
 	switch sargs {
 	case "note":
 		name := subPrompt("Enter a name: ", validateNoteName)
-		desc := subPrompt("Enter a description: ", emptyValidator)
+		desc := subPromptEditor("Description", "", "Enter a description: ", emptyValidator)
 		tags := subPrompt("Enter one or more tags separated by commas: ", emptyValidator)
 		tagSlice := processTags(tags)
 		if name != "" {

@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/config"
+	"strings"
 )
 
 // validator is a function that validates input and returns either an error
@@ -45,4 +46,13 @@ func validateNoteName(name string) string {
 
 func emptyValidator(s string) string {
 	return ""
+}
+
+func validateYesNo(answer string) string {
+	answer = strings.ToLower(strings.TrimSpace(answer))
+	if answer == "y" || answer == "n" || answer == "" {
+		return ""
+	} else {
+		return "Respond with y, n or nothing at all to accept the default."
+	}
 }

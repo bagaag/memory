@@ -70,7 +70,6 @@ things and events that make up human experience and links them together
 in interesting ways.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		welcomeMessage()
-			app.EntryCount())
 		// readline setup
 		var err error
 		rl, err = readline.NewEx(&readline.Config{
@@ -200,10 +199,9 @@ func initConfig() {
 }
 
 // welcomeMessage personalizes the app with a message tailored to the visitors
-// current journey. 
+// current journey.
 //TODO: Flesh out the welcome journey
 func welcomeMessage() {
-	fmt.Printf("Welcome. You have %d entries under management. " +
+	fmt.Printf("Welcome. You have %d entries under management. "+
 		"Type 'help' for assistance.\n", app.EntryCount())
 }
-

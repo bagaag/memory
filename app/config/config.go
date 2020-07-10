@@ -34,6 +34,10 @@ var Prompt = "\033[1;32mmemory\033[0m> "
 // TruncateAt is the length that values are truncated to with an ... during display
 var TruncateAt = 300
 
+// EditorCommand is the command to launch an external editor for long text values
+//TODO: handle editor command cross-platform
+var EditorCommand = "/usr/bin/vim"
+
 // SavePath returns the full path to the data file
 func SavePath() string {
 	return MemoryHome + slash + DataFile
