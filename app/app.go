@@ -209,3 +209,8 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	}
 	return remainingEntries
 }
+
+// EntryCount returns the total number of entries under management.
+func EntryCount() int {
+	return len(data.Notes)
+}

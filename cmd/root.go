@@ -69,6 +69,8 @@ var rootCmd = &cobra.Command{
 things and events that make up human experience and links them together 
 in interesting ways.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		welcomeMessage()
+			app.EntryCount())
 		// readline setup
 		var err error
 		rl, err = readline.NewEx(&readline.Config{
@@ -112,32 +114,11 @@ in interesting ways.`,
 				}
 				lsInteractive(args) // in ls.go
 			default:
+				//TODO: Implement help command in interactive mode
 				fmt.Println("Sorry, I don't understand. Try 'help'.")
 			}
 		}
 	},
-}
-
-// subPrompt asks for additional info within a command.
-func subPrompt(prompt string, validate validator) string {
-	rl.HistoryDisable()
-	rl.SetPrompt(prompt)
-	var err error
-	var input = ""
-	for {
-		input, err = rl.ReadlineWithDefault(input)
-		if err != nil {
-			break
-		}
-		if msg := validate(input); msg != "" {
-			fmt.Println(msg)
-		} else {
-			break
-		}
-	}
-	rl.HistoryEnable()
-	rl.SetPrompt(config.Prompt)
-	return strings.TrimSpace(input)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -217,3 +198,12 @@ func initConfig() {
 		panic("Failed to initialize application state: " + err.Error())
 	}
 }
+
+// welcomeMessage personalizes the app with a message tailored to the visitors
+// current journey. 
+//TODO: Flesh out the welcome journey
+func welcomeMessage() {
+	fmt.Printf("Welcome. You have %d entries under management. " +
+		"Type 'help' for assistance.\n", app.EntryCount())
+}
+
