@@ -52,7 +52,6 @@ func validateYesNo(answer string) string {
 	answer = strings.ToLower(strings.TrimSpace(answer))
 	if answer == "y" || answer == "n" || answer == "" {
 		return ""
-	} else {
-		return "Respond with y, n or nothing at all to accept the default."
 	}
+	return "Respond with y, n or nothing at all to accept the default."
 }

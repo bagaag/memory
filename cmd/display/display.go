@@ -201,7 +201,7 @@ func renderEntry(pager EntryPager, ix int, entry model.Entry) []string {
 
 // renderEntries calls renderEntry for each entry in results and returns an array of them
 func renderEntries(pager EntryPager) [][]string {
-	ret := [][]string{}
+	ret := make([][]string, len(pager.results.Entries))
 	for i, entry := range pager.results.Entries {
 		ret[i] = renderEntry(pager, i, entry)
 	}
