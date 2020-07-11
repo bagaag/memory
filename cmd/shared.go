@@ -28,6 +28,9 @@ import (
 
 // processTags takes in a comma-separated string and returns a slice of trimmed values
 func processTags(tags string) []string {
+	if strings.TrimSpace(tags) == "" {
+		return []string{}
+	}
 	arr := strings.Split(tags, ",")
 	for i, tag := range arr {
 		arr[i] = strings.ToLower(strings.TrimSpace(tag))
