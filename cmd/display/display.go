@@ -77,18 +77,17 @@ func (pager *EntryPager) PrintPage() {
 
 // addSettingToHeader is used by renderHeader to add a filter setting to the header. It returns
 // the filter appended to the last line of the header or wraps to a new line if neeed.
-func addSettingToHeader(pager EntryPager, label string, value string) []string {
+func addSettingToHeader(pager EntryPager, header []string, label string, value string) []string {
 	s := "|  " + label + ": " + value + "  "
-	lines := pager.header
-	line := lines[len(lines)-1]
+	line := header[len(header)-1]
 	if (len(line) + len(s) + 2) > displayWidth(pager) {
 		// wrap to new line
-		lines = append(lines, s[1:])
+		header = append(header, s[1:])
 	} else {
 		// append to last line
-		lines[len(lines)-1] = line + s
+		header[len(header)-1] = line + s
 	}
-	return lines
+	return header
 }
 
 // renderHeader returns the top 2-3 rows of a page display.
@@ -107,25 +106,25 @@ func renderHeader(pager EntryPager) []string {
 	lines = append(lines, info)
 	// add sort
 	if pager.results.Sort == app.SortName {
-		lines = addSettingToHeader(pager, "Sort", "Name")
+		lines = addSettingToHeader(pager, lines, "Sort", "Name")
 	} else {
-		lines = addSettingToHeader(pager, "Sort", "Most recent")
+		lines = addSettingToHeader(pager, lines, "Sort", "Most recent")
 	}
 	// optional Tags filter
 	if len(pager.results.Tags) > 0 {
-		lines = addSettingToHeader(pager, "Tagged with", strings.Join(pager.results.Tags, ", "))
+		lines = addSettingToHeader(pager, lines, "Tagged with", strings.Join(pager.results.Tags, ", "))
 	}
 	// optional Contains filter
 	if pager.results.Contains != "" {
-		lines = addSettingToHeader(pager, "Containing", pager.results.Contains)
+		lines = addSettingToHeader(pager, lines, "Containing", pager.results.Contains)
 	}
 	// optional Starting With filter
 	if pager.results.StartsWith != "" {
-		lines = addSettingToHeader(pager, "Starting with", pager.results.StartsWith)
+		lines = addSettingToHeader(pager, lines, "Starting with", pager.results.StartsWith)
 	}
 	// optional Search filter
 	if pager.results.StartsWith != "" {
-		lines = addSettingToHeader(pager, "Search for", pager.results.Search)
+		lines = addSettingToHeader(pager, lines, "Search for", pager.results.Search)
 	}
 	// blank line at the bottom
 	lines = append(lines, "")
