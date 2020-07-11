@@ -23,7 +23,7 @@ import (
 // flag values
 var flagLsStartsWith string
 var flagLsContains string
-var flagLsLimit int = 10
+var flagLsLimit int
 var flagLsSortModifiedDesc bool
 var flagLsSortName bool
 var flagLsFull bool
@@ -37,7 +37,7 @@ var flagLsTypes []string
 func resetLsFlags() {
 	flagLsStartsWith = ""
 	flagLsContains = ""
-	flagLsLimit = 10
+	flagLsLimit = 0
 	flagLsSortModifiedDesc = false
 	flagLsSortName = false
 	flagLsFull = false
@@ -77,8 +77,8 @@ func init() {
 		"Filter output with case-insensitive substring")
 	lsCmd.Flags().StringSliceVarP(&flagLsTags, "tags", "g", []string{},
 		"Limit entries to those tagged with any of these")
-	lsCmd.Flags().IntVarP(&flagLsLimit, "limit", "l", 10,
-		"Specify maximum number of results to return, default is 10")
+	lsCmd.Flags().IntVarP(&flagLsLimit, "limit", "l", 0,
+		"Specify maximum number of results to return")
 	lsCmd.Flags().BoolVar(&flagLsSortModifiedDesc, "sort-modified-desc", false,
 		"Sort results with most recently modified entries at the top (default)")
 	lsCmd.Flags().BoolVar(&flagLsSortName, "sort-name", false,
