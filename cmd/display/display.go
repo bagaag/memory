@@ -33,14 +33,14 @@ type page struct {
 
 // EntryPager is a stateful object to handle paging and display of an entry list
 type EntryPager struct {
-	results      app.EntryResults // entries to display and filter settings
-	currentPage  int              // current page, 0-based
-	pages        []page           // total number of pages
-	entryOutputs [][]string       // rendered output for each entry
-	header       []string         // rendered page header
-	footer       []string         // rendered page footer
-	screenHeight int              // screen height at last render
-	screenWidth  int              // screen width at last render
+	results         app.EntryResults // entries to display and filter settings
+	currentPage     int              // current page, 0-based
+	pages           []page           // total number of pages
+	renderedEntries [][]string       // rendered output for each entry
+	header          []string         // rendered page header
+	footer          []string         // rendered page footer
+	screenHeight    int              // screen height at last render
+	screenWidth     int              // screen width at last render
 }
 
 // NewEntryPager prepares a list of entries for paged display.
@@ -53,7 +53,7 @@ func NewEntryPager(results app.EntryResults) EntryPager {
 func updateRenderings(pager *EntryPager) {
 	pager.screenHeight = goterm.Height()
 	pager.screenWidth = goterm.Width()
-	pager.entryOutputs = renderEntries(*pager)
+	pager.renderedEntries = renderEntries(*pager)
 	// once to get a sense of lines needed to display header
 	pager.header = renderHeader(*pager)
 	pager.footer = renderFooter(*pager)
@@ -69,7 +69,7 @@ func (pager *EntryPager) PrintPage() {
 		updateRenderings(pager)
 	}
 	fmt.Println(strings.Join(pager.header, "\n"))
-	for _, lines := range pager.entryOutputs {
+	for _, lines := range pager.renderedEntries {
 		fmt.Println(strings.Join(lines, "\n"))
 	}
 	fmt.Println(strings.Join(pager.footer, "\n"))
@@ -217,7 +217,7 @@ func calculatePages(pager EntryPager) []page {
 	screenHeight := pager.screenHeight
 	headerFooterHeight := len(pager.header) + len(pager.footer)
 	linesOnPage := headerFooterHeight
-	for i, entryLines := range pager.entryOutputs {
+	for i, entryLines := range pager.renderedEntries {
 		// start new page if we don't have space for this entry
 		if (linesOnPage + len(entryLines)) > screenHeight {
 			currentPage = page{startIndex: i, count: 0}
