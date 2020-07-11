@@ -178,20 +178,22 @@ func renderEntry(pager EntryPager, ix int, entry model.Entry) []string {
 		lines = append(lines, tagLine)
 	}
 	// add Description, ex. "      A seaside town..." - Max 2 lines w/ elipsis if truncated
-	descWrapped := wordwrap.WrapString(entry.Description(), uint(contentWidth))
-	descLines := strings.Split(descWrapped, "\n")
-	// add elipses to 2nd line if more than 2 lines and truncate array
-	if len(descLines) > 2 {
-		for len(descLines[1]) > (contentWidth - 3) {
-			words := strings.Split(descLines[1], " ")
-			words = words[:len(words)-1]
-			descLines[1] = strings.Join(words, " ")
+	if entry.Description() != "" {
+		descWrapped := wordwrap.WrapString(entry.Description(), uint(contentWidth))
+		descLines := strings.Split(descWrapped, "\n")
+		// add elipses to 2nd line if more than 2 lines and truncate array
+		if len(descLines) > 2 {
+			for len(descLines[1]) > (contentWidth - 3) {
+				words := strings.Split(descLines[1], " ")
+				words = words[:len(words)-1]
+				descLines[1] = strings.Join(words, " ")
+			}
+			descLines[1] = descLines[1] + "..."
+			descLines = descLines[:2]
 		}
-		descLines[1] = descLines[1] + "..."
-		descLines = descLines[:2]
-	}
-	for _, line := range descLines {
-		lines = append(lines, blankLeftMargin+line)
+		for _, line := range descLines {
+			lines = append(lines, blankLeftMargin+line)
+		}
 	}
 	// add bottom border
 	lines = append(lines, blankLeftMargin+strings.Repeat("-", contentWidth))
