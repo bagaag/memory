@@ -26,6 +26,53 @@ type EntryTypes struct {
 	Thing  bool
 }
 
+// EntryResults is used to contain the results of GetEntries and the settings used
+// to generate those results.
+type EntryResults struct {
+	Entries    []model.Entry
+	Types      EntryTypes
+	StartsWith string
+	Contains   string
+	Search     string
+	Tags       []string
+	Sort       SortOrder
+	Limit      int
+}
+
+// HasAll returns true if either all are true or all are false.
+func (t EntryTypes) HasAll() bool {
+	if (t.Note && t.Event && t.Person && t.Place && t.Thing) ||
+		(!t.Note && !t.Event && !t.Person && !t.Place && !t.Thing) {
+		return true
+	}
+	return false
+}
+
+// String returns a string representation of the selected types.
+func (t EntryTypes) String() string {
+	s := "All types"
+	if !t.HasAll() {
+		a := []string{}
+		if t.Note {
+			a = append(a, "Notes")
+		}
+		if t.Event {
+			a = append(a, "Events")
+		}
+		if t.Person {
+			a = append(a, "People")
+		}
+		if t.Place {
+			a = append(a, "Places")
+		}
+		if t.Thing {
+			a = append(a, "Things")
+		}
+		s = strings.Join(a, ", ")
+	}
+	return s
+}
+
 // root contains all the data to be saved
 type root struct {
 	Notes []model.Note
@@ -159,14 +206,15 @@ func sortEntries(arr []model.Entry, field string, ascending bool) {
 // GetEntries returns an array of entries of the specified type(s) with
 // specified filters and sorting applied.
 func GetEntries(types EntryTypes, startsWith string, contains string,
-	search string, tags []string, sort SortOrder, limit int) []model.Entry {
+	search string, tags []string, sort SortOrder, limit int) EntryResults {
 
 	// collect and filter entries
 	entriesArrays := make([][]model.Entry, 5)
 	//TODO: Make these cases run concurrently
-	if types.Event {
+	allTypes := types.HasAll()
+	if allTypes || types.Event {
 	}
-	if types.Note {
+	if allTypes || types.Note {
 		notes := data.Notes
 		noteEntries := make([]model.Entry, len(notes))
 		for i, note := range notes {
@@ -178,11 +226,11 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 		noteEntries = filterSearch(noteEntries, search)
 		entriesArrays[1] = noteEntries
 	}
-	if types.Person {
+	if allTypes || types.Person {
 	}
-	if types.Place {
+	if allTypes || types.Place {
 	}
-	if types.Thing {
+	if allTypes || types.Thing {
 	}
 	// combine filtered entries
 	remainingCount := 0
@@ -207,7 +255,16 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	if limit > 0 && len(remainingEntries) > limit {
 		remainingEntries = remainingEntries[:limit]
 	}
-	return remainingEntries
+	return EntryResults{
+		Entries:    remainingEntries,
+		Types:      types,
+		StartsWith: startsWith,
+		Contains:   contains,
+		Search:     search,
+		Tags:       tags,
+		Sort:       sort,
+		Limit:      limit,
+	}
 }
 
 // EntryCount returns the total number of entries under management.
