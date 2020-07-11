@@ -36,15 +36,15 @@ var settingsFile = "settings.yml"
 
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
-	readline.PcItem("add",
-		readline.PcItem("note"),
-		readline.PcItem("event"),
-		readline.PcItem("person"),
-		readline.PcItem("place"),
-		readline.PcItem("thing"),
-	),
+	readline.PcItem("add-note"),
+	readline.PcItem("add-event"),
+	readline.PcItem("add-person"),
+	readline.PcItem("add-place"),
+	readline.PcItem("add-thing"),
 	readline.PcItem("ls",
 		readline.PcItem("--types"),
+		readline.PcItem("--contains"),
+		readline.PcItem("--start-with"),
 	),
 )
 

@@ -14,13 +14,13 @@ package cmd
 
 import (
 	"memory/app"
+	"memory/cmd/display"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 // flag values
-var flagLsName string
 var flagLsStartsWith string
 var flagLsContains string
 var flagLsLimit int = 10
@@ -28,11 +28,13 @@ var flagLsSortModifiedDesc bool
 var flagLsSortName bool
 var flagLsFull bool
 var flagLsTags []string
+var flagLsTypes []string
+
+//var flagLsTypes []string
 
 // resetFlags returns all flag values to their defaults after being set via
 // an interactive command (see lsInteractive).
 func resetLsFlags() {
-	flagLsName = ""
 	flagLsStartsWith = ""
 	flagLsContains = ""
 	flagLsLimit = 10
@@ -40,6 +42,7 @@ func resetLsFlags() {
 	flagLsSortName = false
 	flagLsFull = false
 	flagLsTags = []string{}
+	flagLsTypes = []string{}
 }
 
 // sortOrder translates the various bool sort flags into a SortOrder value
@@ -57,20 +60,22 @@ var lsCmd = &cobra.Command{
 	Short: "Displays and lists entries",
 	Long:  `By default, lists 10 most recent entries of any type. Use flags to modify the listing.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		//TODO: Implement types flag
-		//TODO: Implement name flag
-		entries := app.GetEntries(app.EntryTypes{Note: true}, flagLsStartsWith, flagLsContains, "", []string{}, sortOrder(), flagLsLimit)
-		displayEntries(entries, flagLsFull)
+		types := parseTypes()
+		results := app.GetEntries(types, flagLsStartsWith, flagLsContains, "", []string{}, sortOrder(), flagLsLimit)
+		pager := display.NewEntryPager(results)
+		pager.PrintPage()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(lsCmd)
+	lsCmd.Flags().StringSliceVarP(&flagLsTypes, "types", "t", []string{},
+		"Limit entries to one or more types (event, person, place, thing, note)")
 	lsCmd.Flags().StringVar(&flagLsStartsWith, "starts-with", "",
 		"Filter output with case-insensitive prefix")
 	lsCmd.Flags().StringVarP(&flagLsContains, "contains", "c", "",
 		"Filter output with case-insensitive substring")
-	lsCmd.Flags().StringSliceVarP(&flagLsTags, "tags", "t", []string{},
+	lsCmd.Flags().StringSliceVarP(&flagLsTags, "tags", "g", []string{},
 		"Limit entries to those tagged with any of these")
 	lsCmd.Flags().IntVarP(&flagLsLimit, "limit", "l", 10,
 		"Specify maximum number of results to return, default is 10")
@@ -78,8 +83,6 @@ func init() {
 		"Sort results with most recently modified entries at the top (default)")
 	lsCmd.Flags().BoolVar(&flagLsSortName, "sort-name", false,
 		"Sort results by name")
-	lsCmd.Flags().StringVarP(&flagLsName, "name", "n", "",
-		"Display a single note with the given name")
 	lsCmd.Flags().BoolVar(&flagLsFull, "full", false,
 		"Display full values instead of truncating long strings")
 }
@@ -88,7 +91,28 @@ func init() {
 func lsInteractive(sargs string) {
 	args := strings.Split(sargs, " ")
 	lsCmd.Flags().Parse(args)
-	entries := app.GetEntries(app.EntryTypes{Note: true}, flagLsStartsWith, flagLsContains, "", flagLsTags, sortOrder(), flagLsLimit)
-	displayEntries(entries, flagLsFull)
+	results := app.GetEntries(app.EntryTypes{Note: true}, flagLsStartsWith, flagLsContains, "", flagLsTags, sortOrder(), flagLsLimit)
+	pager := display.NewEntryPager(results)
+	pager.PrintPage()
 	resetLsFlags()
+}
+
+// parseTypes populates an EntryType struct based on the --types flag
+func parseTypes() app.EntryTypes {
+	types := app.EntryTypes{}
+	for _, t := range flagLsTypes {
+		switch strings.ToLower(t) {
+		case "note", "notes":
+			types.Note = true
+		case "event", "events":
+			types.Event = true
+		case "person", "people":
+			types.Person = true
+		case "place", "places":
+			types.Place = true
+		case "thing", "things":
+			types.Thing = true
+		}
+	}
+	return types
 }
