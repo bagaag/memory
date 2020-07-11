@@ -50,6 +50,24 @@ func NewEntryPager(results app.EntryResults) EntryPager {
 	return pager
 }
 
+// PrintPage outputs the current page.
+func (pager *EntryPager) PrintPage() {
+	// re-render pages if the terminal size has changed
+	if pager.screenHeight != goterm.Height() || pager.screenWidth != goterm.Width() {
+		updateRenderings(pager)
+		pager.currentPage = 0
+	}
+	fmt.Println(strings.Join(pager.header, "\n"))
+	page := pager.pages[pager.currentPage]
+	for i := page.startIndex; i <= page.startIndex+page.count; i++ {
+		fmt.Println(strings.Join(pager.renderedEntries[i], "\n"))
+	}
+	fmt.Println(strings.Join(pager.footer, "\n"))
+}
+
+// updateRenderings creates arrays of output for header, footer and each entry
+// so that paging can be established. This happens when a new struct is created
+// or when PrintPage detects a change in window size.
 func updateRenderings(pager *EntryPager) {
 	pager.screenHeight = goterm.Height()
 	pager.screenWidth = goterm.Width()
@@ -60,19 +78,6 @@ func updateRenderings(pager *EntryPager) {
 	pager.pages = calculatePages(*pager)
 	// and again to include the calculated page count
 	pager.header = renderHeader(*pager)
-}
-
-// PrintPage outputs the current page.
-func (pager *EntryPager) PrintPage() {
-	// re-render pages if the terminal size has changed
-	if pager.screenHeight != goterm.Height() || pager.screenWidth != goterm.Width() {
-		updateRenderings(pager)
-	}
-	fmt.Println(strings.Join(pager.header, "\n"))
-	for _, lines := range pager.renderedEntries {
-		fmt.Println(strings.Join(lines, "\n"))
-	}
-	fmt.Println(strings.Join(pager.footer, "\n"))
 }
 
 // addSettingToHeader is used by renderHeader to add a filter setting to the header. It returns
@@ -102,7 +107,7 @@ func renderHeader(pager EntryPager) []string {
 	// info header template
 	types := pager.results.Types.String()
 	info := fmt.Sprintf("%4d results  |  Page %d of %d  |  Showing: %s  ",
-		len(pager.results.Entries), pager.currentPage, len(pager.pages), types)
+		len(pager.results.Entries), pager.currentPage+1, len(pager.pages), types)
 	lines = append(lines, info)
 	// add sort
 	if pager.results.Sort == app.SortName {
@@ -149,10 +154,16 @@ func renderFooter(pager EntryPager) []string {
 	return lines
 }
 
-// displayWidth returns the total width of the display table
+// displayWidth returns the total width of the display table.
 func displayWidth(pager EntryPager) int {
 	fw := float64(pager.screenWidth)
 	return pager.screenWidth - int(math.Floor(fw*0.1))
+}
+
+// displayHeight returns the total height to be used.
+func displayHeight(pager EntryPager) int {
+	fh := float64(pager.screenHeight)
+	return pager.screenHeight - int(math.Floor(fh*0.2))
 }
 
 // entryLines returns a string slice representing the lines of an individual entry listing.
@@ -213,20 +224,20 @@ func renderEntries(pager EntryPager) [][]string {
 // can fit on each page given available screen height.
 func calculatePages(pager EntryPager) []page {
 	currentPage := page{startIndex: 0, count: 0}
-	pages := []page{currentPage}
-	screenHeight := pager.screenHeight
+	pages := []page{}
 	headerFooterHeight := len(pager.header) + len(pager.footer)
 	linesOnPage := headerFooterHeight
 	for i, entryLines := range pager.renderedEntries {
 		// start new page if we don't have space for this entry
-		if (linesOnPage + len(entryLines)) > screenHeight {
-			currentPage = page{startIndex: i, count: 0}
+		if (linesOnPage + len(entryLines)) > displayHeight(pager) {
 			pages = append(pages, currentPage)
+			currentPage = page{startIndex: i, count: 0}
 			linesOnPage = headerFooterHeight
 		}
 		// add entry to current page
 		currentPage.count = currentPage.count + 1
 		linesOnPage = linesOnPage + len(entryLines)
 	}
+	pages = append(pages, currentPage)
 	return pages
 }
