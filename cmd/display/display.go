@@ -16,11 +16,13 @@ import (
 	"math"
 	"memory/app"
 	"memory/app/model"
+	"os"
 	"reflect"
 	"strings"
 
 	"github.com/buger/goterm"
 	"github.com/mitchellh/go-wordwrap"
+	"github.com/olekukonko/tablewriter"
 )
 
 const prefix = "  "
@@ -240,4 +242,48 @@ func calculatePages(pager EntryPager) []page {
 	}
 	pages = append(pages, currentPage)
 	return pages
+}
+
+// EntryTables displays a table of entries, used when we're just dumping all results after
+// a non-interactive command line request, or when displaying a single entry details.
+func EntryTables(entries []model.Entry) {
+	width := goterm.Width() - 30
+	fmt.Println("") // prefix with blank line
+	for ix, entry := range entries {
+		switch entry.(type) {
+		case model.Note:
+			// holds table contents
+			data := [][]string{}
+			// add note name row
+			note := entry.(model.Note)
+			data = append(data, []string{"Name", note.Name()})
+			// description row
+			desc := note.Description()
+			if desc != "" {
+				data = append(data, []string{"Description", desc})
+			}
+			// tags row
+			if len(note.Tags()) > 0 {
+				data = append(data, []string{"Tags", strings.Join(note.Tags(), ", ")})
+			}
+			// create and configure table
+			table := tablewriter.NewWriter(os.Stdout)
+			// add border to top unless this is the first
+			if ix == len(entries)-1 {
+				table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: true})
+			} else {
+				table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: false})
+			}
+			table.SetRowLine(false)
+			table.SetColMinWidth(0, 12)
+			table.SetColMinWidth(1, width)
+			table.SetColWidth(width)
+			table.SetAutoWrapText(true)
+			table.SetReflowDuringAutoWrap(true)
+			// add data and render
+			table.AppendBulk(data)
+			table.Render()
+		}
+	}
+	fmt.Println("") // finish with blank line
 }

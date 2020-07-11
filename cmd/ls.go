@@ -62,8 +62,7 @@ var lsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		types := parseTypes()
 		results := app.GetEntries(types, flagLsStartsWith, flagLsContains, "", []string{}, sortOrder(), flagLsLimit)
-		pager := display.NewEntryPager(results)
-		pager.PrintPage()
+		display.EntryTables(results.Entries)
 	},
 }
 
