@@ -10,6 +10,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package app
 
 import (
+	"errors"
 	"memory/app/config"
 	"memory/app/model"
 	"memory/app/persist"
@@ -252,7 +253,10 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 		sortEntries(remainingEntries, "Modified", false)
 	}
 	// limit sorted results
-	if limit > 0 && len(remainingEntries) > limit {
+	if limit <= 0 {
+		limit = 999
+	}
+	if len(remainingEntries) > limit {
 		remainingEntries = remainingEntries[:limit]
 	}
 	return EntryResults{
@@ -270,4 +274,19 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 // EntryCount returns the total number of entries under management.
 func EntryCount() int {
 	return len(data.Notes)
+}
+
+// GetEntry returns a single entry or throws an error.
+func GetEntry(entryType string, entryName string) (model.Entry, error) {
+	switch strings.ToLower(entryType) {
+	case "note":
+		return GetNote(entryName)
+	case "event":
+	case "person":
+	case "place":
+	case "thing":
+	default:
+		return nil, errors.New(entryType + " is not a valid entry type.")
+	}
+	return nil, nil
 }

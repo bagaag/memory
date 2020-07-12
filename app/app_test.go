@@ -14,7 +14,7 @@ import (
 )
 
 func clearData() {
-	data.Notes = data.Notes[0:0]
+	data.Notes = []model.Note{}
 }
 
 func generateData() {
@@ -32,7 +32,7 @@ func generateData() {
 		name := fmt.Sprintf("note #%d", i)
 		desc := fmt.Sprintf("note desc #%d", i)
 		note := model.NewNote(name, desc, tags)
-		PutNote(note)
+		data.Notes = append(data.Notes, note)
 	}
 }
 
@@ -73,5 +73,23 @@ func TestGetEntries(t *testing.T) {
 	if results.Entries[1].Name() != "note #48" {
 		t.Errorf("Expected 'note #48', got '%s'", results.Entries[1].Name())
 		return
+	}
+}
+
+func TestGetEntry(t *testing.T) {
+	generateData()
+	entry, err := GetEntry("noTe", "note #42")
+	if err != nil {
+		t.Error("Unexpected error getting entry:", err)
+	}
+	if entry.Name() != "note #42" {
+		t.Error("Expected 'note #42', got", entry.Name())
+	}
+	entry, err = GetEntry("invalid", "invalid")
+	if entry != nil {
+		t.Error("Expected nil entry, got", entry.Name())
+	}
+	if err == nil {
+		t.Error("Expected error, got nil")
 	}
 }
