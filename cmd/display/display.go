@@ -179,11 +179,9 @@ func renderHeader(pager EntryPager) []string {
 func renderFooter(pager EntryPager) []string {
 	lines := []string{""}
 	cmd := "Enter # to view details"
-	fmt.Println(pager.currentPage, "<", len(pager.pages)-1)
 	if pager.currentPage < (len(pager.pages) - 1) {
 		cmd = cmd + ", [n]ext page"
 	}
-	fmt.Println(pager.currentPage, "> 0")
 	if pager.currentPage > 0 {
 		cmd = cmd + ", [p]revious page"
 	}
@@ -280,8 +278,8 @@ func calculatePages(pager EntryPager) []Page {
 	return pages
 }
 
-// EntryTables displays a table of entries, used when we're just dumping all results after
-// a non-interactive command line request, or when displaying a single entry details.
+// EntryTables displays a table of entries, used when we're dumping all results after
+// a non-interactive ls request, or when displaying a single entry details.
 func EntryTables(entries []model.Entry) {
 	width := goterm.Width() - 30
 	fmt.Println("") // prefix with blank line
