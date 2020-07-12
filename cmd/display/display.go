@@ -28,16 +28,18 @@ import (
 const prefix = "  "
 const spacer = "  |  "
 
-type page struct {
-	startIndex int // index of first entry shown on the page
-	count      int // number of entries shown on the page
+// Page is described as the index of the first element displayed on the page and
+// the number of elements displayed on the page.
+type Page struct {
+	StartIndex int // index of first entry shown on the page
+	Count      int // number of entries shown on the page
 }
 
 // EntryPager is a stateful object to handle paging and display of an entry list
 type EntryPager struct {
 	results         app.EntryResults // entries to display and filter settings
 	currentPage     int              // current page, 0-based
-	pages           []page           // total number of pages
+	pages           []Page           // total number of pages
 	renderedEntries [][]string       // rendered output for each entry
 	header          []string         // rendered page header
 	footer          []string         // rendered page footer
@@ -56,15 +58,44 @@ func NewEntryPager(results app.EntryResults) EntryPager {
 func (pager *EntryPager) PrintPage() {
 	// re-render pages if the terminal size has changed
 	if pager.screenHeight != goterm.Height() || pager.screenWidth != goterm.Width() {
-		updateRenderings(pager)
 		pager.currentPage = 0
+		updateRenderings(pager)
 	}
 	fmt.Println(strings.Join(pager.header, "\n"))
 	page := pager.pages[pager.currentPage]
-	for i := page.startIndex; i <= page.startIndex+page.count; i++ {
+	for i := page.StartIndex; i < page.StartIndex+page.Count; i++ {
 		fmt.Println(strings.Join(pager.renderedEntries[i], "\n"))
 	}
 	fmt.Println(strings.Join(pager.footer, "\n"))
+}
+
+// CurrentPage returns the current page.
+func (pager *EntryPager) CurrentPage() Page {
+	return pager.pages[pager.currentPage]
+}
+
+// Next returns false if we're on the last page, otherwise
+// true and advances to the next page.
+func (pager *EntryPager) Next() bool {
+	if pager.currentPage >= (len(pager.pages) - 1) {
+		return false
+	}
+	pager.currentPage = pager.currentPage + 1
+	pager.header = renderHeader(*pager)
+	pager.footer = renderFooter(*pager)
+	return true
+}
+
+// Prev returns true if we're on the first page, otherwise
+// true and goes to the previous page.
+func (pager *EntryPager) Prev() bool {
+	if pager.currentPage <= 0 {
+		return false
+	}
+	pager.currentPage = pager.currentPage - 1
+	pager.header = renderHeader(*pager)
+	pager.footer = renderFooter(*pager)
+	return true
 }
 
 // updateRenderings creates arrays of output for header, footer and each entry
@@ -74,12 +105,14 @@ func updateRenderings(pager *EntryPager) {
 	pager.screenHeight = goterm.Height()
 	pager.screenWidth = goterm.Width()
 	pager.renderedEntries = renderEntries(*pager)
-	// once to get a sense of lines needed to display header
+	// header/footer once to get a sense of lines needed to display header
 	pager.header = renderHeader(*pager)
 	pager.footer = renderFooter(*pager)
+	// needs line counts for header/footer
 	pager.pages = calculatePages(*pager)
-	// and again to include the calculated page count
+	// then again to include the calculated page count
 	pager.header = renderHeader(*pager)
+	pager.footer = renderFooter(*pager)
 }
 
 // addSettingToHeader is used by renderHeader to add a filter setting to the header. It returns
@@ -144,15 +177,18 @@ func renderHeader(pager EntryPager) []string {
 // Enter # to view details, [n]ext page, [p]revious page, [Q]uit
 // >
 func renderFooter(pager EntryPager) []string {
-	lines := []string{"", "Enter # to view details"}
+	lines := []string{""}
+	cmd := "Enter # to view details"
+	fmt.Println(pager.currentPage, "<", len(pager.pages)-1)
 	if pager.currentPage < (len(pager.pages) - 1) {
-		lines[0] = lines[0] + ", [n]ext page"
+		cmd = cmd + ", [n]ext page"
 	}
+	fmt.Println(pager.currentPage, "> 0")
 	if pager.currentPage > 0 {
-		lines[0] = lines[0] + ", [p]revious page"
+		cmd = cmd + ", [p]revious page"
 	}
-	lines[0] = lines[0] + ", [Q]uit"
-	lines = append(lines, "> ")
+	cmd = cmd + ", [Q]uit"
+	lines = append(lines, cmd)
 	return lines
 }
 
@@ -165,7 +201,7 @@ func displayWidth(pager EntryPager) int {
 // displayHeight returns the total height to be used.
 func displayHeight(pager EntryPager) int {
 	fh := float64(pager.screenHeight)
-	return pager.screenHeight - int(math.Floor(fh*0.2))
+	return pager.screenHeight - int(math.Floor(fh*0.1))
 }
 
 // entryLines returns a string slice representing the lines of an individual entry listing.
@@ -224,20 +260,20 @@ func renderEntries(pager EntryPager) [][]string {
 
 // calculatePages returns a slice of page structs by figuring out how many entries
 // can fit on each page given available screen height.
-func calculatePages(pager EntryPager) []page {
-	currentPage := page{startIndex: 0, count: 0}
-	pages := []page{}
+func calculatePages(pager EntryPager) []Page {
+	currentPage := Page{StartIndex: 0, Count: 0}
+	pages := []Page{}
 	headerFooterHeight := len(pager.header) + len(pager.footer)
 	linesOnPage := headerFooterHeight
 	for i, entryLines := range pager.renderedEntries {
 		// start new page if we don't have space for this entry
 		if (linesOnPage + len(entryLines)) > displayHeight(pager) {
 			pages = append(pages, currentPage)
-			currentPage = page{startIndex: i, count: 0}
+			currentPage = Page{StartIndex: i, Count: 0}
 			linesOnPage = headerFooterHeight
 		}
 		// add entry to current page
-		currentPage.count = currentPage.count + 1
+		currentPage.Count = currentPage.Count + 1
 		linesOnPage = linesOnPage + len(entryLines)
 	}
 	pages = append(pages, currentPage)

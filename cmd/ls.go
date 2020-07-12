@@ -13,8 +13,11 @@ This file contains variables and functions used by the
 package cmd
 
 import (
+	"fmt"
 	"memory/app"
+	"memory/app/config"
 	"memory/cmd/display"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -93,7 +96,46 @@ func lsInteractive(sargs string) {
 	results := app.GetEntries(app.EntryTypes{Note: true}, flagLsStartsWith, flagLsContains, "", flagLsTags, sortOrder(), flagLsLimit)
 	pager := display.NewEntryPager(results)
 	pager.PrintPage()
+	rl.HistoryDisable()
+	rl.SetPrompt("> ")
+	for {
+		cmd, err := rl.Readline()
+		if err != nil {
+			fmt.Println("Error:", err)
+			break
+		} else if num, err := strconv.Atoi(cmd); err == nil {
+			ix := num - 1
+			if num < 0 || num > len(results.Entries)-1 {
+				fmt.Printf("Error: %d is not a valid result number.\n", num)
+			} else {
+				EntryDetails(pager, results, ix)
+				break
+			}
+		} else if strings.ToLower(cmd) == "n" {
+			if !pager.Next() {
+				fmt.Println("Error: Already on the last page.")
+			}
+		} else if strings.ToLower(cmd) == "p" {
+			if !pager.Prev() {
+				fmt.Println("Error: Already on the first page.")
+			}
+		} else if cmd == "" || strings.ToLower(cmd) == "q" || strings.ToLower(cmd) == "quit" {
+			break
+		} else {
+			fmt.Println("Error: Unrecognized command:", cmd)
+		}
+		pager.PrintPage()
+	}
 	resetLsFlags()
+	rl.HistoryEnable()
+	rl.SetPrompt(config.Prompt)
+}
+
+// EntryDetails displays an entry result in full and provides an entry-specific
+// menu of options.
+// TODO: Left Off - move this to its own command file and implement
+func EntryDetails(pager display.EntryPager, results app.EntryResults, ix int) {
+	fmt.Println("Details for", results.Entries[ix].Name())
 }
 
 // parseTypes populates an EntryType struct based on the --types flag
