@@ -31,6 +31,9 @@ var MaxNameLen = 50
 // Prompt is used in readline mode
 var Prompt = "\033[1;32mmemory\033[0m> "
 
+// SubPrompt is used within an interactive command loop
+var SubPrompt = ": "
+
 // TruncateAt is the length that values are truncated to with an ... during display
 var TruncateAt = 300
 

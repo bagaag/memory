@@ -14,7 +14,7 @@ import (
 )
 
 func clearData() {
-	data.Notes = []model.Note{}
+	data.Names = make(map[string]model.Entry)
 }
 
 func generateData() {
@@ -32,7 +32,16 @@ func generateData() {
 		name := fmt.Sprintf("note #%d", i)
 		desc := fmt.Sprintf("note desc #%d", i)
 		note := model.NewNote(name, desc, tags)
-		data.Notes = append(data.Notes, note)
+		data.Names[note.Name()] = note
+	}
+}
+
+func setupCrud() {
+	clearData()
+	for i := 0; i < 10; i++ {
+		num := i + 1
+		note := model.NewNote(fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
+		data.Names[note.Name()] = note
 	}
 }
 
@@ -50,8 +59,8 @@ func TestGetEntries(t *testing.T) {
 	}
 	// no types selected
 	results = GetEntries(EntryTypes{}, "", "", "", []string{}, 0, 0)
-	if len(results.Entries) != 0 {
-		t.Errorf("Expected 0 entries, got %d", len(results.Entries))
+	if len(results.Entries) != 50 {
+		t.Errorf("Expected 50 entries, got %d", len(results.Entries))
 		return
 	}
 	// filter by 1 tag and sort by name
@@ -78,18 +87,74 @@ func TestGetEntries(t *testing.T) {
 
 func TestGetEntry(t *testing.T) {
 	generateData()
-	entry, err := GetEntry("noTe", "note #42")
-	if err != nil {
-		t.Error("Unexpected error getting entry:", err)
+	entry, exists := GetEntry("note #42")
+	if !exists {
+		t.Error("Unexpected entry not found")
 	}
 	if entry.Name() != "note #42" {
 		t.Error("Expected 'note #42', got", entry.Name())
 	}
-	entry, err = GetEntry("invalid", "invalid")
-	if entry != nil {
+	entry, exists = GetEntry("invalid")
+	if exists {
 		t.Error("Expected nil entry, got", entry.Name())
 	}
-	if err == nil {
-		t.Error("Expected error, got nil")
+}
+
+// GetNote retrieves and returns the specified note from the collection.
+func TestGetNote(t *testing.T) {
+	setupCrud()
+	var entry model.Entry
+	var note model.Note
+	var exists bool
+	entry, exists = GetEntry("note #3")
+	note = entry.(model.Note)
+	if !exists {
+		t.Error("Unexpected not exists")
+	} else if note.Name() != "note #3" || note.Description() != "desc #3" {
+		t.Error("Did not get expected note name (test #3) or description (desc #3):", note.Name(), ",", note.Description())
+	}
+	_, exists = GetEntry("not found")
+	if exists {
+		t.Error("Expected exists for invalid note name")
+	}
+}
+
+// PutNote adds or replaces the given note in the collection.
+func TestPutNote(t *testing.T) {
+	setupCrud()
+	newNote := model.NewNote("new note", "", []string{})
+	PutEntry(newNote)
+	if len(data.Names) != 11 {
+		t.Errorf("Expected 11 notes (1st pass), found %d", len(data.Names))
+	}
+	existingNote := model.NewNote("note #3", "different desc", []string{})
+	PutEntry(existingNote)
+	if len(data.Names) != 11 {
+		t.Errorf("Expected 11 notes (2nd pass), found %d", len(data.Names))
+	}
+	gotNote, exists := GetEntry("note #3")
+	if !exists {
+		t.Error("updated note does not exist")
+	} else if gotNote.Description() != "different desc" {
+		t.Error("Expected 'different desc', got", gotNote.Description())
+	}
+}
+
+// DeleteNote removes the specified note from the collection.
+func TestDeleteNote(t *testing.T) {
+	setupCrud()
+	existed := DeleteEntry("note #3")
+	if !existed {
+		t.Error("Note did not exist")
+	}
+	if len(data.Names) != 9 {
+		t.Errorf("Expected 9 notes, got %d", len(data.Names))
+	}
+	gotNote, exists := GetEntry("note #3")
+	if exists {
+		t.Error("Deleted note exists")
+	}
+	if gotNote != nil {
+		t.Error("Expected nil, got", gotNote.Name())
 	}
 }

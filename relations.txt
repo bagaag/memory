@@ -1,0 +1,40 @@
+---------------+-----------------------------------------------------------------------------------------------------------------------------------
+  Name         | Rockport                                                                                                                          
+  Description  | A seaside town on [L: Cape Ann], North Shore of [Place: Massachusetts]. We go there every year for 4th of July and other      
+               | random times throughout the year, especially in summer. Audrey also used to go there as a kid with her family.
+---------------+-----------------------------------------------------------------------------------------------------------------------------------
+[E: event]
+[N: person]
+[L: place]
+[T: thing]
+[O: note]
+
+Relations can be created via links in the Description as shown above using full type name or shorthand.
+
+Dedicated command for listing unfulfilled relations.
+
+Relations are created based on the reference. Parent/child relations can be
+established based on which is referenced (parent) and which is doing the
+referencing (child). In the example above, Rockport is a child of Massachuetts
+and Cape Ann.
+
+Browse relations from detail view:
+
+Relations for [Place] Rockport
+
+  Referenced by Rockport:
+    1. [Place] Massachusetts
+    2. [Place] Cap Ann
+    3. [Place] Captain's Bounty
+    4. [Place] Front Beach
+    5. [Place] Rockport General Store
+
+  Referencing Rockport:
+    6. [Note] Towns in MA
+    7. [Thing] Rockport Firemans Parade and Bonfire
+    8. [Person] Kathy Hargan
+
+Options: # for details, [b]ack, [Q]uit
+: 
+
+

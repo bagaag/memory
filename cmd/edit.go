@@ -7,7 +7,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 
 /*
 This file contains variables and functions used by the
-`add-note` command in both command line and interactive modes.
+`edit-note` command in both command line and interactive modes.
 */
 
 package cmd
@@ -22,29 +22,30 @@ import (
 )
 
 // flag values
-var flagAddNoteName string
-var flagAddNoteDescription string
-var flagAddNoteTags []string
+var flagEditName string
+var flagEditDescription string
+var flagEditTags []string
 
 // resetFlags returns all flag values to their defaults after being set via
-// an interactive command (see addNoteInteractive).
-func resetAddNoteFlags() {
-	flagAddNoteName = ""
-	flagAddNoteDescription = ""
-	flagAddNoteTags = []string{}
+// an interactive command (see editNoteInteractive).
+func resetEditFlags() {
+	flagEditName = ""
+	flagEditDescription = ""
+	flagEditTags = []string{}
 }
 
-// addNoteCmd adds a new Note
-var addNoteCmd = &cobra.Command{
-	Use:   "add-note",
-	Short: "Adds a new Note",
-	Long:  `Adds a new Note. Notes store unstructured information for later use.`,
+// editNoteCmd adds a new Note
+var editCmd = &cobra.Command{
+	Use:   "edit",
+	Short: "Edits an entry",
+	Long:  `Edits an existing entry.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if flagAddNoteName == "" || len(flagAddNoteName) > config.MaxNameLen {
-			fmt.Println("Cannot add note: Name is required and must not exceed 50 characters.")
+		if len(flagEditName) > config.MaxNameLen {
+			fmt.Println("Name cannot exceed 50 characters.")
 			return
 		}
-		note := model.NewNote(flagAddNoteName, flagAddNoteDescription, flagAddNoteTags)
+
+		note := model.NewNote(flagEditName, flagEditDescription, flagEditTags)
 		app.PutEntry(note)
 		save()
 		fmt.Printf("Added note: %s.\n", note.Name())
@@ -53,18 +54,21 @@ var addNoteCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(addNoteCmd)
+	rootCmd.AddCommand(editCmd)
 
-	addNoteCmd.Flags().StringVarP(&flagAddNoteName, "name", "n", "",
+	editCmd.Flags().StringVarP(&flagEditName, "name", "n", "",
 		"Enter a unique name of no more than 50 characters")
-	addNoteCmd.Flags().StringVarP(&flagAddNoteDescription, "description", "d", "",
+	editCmd.Flags().StringVar(&flagEditName, "new-name", "",
+		"Enter a unique name of no more than 50 characters")
+	editCmd.Flags().StringVarP(&flagEditDescription, "description", "d", "",
 		"Enter a description or omit to launch text editor")
-	addNoteCmd.Flags().StringSliceVarP(&flagAddNoteTags, "tags", "t", []string{},
+	editCmd.Flags().StringSliceVarP(&flagEditTags, "tags", "t", []string{},
 		"Enter comma-separated tags")
+	editCmd.MarkFlagRequired("name")
 }
 
 // addInteractive takes the user through the sequence of prompts to add an item
-func addNoteInteractive(sargs string) {
+func editNoteInteractive(sargs string) {
 	switch sargs {
 	case "note":
 		name := subPrompt("Enter a name: ", validateNoteName)
@@ -80,5 +84,5 @@ func addNoteInteractive(sargs string) {
 	default:
 		fmt.Printf("%s is not a valid entry type.\n", sargs)
 	}
-	resetAddNoteFlags()
+	resetEditFlags()
 }

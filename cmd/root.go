@@ -41,6 +41,7 @@ var completer = readline.NewPrefixCompleter(
 	readline.PcItem("add-person"),
 	readline.PcItem("add-place"),
 	readline.PcItem("add-thing"),
+	readline.PcItem("detail"),
 	readline.PcItem("ls",
 		readline.PcItem("--types"),
 		readline.PcItem("--contains"),
@@ -101,20 +102,20 @@ in interesting ways.`,
 			switch {
 			case line == "exit" || line == "quit":
 				os.Exit(0)
-			case strings.HasPrefix(line, "add "):
-				switch strings.TrimSpace(line[4:]) {
-				case "note":
-					addNoteInteractive(line[4:]) // in add_note.go
-				}
+			case strings.HasPrefix(line, "add-note"):
+				addNoteInteractive(line[4:]) // in add_note.go
 			case line == "ls" || strings.HasPrefix(line, "ls "):
 				args := ""
 				if len(line) > 3 {
 					args = line[3:]
 				}
 				lsInteractive(args) // in ls.go
+			case strings.HasPrefix(line, "detail "):
+				line = strings.TrimSpace(line[7:])
+				detailInteractive(line)
 			default:
 				//TODO: Implement help command in interactive mode
-				fmt.Println("Sorry, I don't understand. Try 'help'.")
+				fmt.Printf("Sorry, I don't understand '%s'. Try 'help'.\n", line)
 			}
 		}
 	},

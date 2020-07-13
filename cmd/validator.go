@@ -38,7 +38,7 @@ func validateNoteName(name string) string {
 	if msg := validateName(name); msg != "" {
 		return msg
 	}
-	if _, err := app.GetNote(name); err != nil {
+	if _, exists := app.GetEntry(name); exists {
 		return "A unique name is required. This name is already in use."
 	}
 	return ""

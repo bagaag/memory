@@ -97,7 +97,7 @@ func lsInteractive(sargs string) {
 	pager := display.NewEntryPager(results)
 	pager.PrintPage()
 	rl.HistoryDisable()
-	rl.SetPrompt("> ")
+	rl.SetPrompt(config.SubPrompt)
 	for {
 		cmd, err := rl.Readline()
 		if err != nil {
@@ -108,7 +108,7 @@ func lsInteractive(sargs string) {
 			if num < 0 || num > len(results.Entries)-1 {
 				fmt.Printf("Error: %d is not a valid result number.\n", num)
 			} else {
-				EntryDetails(pager, results, ix)
+				detailInteractiveLoop(results.Entries[ix])
 				break
 			}
 		} else if strings.ToLower(cmd) == "n" {
@@ -129,13 +129,6 @@ func lsInteractive(sargs string) {
 	resetLsFlags()
 	rl.HistoryEnable()
 	rl.SetPrompt(config.Prompt)
-}
-
-// EntryDetails displays an entry result in full and provides an entry-specific
-// menu of options.
-// TODO: Left Off - move this to its own command file and implement
-func EntryDetails(pager display.EntryPager, results app.EntryResults, ix int) {
-	fmt.Println("Details for", results.Entries[ix].Name())
 }
 
 // parseTypes populates an EntryType struct based on the --types flag

@@ -290,6 +290,7 @@ func EntryTables(entries []model.Entry) {
 			data := [][]string{}
 			// add note name row
 			note := entry.(model.Note)
+			data = append(data, []string{"Type", "Note"})
 			data = append(data, []string{"Name", note.Name()})
 			// description row
 			desc := note.Description()
@@ -300,6 +301,7 @@ func EntryTables(entries []model.Entry) {
 			if len(note.Tags()) > 0 {
 				data = append(data, []string{"Tags", strings.Join(note.Tags(), ", ")})
 			}
+			//TODO: add created and modified dates
 			// create and configure table
 			table := tablewriter.NewWriter(os.Stdout)
 			// add border to top unless this is the first
@@ -320,4 +322,10 @@ func EntryTables(entries []model.Entry) {
 		}
 	}
 	fmt.Println("") // finish with blank line
+}
+
+// EntryTable displays a single entry with full detail
+func EntryTable(entry model.Entry) {
+	entries := []model.Entry{entry}
+	EntryTables(entries)
 }
