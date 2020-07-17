@@ -9,7 +9,11 @@ package app
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
+	"memory/app/config"
 	"memory/app/model"
+	"os"
 	"testing"
 )
 
@@ -156,5 +160,65 @@ func TestDeleteNote(t *testing.T) {
 	}
 	if gotNote != nil {
 		t.Error("Expected nil, got", gotNote.Name())
+	}
+}
+
+func TestSave(t *testing.T) {
+	setupCrud()
+	file, err := ioutil.TempFile(".", "prefix")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	config.MemoryHome = "."
+	config.DataFile = file.Name()
+	Save()
+	data.Names = make(map[string]model.Entry)
+	Init()
+	if len(data.Names) != 10 {
+		t.Error("Expected 10 entries, got", len(data.Names))
+	}
+}
+
+func TestRename(t *testing.T) {
+	setupCrud()
+	newName := "renamed note #3"
+	err := RenameEntry("note #3", newName)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	entry, exists := GetEntry(newName)
+	if !exists {
+		t.Error("Renamed note doesn't exist")
+		return
+	} else if entry.Name() != newName {
+		t.Errorf("Expected '%s', got '%s", newName, entry.Name())
+		return
+	}
+	if len(data.Names) != 10 {
+		t.Error("Expected 10 entries, got", len(data.Names))
+	}
+}
+
+func TestEdit(t *testing.T) {
+	setupCrud()
+	entry, exists := GetEntry("note #3")
+	if !exists {
+		t.Error("note #3 doesn't exist, but should")
+	}
+	switch typedEntry := entry.(type) {
+	case model.Note:
+		typedEntry.SetDescription("different")
+		PutEntry(typedEntry)
+	default:
+		t.Error("Unexpected entry type")
+	}
+	entry2, exists := GetEntry("note #3")
+	if !exists {
+		t.Error("note #3 doesn't exist (2nd), but should")
+	}
+	if entry2.Description() != "different" {
+		t.Errorf("Expected '%s', got '%s'", "different", entry2.Description())
 	}
 }

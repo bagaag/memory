@@ -319,6 +319,8 @@ func EntryTables(entries []model.Entry) {
 			// add data and render
 			table.AppendBulk(data)
 			table.Render()
+		default:
+			fmt.Printf("Error: unexpected type %T\n", reflect.TypeOf(entry))
 		}
 	}
 	fmt.Println("") // finish with blank line

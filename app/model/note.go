@@ -49,6 +49,11 @@ func (note Note) Name() string {
 	return note.name
 }
 
+// SetName setter
+func (note *Note) SetName(name string) {
+	note.name = name
+}
+
 // Description getter
 func (note Note) Description() string {
 	return note.description

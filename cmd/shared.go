@@ -14,7 +14,6 @@ package cmd
 
 import (
 	"fmt"
-	"memory/app"
 	"memory/app/config"
 	"memory/app/persist"
 	"os"
@@ -32,13 +31,6 @@ func processTags(tags string) []string {
 		arr[i] = strings.ToLower(strings.TrimSpace(tag))
 	}
 	return arr
-}
-
-// Shared function for use by commands to save data to config.SavePath.
-func save() {
-	if err := app.Save(); err != nil {
-		fmt.Println("Failed to save data:", err)
-	}
 }
 
 // subPrompt asks for additional info within a command.

@@ -17,6 +17,7 @@ import (
 	"memory/app"
 	"memory/app/config"
 	"memory/app/model"
+	"memory/cmd/display"
 
 	"github.com/spf13/cobra"
 )
@@ -46,9 +47,12 @@ var addNoteCmd = &cobra.Command{
 		}
 		note := model.NewNote(flagAddNoteName, flagAddNoteDescription, flagAddNoteTags)
 		app.PutEntry(note)
-		save()
+		if err := app.Save(); err != nil {
+			fmt.Println("Failed to save data:", err)
+			return
+		}
 		fmt.Printf("Added note: %s.\n", note.Name())
-		//TODO: Display new note
+		display.EntryTable(note)
 	},
 }
 

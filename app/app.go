@@ -10,9 +10,12 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package app
 
 import (
+	"errors"
+	"fmt"
 	"memory/app/config"
 	"memory/app/model"
 	"memory/app/persist"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -27,7 +30,7 @@ type root struct {
 // saveData is just the data we need to save to file - eliminating any
 // calculated data in the root struct.
 type saveData struct {
-	Names   map[string]model.Entry
+	Notes   []model.Note
 	Version int // for migrations
 }
 
@@ -112,35 +115,13 @@ const SortRecent = SortOrder(0)
 const SortName = SortOrder(1)
 
 // The data variable stores all the things that get saved.
-var data = root{}
-
-// Init reads data stored on the file system
-// and initializes application variable.
-func Init() error {
-	if persist.PathExists(config.SavePath()) {
-		fromsave := saveData{}
-		fromsave.Names = make(map[string]model.Entry)
-		if err := persist.Load(config.SavePath(), &fromsave); err != nil {
-			return err
-		}
-		//TODO: handle version difference w/ migration
-		data.Names = fromsave.Names
-	}
-	return nil
+var data = root{
+	Names: make(map[string]model.Entry),
 }
 
-// filterType returns true if the entry is one of the true EntryTypes
-func filterType(entry model.Entry, types EntryTypes) bool {
-	if types.HasAll() {
-		return true
-	}
-	switch entry.(type) {
-	case model.Note:
-		return types.Note
-	// TODO: add Event, Person, Place, Thing models as they're created here
-	default:
-		return false
-	}
+// EntryCount returns the total number of entries under management.
+func EntryCount() int {
+	return len(data.Names)
 }
 
 // GetEntries returns an array of entries of the specified type(s) with
@@ -171,10 +152,10 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 		if contains != "" && !strings.Contains(lowerName, contains) {
 			continue
 		}
-		//TODO: implement search
 		if len(tags) > 0 && !tagMatches(entry, tags) {
 			continue
 		}
+		//TODO: implement search
 		// if we made it this far, add to return slice
 		entries = append(entries, entry)
 	}
@@ -204,21 +185,91 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	}
 }
 
-// EntryCount returns the total number of entries under management.
-func EntryCount() int {
-	return len(data.Names)
-}
-
 // GetEntry returns a single entry or throws an error.
 func GetEntry(entryName string) (model.Entry, bool) {
 	entry, exists := data.Names[entryName]
 	return entry, exists
 }
 
+// Init reads data stored on the file system
+// and initializes application variable.
+func Init() error {
+	if persist.PathExists(config.SavePath()) {
+		// read saved file into saveData struct
+		fromSave := saveData{}
+		if err := persist.Load(config.SavePath(), &fromSave); err != nil {
+			return err
+		}
+		//TODO: handle version difference w/ migration
+		// setup runtime data structure from saved data
+		for _, note := range fromSave.Notes {
+			data.Names[note.Name()] = note
+		}
+	}
+	return nil
+}
+
+// RenameEntry changes an entry name and updates associated data structures.
+func RenameEntry(name string, newName string) error {
+	_, exists := GetEntry(newName)
+	if exists {
+		return fmt.Errorf("an entry named %s already exists", newName)
+	}
+	entry, exists := GetEntry(name)
+	if !exists {
+		return fmt.Errorf("an entry named %s does not exist", name)
+	}
+	DeleteEntry(entry.Name())
+	switch castEntry := entry.(type) {
+	case model.Note:
+		castEntry.SetName(newName)
+		PutEntry(castEntry)
+	default:
+		return errors.New("unsupported entry type during rename")
+	}
+	return nil
+}
+
 // Save writes application data to file storage.
 func Save() error {
-	tosave := saveData{Names: data.Names, Version: dataVersion}
-	return persist.Save(config.SavePath(), tosave)
+	toSave := saveData{Version: dataVersion}
+	toSave.Notes = []model.Note{}
+	for _, entry := range data.Names {
+		switch entry.(type) {
+		// case *model.Note:
+		// 	toSave.Notes = append(toSave.Notes, entry.(model.Note))
+		case model.Note:
+			toSave.Notes = append(toSave.Notes, entry.(model.Note))
+		default:
+			return fmt.Errorf("unexpected type: %s", reflect.TypeOf(entry))
+		}
+	}
+	return persist.Save(config.SavePath(), toSave)
+}
+
+// ValidateEntryName returns an error if the given name is invalid.
+func ValidateEntryName(name string) error {
+	if len(name) == 0 {
+		return errors.New("name cannot be an empty string")
+	}
+	if len(name) > config.MaxNameLen {
+		return fmt.Errorf("name length cannot exceed %d", config.MaxNameLen)
+	}
+	return nil
+}
+
+// filterType returns true if the entry is one of the true EntryTypes
+func filterType(entry model.Entry, types EntryTypes) bool {
+	if types.HasAll() {
+		return true
+	}
+	switch entry.(type) {
+	case model.Note:
+		return types.Note
+	// TODO: add Event, Person, Place, Thing models as they're created here
+	default:
+		return false
+	}
 }
 
 // tagMatches returns true if any of the tags in searchTags match the tags
