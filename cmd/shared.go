@@ -18,6 +18,7 @@ import (
 	"memory/app/persist"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -34,11 +35,11 @@ func processTags(tags string) []string {
 }
 
 // subPrompt asks for additional info within a command.
-func subPrompt(prompt string, validate validator) string {
+func subPrompt(prompt string, value string, validate validator) string {
 	rl.HistoryDisable()
 	rl.SetPrompt(prompt)
 	var err error
-	var input = ""
+	var input = value
 	for {
 		input, err = rl.ReadlineWithDefault(input)
 		if err != nil {
@@ -58,14 +59,14 @@ func subPrompt(prompt string, validate validator) string {
 // subPromptEditor provides an option to use a full editor for
 // a long-text value rather than readline.
 func subPromptEditor(fieldName string, value string, prompt string, validate validator) string {
-	useEditor := subPrompt(fieldName+" may hold paragraphs of text. Would you like to use a full screen editor? [Y/n]: ", validateYesNo)
+	useEditor := subPrompt(fieldName+" may hold paragraphs of text. Would you like to use a full screen editor? [Y/n]: ", "", validateYesNo)
 	useEditor = strings.ToLower(strings.TrimSpace(useEditor))
 	if useEditor == "y" || useEditor == "" {
 		var tmp string
 		var err error
 		if tmp, err = persist.CreateTempFile(value); err != nil {
 			fmt.Println("Failed to create temporary file:", err)
-			return subPrompt(prompt, validate)
+			return subPrompt(prompt, value, validate)
 		}
 		cmd := exec.Command(config.EditorCommand, tmp)
 		cmd.Stdin = os.Stdin
@@ -87,5 +88,32 @@ func subPromptEditor(fieldName string, value string, prompt string, validate val
 		return edited
 	}
 	// user elected not to use editor; use std readline prompt
-	return subPrompt(prompt, validate)
+	return subPrompt(prompt, value, validate)
+}
+
+// listPrompt presents a numbered list of options and prompts the user to choose one.
+// TODO: Handle interrupts for all prompt functions
+func listPrompt(prompt string, list []string) int {
+	rl.HistoryDisable()
+	fmt.Println(prompt)
+	for i, v := range list {
+		fmt.Printf("%3d. %s\n", i+1, v)
+	}
+	rl.SetPrompt("[1]" + config.SubPrompt)
+	selection := 1
+	for {
+		input, err := rl.Readline()
+		if err != nil {
+			break
+		}
+		if i, err := strconv.Atoi(input); err != nil || i <= 0 || i > len(list) {
+			fmt.Println("Enter a number from 1 to", len(list))
+		} else {
+			selection = i - 1
+			break
+		}
+	}
+	rl.HistoryEnable()
+	rl.SetPrompt(config.Prompt)
+	return selection
 }

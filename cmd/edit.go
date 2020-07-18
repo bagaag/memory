@@ -16,79 +16,66 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/model"
-	"memory/app/util"
 	"memory/cmd/display"
 	"reflect"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 // flag values
 var flagEditName string
-var flagEditNewName string
-var flagEditDescription string
-var flagEditTags []string
-
-// resetFlags returns all flag values to their defaults after being set via
-// an interactive command (see editNoteInteractive).
-func resetEditFlags() {
-	flagEditName = ""
-	flagEditDescription = ""
-	flagEditTags = []string{}
-}
+var flagEditField string
+var flagEditValue string
 
 // editNoteCmd adds a new Note
 var editCmd = &cobra.Command{
 	Use:   "edit",
-	Short: "Edits an entry",
-	Long:  `Edits an existing entry.`,
+	Short: "Updates an entry field",
+	Long:  `Replaces the value of a named field on an existing entry.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		save := false
+		flagEditField = strings.ToLower(flagEditField)
 		// get the entry we're editing
 		entry, exists := app.GetEntry(flagEditName)
 		if !exists {
 			fmt.Println("Error: Cannot find an entry named", flagEditName)
 			return
 		}
-		// rename if a new-name flag was provided
-		if cmd.Flag("new-name").Changed {
-			if err := app.RenameEntry(entry.Name(), flagEditNewName); err != nil {
-				fmt.Println(util.FormatErrorForDisplay(err))
-				return
-			}
-			// get renamed entry
-			entry, exists = app.GetEntry(flagEditNewName)
-			if !exists {
-				fmt.Println("Error: Cannot find renamed entry ", flagEditName)
-				return
-			}
-			save = true
+		// check for 'name' field
+		if flagEditField == "name" {
+			fmt.Println("Use the rename command to rename an entry.")
+			return
 		}
-		switch obj := (entry).(type) {
+		// track if we've found a home for the named field across types
+		fieldMatched := false
+		// cast entry to editable type and update field
+		switch typedEntry := entry.(type) {
 		case model.Note:
-			changed := false
-			if cmd.Flag("description").Changed {
-				obj.SetDescription(flagEditDescription)
-				changed = true
+			switch flagEditField {
+			case "description":
+				typedEntry.SetDescription(flagEditValue)
+				fieldMatched = true
+			case "tags":
+				typedEntry.SetTags(processTags(flagEditValue))
+				fieldMatched = true
 			}
-			if cmd.Flag("tags").Changed {
-				obj.SetTags(flagEditTags)
-				changed = true
-			}
-			if changed {
-				app.PutEntry(obj)
-				save = true
-			}
+			app.PutEntry(typedEntry)
+			entry = typedEntry
 		default:
-			fmt.Printf("Error: Unhandled entry type: %s\n", reflect.TypeOf(entry))
+			fmt.Println("Error: unexpected entry type:", reflect.TypeOf(entry))
+			return
 		}
-		if save {
-			if err := app.Save(); err != nil {
-				fmt.Println("Failed to save data:", err)
-				return
-			}
+		// error if still no field match
+		if !fieldMatched {
+			fmt.Printf("Error: '%s' is not a valid field name for '%s'.", flagEditField, entry.Name())
+			return
 		}
-		fmt.Printf("Updated note: %s.\n", entry.Name())
+		// save data
+		if err := app.Save(); err != nil {
+			fmt.Println("Failed to save data:", err)
+			return
+		}
+		fmt.Printf("Updated entry: %s.\n", entry.Name())
 		display.EntryTable(entry)
 	},
 }
@@ -97,32 +84,60 @@ func init() {
 	rootCmd.AddCommand(editCmd)
 
 	editCmd.Flags().StringVarP(&flagEditName, "name", "n", "",
-		"Enter a unique name of no more than 50 characters")
-	editCmd.Flags().StringVar(&flagEditNewName, "new-name", "",
-		"Enter a unique name of no more than 50 characters")
-	editCmd.Flags().StringVarP(&flagEditDescription, "description", "d", "",
-		"Enter a description or omit to launch text editor")
-	editCmd.Flags().StringSliceVarP(&flagEditTags, "tags", "t", []string{},
-		"Enter comma-separated tags")
+		"A unique name of no more than 50 characters")
+	editCmd.Flags().StringVar(&flagEditField, "field", "",
+		"The field name to edit")
+	editCmd.Flags().StringVar(&flagEditValue, "value", "",
+		"The new value for the field")
 	editCmd.MarkFlagRequired("name")
+	editCmd.MarkFlagRequired("field")
+	editCmd.MarkFlagRequired("value")
 }
 
-// addInteractive takes the user through the sequence of prompts to add an item
-func editNoteInteractive(sargs string) {
-	switch sargs {
-	case "note":
-		name := subPrompt("Enter a name: ", validateNoteName)
-		desc := subPromptEditor("Description", "", "Enter a description: ", emptyValidator)
-		tags := subPrompt("Enter one or more tags separated by commas: ", emptyValidator)
-		tagSlice := processTags(tags)
-		if name != "" {
-			note := model.NewNote(name, desc, tagSlice)
-			app.PutEntry(note)
-			app.Save()
-			fmt.Println("Note added.")
-		}
-	default:
-		fmt.Printf("%s is not a valid entry type.\n", sargs)
+// editInteractive takes the user through the sequence of prompts to edit an item field or fields
+func editInteractive(name string) {
+	// get entry and validate name
+	entry, exists := app.GetEntry(name)
+	if !exists {
+		fmt.Println("There is no entry named", name)
+		return
 	}
-	resetEditFlags()
+
+	// get list of editable fields based on type
+	editableFields := []string{"Edit all fields interactively", "Description", "Tags"}
+	switch entry.(type) {
+	case model.Note:
+		// add entry specific field here
+	default:
+		fmt.Printf("Error: unexpected entry type '%T'.", reflect.TypeOf(entry))
+		return
+	}
+
+	// prompt user for which field(s) to edit
+	fieldSelection := listPrompt("Select a field to edit:", editableFields)
+
+	// update the selected field(s)
+	switch typedEntry := entry.(type) {
+	case model.Note:
+		if fieldSelection == 0 || editableFields[fieldSelection] == "Description" {
+			typedEntry.SetDescription(subPromptEditor("Description", typedEntry.Description(), "Enter a description: ", emptyValidator))
+
+		} else if fieldSelection == 0 || editableFields[fieldSelection] == "Tags" {
+			sTags := subPrompt("Enter one or more tags separated by commas: ", strings.Join(typedEntry.Tags(), ","), emptyValidator)
+			tags := processTags(sTags)
+			typedEntry.SetTags(tags)
+		}
+		// update entry in collection
+		app.PutEntry(typedEntry)
+		entry = typedEntry
+	default:
+		fmt.Printf("Error: unexpected entry type: %T\n", reflect.TypeOf(entry))
+	}
+	// save data
+	if err := app.Save(); err != nil {
+		fmt.Println("Failed to save data:", err)
+		return
+	}
+	fmt.Println("Entry updated.")
+	display.EntryTable(entry)
 }

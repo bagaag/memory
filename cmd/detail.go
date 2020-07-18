@@ -91,6 +91,9 @@ func detailInteractiveLoop(entry model.Entry) {
 		if err != nil {
 			fmt.Println("Error:", err)
 			break
+		} else if strings.ToLower(cmd) == "e" || strings.ToLower(cmd) == "edit" {
+			editInteractive(entry.Name())
+			break
 		} else if cmd == "" || strings.ToLower(cmd) == "q" || strings.ToLower(cmd) == "quit" {
 			break
 		} else {
