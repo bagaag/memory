@@ -36,17 +36,23 @@ var settingsFile = "settings.yml"
 
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
-	readline.PcItem("add-note"),
-	readline.PcItem("add-event"),
-	readline.PcItem("add-person"),
-	readline.PcItem("add-place"),
-	readline.PcItem("add-thing"),
+	readline.PcItem("add",
+		readline.PcItem("event"),
+		readline.PcItem("note"),
+		readline.PcItem("person"),
+		readline.PcItem("place"),
+		readline.PcItem("thing"),
+	),
 	readline.PcItem("detail"),
 	readline.PcItem("ls",
 		readline.PcItem("--types"),
+		readline.PcItem("--tags"),
 		readline.PcItem("--contains"),
 		readline.PcItem("--start-with"),
 	),
+	readline.PcItem("delete"),
+	readline.PcItem("rename"),
+	readline.PcItem("edit"),
 )
 
 // filterInput allows certain keys to be intercepted during readline
@@ -124,6 +130,13 @@ in interesting ways.`,
 				}
 				line = strings.TrimSpace(line[7:])
 				deleteEntryInteractive(line)
+			case strings.HasPrefix(line, "edit ") || line == "edit":
+				if line == "edit" {
+					fmt.Println("Usage: edit [name]")
+					continue
+				}
+				line = strings.TrimSpace(line[5:])
+				editInteractive(line)
 			default:
 				//TODO: Implement help command in interactive mode
 				fmt.Printf("Sorry, I don't understand '%s'. Try 'help'.\n", line)
