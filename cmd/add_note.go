@@ -17,6 +17,7 @@ import (
 	"memory/app"
 	"memory/app/config"
 	"memory/app/model"
+	"memory/app/util"
 	"memory/cmd/display"
 
 	"github.com/spf13/cobra"
@@ -71,9 +72,21 @@ func init() {
 func addNoteInteractive(sargs string) {
 	switch sargs {
 	case "note":
-		name := subPrompt("Enter a name: ", "", validateNoteName)
-		desc := subPromptEditor("Description", "", "Enter a description: ", emptyValidator)
-		tags := subPrompt("Enter one or more tags separated by commas: ", "", emptyValidator)
+		name, err := subPrompt("Enter a name: ", "", validateNoteName)
+		if err != nil {
+			fmt.Println(util.FormatErrorForDisplay(err))
+			return
+		}
+		desc, err := subPromptEditor("Description", "", "Enter a description: ", emptyValidator)
+		if err != nil {
+			fmt.Println(util.FormatErrorForDisplay(err))
+			return
+		}
+		tags, err := subPrompt("Enter one or more tags separated by commas: ", "", emptyValidator)
+		if err != nil {
+			fmt.Println(util.FormatErrorForDisplay(err))
+			return
+		}
 		tagSlice := processTags(tags)
 		if name != "" {
 			note := model.NewNote(name, desc, tagSlice)

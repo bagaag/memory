@@ -70,8 +70,13 @@ func renameEntryInteractive(name string) {
 		return
 	}
 	// rename if a new-name flag was provided
-	flagRenameTo = subPrompt("Enter a new name:", name, validateName)
-	if err := app.RenameEntry(entry.Name(), flagRenameTo); err != nil {
+	var err error
+	flagRenameTo, err = subPrompt("Enter a new name:", name, validateName)
+	if err != nil {
+		fmt.Println(util.FormatErrorForDisplay(err))
+		return
+	}
+	if err = app.RenameEntry(entry.Name(), flagRenameTo); err != nil {
 		fmt.Println(util.FormatErrorForDisplay(err))
 		return
 	}

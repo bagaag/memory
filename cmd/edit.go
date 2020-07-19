@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/model"
+	"memory/app/util"
 	"memory/cmd/display"
 	"reflect"
 	"strings"
@@ -114,16 +115,29 @@ func editInteractive(name string) {
 	}
 
 	// prompt user for which field(s) to edit
-	fieldSelection := listPrompt("Select a field to edit:", editableFields)
+	fieldSelection, err := listPrompt("Select a field to edit:", editableFields)
+	if err != nil {
+		fmt.Println(util.FormatErrorForDisplay(err))
+		return
+	}
 
 	// update the selected field(s)
 	switch typedEntry := entry.(type) {
 	case model.Note:
 		if fieldSelection == 0 || editableFields[fieldSelection] == "Description" {
-			typedEntry.SetDescription(subPromptEditor("Description", typedEntry.Description(), "Enter a description: ", emptyValidator))
+			desc, err := subPromptEditor("Description", typedEntry.Description(), "Enter a description: ", emptyValidator)
+			if err != nil {
+				fmt.Println(util.FormatErrorForDisplay(err))
+				return
+			}
+			typedEntry.SetDescription(desc)
 
 		} else if fieldSelection == 0 || editableFields[fieldSelection] == "Tags" {
-			sTags := subPrompt("Enter one or more tags separated by commas: ", strings.Join(typedEntry.Tags(), ","), emptyValidator)
+			sTags, err := subPrompt("Enter one or more tags separated by commas: ", strings.Join(typedEntry.Tags(), ","), emptyValidator)
+			if err != nil {
+				fmt.Println(util.FormatErrorForDisplay(err))
+				return
+			}
 			tags := processTags(sTags)
 			typedEntry.SetTags(tags)
 		}
