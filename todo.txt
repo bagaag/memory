@@ -1,2 +1,2 @@
 - Make backup of data file before saving
-- Version json to support migrations
+- Replace json storage with Ponzu to allow cli and web to co-exist
