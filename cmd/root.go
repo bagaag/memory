@@ -110,9 +110,20 @@ in interesting ways.`,
 					args = line[3:]
 				}
 				lsInteractive(args) // in ls.go
-			case strings.HasPrefix(line, "detail "):
+			case strings.HasPrefix(line, "detail ") || line == "detail":
+				if line == "detail" {
+					fmt.Println("Usage: detail [name]")
+					continue
+				}
 				line = strings.TrimSpace(line[7:])
 				detailInteractive(line)
+			case strings.HasPrefix(line, "delete ") || line == "delete":
+				if line == "delete" {
+					fmt.Println("Usage: delete [name]")
+					continue
+				}
+				line = strings.TrimSpace(line[7:])
+				deleteEntryInteractive(line)
 			default:
 				//TODO: Implement help command in interactive mode
 				fmt.Printf("Sorry, I don't understand '%s'. Try 'help'.\n", line)
