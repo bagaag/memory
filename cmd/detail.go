@@ -75,7 +75,7 @@ func detailInteractive(sargs string) {
 // detailInteractiveLoop displays the given entry and prompts for actions
 // to take on that entry. Called from the ls interactive loop and from
 // detailInteractive.
-func detailInteractiveLoop(entry model.Entry) {
+func detailInteractiveLoop(entry model.IEntry) {
 	// setup subloop readline mode
 	rl.HistoryDisable()
 	rl.SetPrompt(config.SubPrompt)

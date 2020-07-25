@@ -15,13 +15,7 @@ import (
 // Note provides a temporary holding place where ideas that
 // require further development can be quickly captured.
 type Note struct {
-	name        string
-	description string
-	tags        []string
-	linksTo     []string
-	linkedFrom  []string
-	created     time.Time
-	modified    time.Time
+	Entry
 }
 
 // NoteJSON provides public fields for JSON marshalling.
@@ -29,6 +23,8 @@ type NoteJSON struct {
 	Name        string
 	Description string
 	Tags        []string
+	LinksTo     []string
+	LinkedFrom  []string
 	Created     time.Time
 	Modified    time.Time
 }
@@ -37,13 +33,15 @@ type NoteJSON struct {
 func NewNote(name string, description string, tags []string) Note {
 	now := time.Now()
 	note := Note{
-		name:        name,
-		description: description,
-		tags:        tags,
-		linksTo:     []string{},
-		linkedFrom:  []string{},
-		created:     now,
-		modified:    now,
+		Entry: Entry{
+			name:        name,
+			description: description,
+			tags:        tags,
+			linksTo:     []string{},
+			linkedFrom:  []string{},
+			created:     now,
+			modified:    now,
+		},
 	}
 	return note
 }

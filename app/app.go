@@ -24,7 +24,7 @@ const dataVersion = 1
 
 // root contains all the data to be saved
 type root struct {
-	Names map[string]model.Entry
+	Names map[string]model.IEntry
 }
 
 // saveData is just the data we need to save to file - eliminating any
@@ -46,7 +46,7 @@ type EntryTypes struct {
 // EntryResults is used to contain the results of GetEntries and the settings used
 // to generate those results.
 type EntryResults struct {
-	Entries    []model.Entry
+	Entries    []model.IEntry
 	Types      EntryTypes
 	StartsWith string
 	Contains   string
@@ -57,7 +57,7 @@ type EntryResults struct {
 }
 
 // PutEntry adds or replaces the given entry in the collection.
-func PutEntry(entry model.Entry) {
+func PutEntry(entry model.IEntry) {
 	data.Names[entry.Name()] = entry
 }
 
@@ -116,7 +116,7 @@ const SortName = SortOrder(1)
 
 // The data variable stores all the things that get saved.
 var data = root{
-	Names: make(map[string]model.Entry),
+	Names: make(map[string]model.IEntry),
 }
 
 // EntryCount returns the total number of entries under management.
@@ -130,7 +130,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	search string, tags []string, sort SortOrder, limit int) EntryResults {
 
 	// holds the results
-	entries := []model.Entry{}
+	entries := []model.IEntry{}
 
 	// convert filters to lower case
 	startsWith = strings.ToLower(startsWith)
@@ -186,7 +186,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 }
 
 // GetEntry returns a single entry or throws an error.
-func GetEntry(entryName string) (model.Entry, bool) {
+func GetEntry(entryName string) (model.IEntry, bool) {
 	entry, exists := data.Names[entryName]
 	return entry, exists
 }
@@ -203,7 +203,7 @@ func Init() error {
 		//TODO: handle version difference w/ migration
 		// setup runtime data structure from saved data
 		for _, note := range fromSave.Notes {
-			data.Names[note.Name()] = note
+			data.Names[note.Name()] = &note
 		}
 	}
 	return nil
@@ -221,7 +221,7 @@ func RenameEntry(name string, newName string) error {
 	}
 	DeleteEntry(entry.Name())
 	switch castEntry := entry.(type) {
-	case model.Note:
+	case *model.Note:
 		castEntry.SetName(newName)
 		PutEntry(castEntry)
 	default:
@@ -235,11 +235,11 @@ func Save() error {
 	toSave := saveData{Version: dataVersion}
 	toSave.Notes = []model.Note{}
 	for _, entry := range data.Names {
-		switch entry.(type) {
+		switch typedEntry := entry.(type) {
 		// case *model.Note:
 		// 	toSave.Notes = append(toSave.Notes, entry.(model.Note))
-		case model.Note:
-			toSave.Notes = append(toSave.Notes, entry.(model.Note))
+		case *model.Note:
+			toSave.Notes = append(toSave.Notes, *typedEntry)
 		default:
 			return fmt.Errorf("unexpected type: %s", reflect.TypeOf(entry))
 		}
@@ -280,12 +280,12 @@ func ValidateEntryName(name string) error {
 }
 
 // filterType returns true if the entry is one of the true EntryTypes
-func filterType(entry model.Entry, types EntryTypes) bool {
+func filterType(entry model.IEntry, types EntryTypes) bool {
 	if types.HasAll() {
 		return true
 	}
 	switch entry.(type) {
-	case model.Note:
+	case *model.Note:
 		return types.Note
 	// TODO: add Event, Person, Place, Thing models as they're created here
 	default:
@@ -295,7 +295,7 @@ func filterType(entry model.Entry, types EntryTypes) bool {
 
 // tagMatches returns true if any of the tags in searchTags match the tags
 // on the provided Entry.
-func tagMatches(entry model.Entry, searchTags []string) bool {
+func tagMatches(entry model.IEntry, searchTags []string) bool {
 	for _, searchTag := range searchTags {
 		for _, tag := range entry.Tags() {
 			if tag == searchTag {
@@ -306,7 +306,7 @@ func tagMatches(entry model.Entry, searchTags []string) bool {
 	return false
 }
 
-func sortEntries(arr []model.Entry, field string, ascending bool) {
+func sortEntries(arr []model.IEntry, field string, ascending bool) {
 	var less func(i, j int) bool
 	switch field {
 	case "Modified":

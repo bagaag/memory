@@ -47,13 +47,13 @@ var addNoteCmd = &cobra.Command{
 			return
 		}
 		note := model.NewNote(flagAddNoteName, flagAddNoteDescription, flagAddNoteTags)
-		app.PutEntry(note)
+		app.PutEntry(&note)
 		if err := app.Save(); err != nil {
 			fmt.Println("Failed to save data:", err)
 			return
 		}
 		fmt.Printf("Added note: %s.\n", note.Name())
-		display.EntryTable(note)
+		display.EntryTable(&note)
 	},
 }
 
@@ -90,7 +90,7 @@ func addNoteInteractive(sargs string) {
 		tagSlice := processTags(tags)
 		if name != "" {
 			note := model.NewNote(name, desc, tagSlice)
-			app.PutEntry(note)
+			app.PutEntry(&note)
 			app.Save()
 			fmt.Println("Note added.")
 		}

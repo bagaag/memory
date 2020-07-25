@@ -18,7 +18,7 @@ import (
 )
 
 func clearTestData() {
-	data.Names = make(map[string]model.Entry)
+	data.Names = make(map[string]model.IEntry)
 }
 
 func generateTestData() {
@@ -36,21 +36,21 @@ func generateTestData() {
 		name := fmt.Sprintf("note #%d", i)
 		desc := fmt.Sprintf("note desc #%d", i)
 		note := model.NewNote(name, desc, tags)
-		data.Names[note.Name()] = note
+		data.Names[note.Name()] = &note
 	}
 }
 
 func setupCrud() {
-	clearData()
+	clearTestData()
 	for i := 0; i < 10; i++ {
 		num := i + 1
 		note := model.NewNote(fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
-		data.Names[note.Name()] = note
+		data.Names[note.Name()] = &note
 	}
 }
 
 func TestGetEntries(t *testing.T) {
-	generateData()
+	generateTestData()
 	// defaults
 	results := GetEntries(EntryTypes{Note: true}, "", "", "", []string{}, 0, 0)
 	if len(results.Entries) != 50 {
@@ -90,7 +90,7 @@ func TestGetEntries(t *testing.T) {
 }
 
 func TestGetEntry(t *testing.T) {
-	generateData()
+	generateTestData()
 	entry, exists := GetEntry("note #42")
 	if !exists {
 		t.Error("Unexpected entry not found")
@@ -107,11 +107,11 @@ func TestGetEntry(t *testing.T) {
 // GetNote retrieves and returns the specified note from the collection.
 func TestGetNote(t *testing.T) {
 	setupCrud()
-	var entry model.Entry
-	var note model.Note
+	var entry model.IEntry
+	var note *model.Note
 	var exists bool
 	entry, exists = GetEntry("note #3")
-	note = entry.(model.Note)
+	note = entry.(*model.Note)
 	if !exists {
 		t.Error("Unexpected not exists")
 	} else if note.Name() != "note #3" || note.Description() != "desc #3" {
@@ -127,12 +127,12 @@ func TestGetNote(t *testing.T) {
 func TestPutNote(t *testing.T) {
 	setupCrud()
 	newNote := model.NewNote("new note", "", []string{})
-	PutEntry(newNote)
+	PutEntry(&newNote)
 	if len(data.Names) != 11 {
 		t.Errorf("Expected 11 notes (1st pass), found %d", len(data.Names))
 	}
 	existingNote := model.NewNote("note #3", "different desc", []string{})
-	PutEntry(existingNote)
+	PutEntry(&existingNote)
 	if len(data.Names) != 11 {
 		t.Errorf("Expected 11 notes (2nd pass), found %d", len(data.Names))
 	}
@@ -173,7 +173,7 @@ func TestSave(t *testing.T) {
 	config.MemoryHome = "."
 	config.DataFile = file.Name()
 	Save()
-	data.Names = make(map[string]model.Entry)
+	data.Names = make(map[string]model.IEntry)
 	Init()
 	if len(data.Names) != 10 {
 		t.Error("Expected 10 entries, got", len(data.Names))
@@ -208,7 +208,7 @@ func TestEdit(t *testing.T) {
 		t.Error("note #3 doesn't exist, but should")
 	}
 	switch typedEntry := entry.(type) {
-	case model.Note:
+	case *model.Note:
 		typedEntry.SetDescription("different")
 		PutEntry(typedEntry)
 	default:

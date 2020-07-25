@@ -209,7 +209,7 @@ func displayHeight(pager EntryPager) int {
 //       A seaside town on Cape Ann, North Shore of Massachusetts. We go there
 //       every year for 4th of July and usually several other random times...
 //       ----------------------------------------------------------------------
-func renderEntry(pager EntryPager, ix int, entry model.Entry) []string {
+func renderEntry(pager EntryPager, ix int, entry model.IEntry) []string {
 	leftMargin := 6 // "  1.  "
 	blankLeftMargin := strings.Repeat(" ", leftMargin)
 	contentWidth := displayWidth(pager) - leftMargin
@@ -280,26 +280,25 @@ func calculatePages(pager EntryPager) []Page {
 
 // EntryTables displays a table of entries, used when we're dumping all results after
 // a non-interactive ls request, or when displaying a single entry details.
-func EntryTables(entries []model.Entry) {
+func EntryTables(entries []model.IEntry) {
 	width := goterm.Width() - 30
 	fmt.Println("") // prefix with blank line
 	for ix, entry := range entries {
-		switch entry.(type) {
-		case model.Note:
+		switch typedEntry := entry.(type) {
+		case *model.Note:
 			// holds table contents
 			data := [][]string{}
 			// add note name row
-			note := entry.(model.Note)
 			data = append(data, []string{"Type", "Note"})
-			data = append(data, []string{"Name", note.Name()})
+			data = append(data, []string{"Name", typedEntry.Name()})
 			// description row
-			desc := note.Description()
+			desc := typedEntry.Description()
 			if desc != "" {
 				data = append(data, []string{"Description", desc})
 			}
 			// tags row
-			if len(note.Tags()) > 0 {
-				data = append(data, []string{"Tags", strings.Join(note.Tags(), ", ")})
+			if len(typedEntry.Tags()) > 0 {
+				data = append(data, []string{"Tags", strings.Join(typedEntry.Tags(), ", ")})
 			}
 			//TODO: add created and modified dates
 			// create and configure table
@@ -327,7 +326,7 @@ func EntryTables(entries []model.Entry) {
 }
 
 // EntryTable displays a single entry with full detail
-func EntryTable(entry model.Entry) {
-	entries := []model.Entry{entry}
+func EntryTable(entry model.IEntry) {
+	entries := []model.IEntry{entry}
 	EntryTables(entries)
 }

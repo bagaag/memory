@@ -51,7 +51,7 @@ var editCmd = &cobra.Command{
 		fieldMatched := false
 		// cast entry to editable type and update field
 		switch typedEntry := entry.(type) {
-		case model.Note:
+		case *model.Note:
 			switch flagEditField {
 			case "description":
 				typedEntry.SetDescription(flagEditValue)
@@ -107,7 +107,7 @@ func editInteractive(name string) {
 	// get list of editable fields based on type
 	editableFields := []string{"Edit all fields interactively", "Description", "Tags"}
 	switch entry.(type) {
-	case model.Note:
+	case *model.Note:
 		// add entry specific field here
 	default:
 		fmt.Printf("Error: unexpected entry type '%T'.", reflect.TypeOf(entry))
@@ -123,7 +123,7 @@ func editInteractive(name string) {
 
 	// update the selected field(s)
 	switch typedEntry := entry.(type) {
-	case model.Note:
+	case *model.Note:
 		if fieldSelection == 0 || editableFields[fieldSelection] == "Description" {
 			desc, err := subPromptEditor("Description", typedEntry.Description(), "Enter a description: ", emptyValidator)
 			if err != nil {
