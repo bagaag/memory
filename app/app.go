@@ -168,7 +168,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	}
 	// limit sorted results
 	if limit <= 0 {
-		limit = 999
+		limit = 2147483647 // int32 max just to be safe
 	}
 	if len(entries) > limit {
 		entries = entries[:limit]
