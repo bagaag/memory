@@ -23,17 +23,18 @@ type Entry struct {
 // IEntry is the interface that provides generic access to people, places, things, events
 type IEntry interface {
 	Name() string
-	SetName(name string)
 	Description() string
-	SetDescription(description string)
 	Tags() []string
-	SetTags(tags []string)
 	LinksTo() []string
-	SetLinksTo(names []string)
 	LinkedFrom() []string
-	SetLinkedFrom(names []string)
 	Created() time.Time
 	Modified() time.Time
+
+	SetName(name string)
+	SetDescription(description string)
+	SetTags(tags []string)
+	SetLinksTo(names []string)
+	SetLinkedFrom(names []string)
 }
 
 // NewEntry creates and returns a new Entry with the provided values.
