@@ -16,8 +16,8 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/model"
-	"memory/app/util"
 	"memory/cmd/display"
+	"memory/util"
 	"reflect"
 	"strings"
 

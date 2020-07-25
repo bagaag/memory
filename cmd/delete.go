@@ -15,8 +15,8 @@ package cmd
 import (
 	"fmt"
 	"memory/app"
-	"memory/app/util"
 	"memory/cmd/display"
+	"memory/util"
 	"strings"
 
 	"github.com/spf13/cobra"
