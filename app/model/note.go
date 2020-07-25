@@ -18,6 +18,8 @@ type Note struct {
 	name        string
 	description string
 	tags        []string
+	linksTo     []string
+	linkedFrom  []string
 	created     time.Time
 	modified    time.Time
 }
@@ -38,6 +40,8 @@ func NewNote(name string, description string, tags []string) Note {
 		name:        name,
 		description: description,
 		tags:        tags,
+		linksTo:     []string{},
+		linkedFrom:  []string{},
 		created:     now,
 		modified:    now,
 	}
@@ -72,6 +76,26 @@ func (note Note) Tags() []string {
 // SetTags setter
 func (note *Note) SetTags(tags []string) {
 	note.tags = tags
+}
+
+// LinksTo contains entry names this entry's description contains links to.
+func (note Note) LinksTo() []string {
+	return note.linksTo
+}
+
+// SetLinksTo setter
+func (note *Note) SetLinksTo(names []string) {
+	note.linksTo = names
+}
+
+// LinkedFrom contains entry names that link to this entry.
+func (note Note) LinkedFrom() []string {
+	return note.linkedFrom
+}
+
+// SetLinkedFrom setter
+func (note *Note) SetLinkedFrom(names []string) {
+	note.linkedFrom = names
 }
 
 // Created getter

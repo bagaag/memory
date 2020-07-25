@@ -14,6 +14,8 @@ type Entry interface {
 	Name() string
 	Description() string
 	Tags() []string
+	LinksTo() []string
+	LinkedFrom() []string
 	Created() time.Time
 	Modified() time.Time
 }

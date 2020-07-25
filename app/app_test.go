@@ -17,12 +17,12 @@ import (
 	"testing"
 )
 
-func clearData() {
+func clearTestData() {
 	data.Names = make(map[string]model.Entry)
 }
 
-func generateData() {
-	clearData()
+func generateTestData() {
+	clearTestData()
 	for i := 1; i <= 50; i++ {
 		tags := []string{"All"}
 		if i%2 == 0 {

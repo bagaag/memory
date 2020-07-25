@@ -1,3 +1,4 @@
+- Use Embedding to implement base Entry within models https://yourbasic.org/golang/inheritance-object-oriented/
 - Make backup of data file before saving
 - Replace json storage with Ponzu to allow cli and web to co-exist
 - Dynamic completer to support name entry for single entry commands
