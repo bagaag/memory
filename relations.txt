@@ -1,40 +1,43 @@
 ---------------+-----------------------------------------------------------------------------------------------------------------------------------
   Name         | Rockport                                                                                                                          
-  Description  | A seaside town on [L: Cape Ann], North Shore of [Place: Massachusetts]. We go there every year for 4th of July and other      
-               | random times throughout the year, especially in summer. Audrey also used to go there as a kid with her family.
+  Description  | A seaside town on [Cape Ann], North Shore of [Massachusetts]. We go there every year for 4th of July and other      
+               | random times throughout the year, especially in summer. [Audrey] also used to go there as a kid with her family.
 ---------------+-----------------------------------------------------------------------------------------------------------------------------------
-[E: event]
-[N: person]
-[L: place]
-[T: thing]
-[O: note]
 
-Relations can be created via links in the Description as shown above using full type name or shorthand.
+Relations can be created via [Name] links in the Description as shown above.
 
-Dedicated command for listing unfulfilled relations.
+Dedicated command for listing relations to entries that don't exist.
 
-Relations are created based on the reference. Parent/child relations can be
-established based on which is referenced (parent) and which is doing the
-referencing (child). In the example above, Rockport is a child of Massachuetts
-and Cape Ann.
+Relations are created based on the reference. Each entry has two sets of relationships. LinksTo are the entries that
+an entry links to in its Description. LinkedFrom are the entries that link to the entry in their Descriptions. 
+In the example above:
+  Rockport.LinksTo == [Cape Ann, Massachusetts, Audrey]
+  Audrey.LinkedFrom == [Rockport]
+  Massachusetts.LinkedFrom == [Rockport]
+  'Cape Ann'.LinkedFrom == [Rockport]
 
-Browse relations from detail view:
+Example output for browsing relations from detail view, which is the 
+[r]eferences command provided by Details ouput:
 
-Relations for [Place] Rockport
+  Relations for Rockport (Place)
 
-  Referenced by Rockport:
-    1. [Place] Massachusetts
-    2. [Place] Cap Ann
-    3. [Place] Captain's Bounty
-    4. [Place] Front Beach
-    5. [Place] Rockport General Store
+    Referenced by Rockport:
+      1. Massachusetts (Place) 
+      2. Cap Ann (Place)
+      3. Captain's Bounty (Place)
+      4. Front Beach (Place)
+      5. Rockport General Store (Place)
 
-  Referencing Rockport:
-    6. [Note] Towns in MA
-    7. [Thing] Rockport Firemans Parade and Bonfire
-    8. [Person] Kathy Hargan
+    Referencing Rockport:
+      6. Towns in MA (Note)
+      7. Rockport Firemans Parade and Bonfire (Thing)
+      8. Audrey (Person)
 
-Options: # for details, [b]ack, [Q]uit
-: 
+  Options: # for details, [b]ack, [Q]uit
+  : 
 
+[b]ack displays the details for Rockport again.
 
+# displays the details for the numbered entry listed.
+
+[Q]uit returns to the main prompt.
