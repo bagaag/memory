@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/model"
-	"memory/app/util"
+	"memory/util"
 	"regexp"
 	"strings"
 )
@@ -81,8 +81,8 @@ func ParseLinks(s string) (string, []string) {
 
 // ResolveLinks accepts a slice of Entry names and returns
 // a slice of Entries that exist with those names.
-func ResolveLinks(links []string) []model.Entry {
-	resolved := []model.Entry{}
+func ResolveLinks(links []string) []model.IEntry {
+	resolved := []model.IEntry{}
 	for _, name := range links {
 		if entry, exists := app.GetEntry(name); exists {
 			resolved = append(resolved, entry)
@@ -94,13 +94,31 @@ func ResolveLinks(links []string) []model.Entry {
 // PopulateLinks populates the LinksTo and LinkedFrom slices on all entries by
 // parsing the descriptions for links.
 func PopulateLinks() {
-	//TODO implement PopulateLinks
-}
-
-// LinkedFrom returns a slice of entry names that link to
-// the given entry name. Assumes all entries have already
-// been parsed.
-func LinkedFrom(name string) []string {
-	//TODO implement LinkedFrom
-	return nil
+	fromLinks := make(map[string][]string)
+	results := app.GetEntries(app.EntryTypes{}, "", "", "", []string{}, app.SortName, -1)
+	for _, entry := range results.Entries {
+		// parse and save outgoing links for this entry
+		searchText := entry.Description()
+		newDesc, links := ParseLinks(searchText)
+		entry.SetDescription(newDesc)
+		entry.SetLinksTo(links)
+		// add links in reverse direction
+		fromName := entry.Name()
+		for _, toName := range links {
+			names, exists := fromLinks[toName]
+			if !exists {
+				names = []string{fromName}
+			} else if !util.StringSliceContains(names, fromName) {
+				names = append(names, fromName)
+			}
+			fromLinks[toName] = names
+		}
+	}
+	// save the fromLinks in corresponding entries
+	for name, linkedFrom := range fromLinks {
+		entry, exists := app.GetEntry(name)
+		if exists {
+			entry.SetLinkedFrom(linkedFrom)
+		}
+	}
 }

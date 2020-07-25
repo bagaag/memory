@@ -10,13 +10,15 @@ package link
 import (
 	"memory/app"
 	"memory/app/model"
-	"memory/app/util"
+	"memory/util"
 	"testing"
 )
 
 func TestParseLinks(t *testing.T) {
-	app.PutEntry(model.NewNote("Exists", "", []string{}))
-	app.PutEntry(model.NewNote("Exists 2", "", []string{}))
+	n1 := model.NewNote("Exists", "", []string{})
+	app.PutEntry(&n1)
+	n2 := model.NewNote("Exists 2", "", []string{})
+	app.PutEntry(&n2)
 	testParseLinks(t, 1, "[Exists]", "[Exists]", []string{"Exists"})
 	testParseLinks(t, 2, "text [Exists]", "text [Exists]", []string{"Exists"})
 	testParseLinks(t, 3, "[Exists] text", "[Exists] text", []string{"Exists"})
@@ -42,8 +44,10 @@ func testParseLinks(t *testing.T, testNo int, input string, parsedExpected strin
 }
 
 func TestResolveLinks(t *testing.T) {
-	app.PutEntry(model.NewNote("Exists", "", []string{}))
-	app.PutEntry(model.NewNote("Exists 2", "", []string{}))
+	n1 := model.NewNote("Exists", "", []string{})
+	app.PutEntry(&n1)
+	n2 := model.NewNote("Exists 2", "", []string{})
+	app.PutEntry(&n2)
 	links := []string{"Exists", "Not exists", "Exists 2"}
 	resolved := ResolveLinks(links)
 	if len(resolved) != 2 {
@@ -51,5 +55,38 @@ func TestResolveLinks(t *testing.T) {
 	}
 	if resolved[1].Name() != "Exists 2" {
 		t.Error("Expected 'Exists 2', got", resolved[1].Name())
+	}
+}
+
+func TestPopulateLinks(t *testing.T) {
+	nA := model.NewNote("Note 1", "This note has a link to [Note 2].", []string{})
+	nB := model.NewNote("Note 2", "This note has a link to [Note 3] and [Note 2].", []string{})
+	nC := model.NewNote("Note 3", "This note has no links.", []string{})
+	app.PutEntry(&nA)
+	app.PutEntry(&nB)
+	app.PutEntry(&nC)
+	PopulateLinks()
+	n1, _ := app.GetEntry("Note 1")
+	n2, _ := app.GetEntry("Note 2")
+	n3, _ := app.GetEntry("Note 3")
+	// test linksTo
+	if !util.StringSlicesEqual(n1.LinksTo(), []string{"Note 2"}) {
+		t.Error("Expected n1.LinksTo==['Note 2'], got", n1.LinksTo())
+	}
+	if !util.StringSlicesEqual(n2.LinksTo(), []string{"Note 3", "Note 2"}) {
+		t.Error("Expected n2.LinksTo==['Note 3','Note 2'], got", n2.LinksTo())
+	}
+	if !util.StringSlicesEqual(n3.LinksTo(), []string{}) {
+		t.Error("Expected n3.LinksTo==[], got", n3.LinksTo())
+	}
+	// test linkedFrom
+	if !util.StringSlicesEqual(n1.LinkedFrom(), []string{}) {
+		t.Error("Expected n1.LinkedFrom==[], got", n1.LinkedFrom())
+	}
+	if !util.StringSlicesEqual(n2.LinkedFrom(), []string{"Note 1", "Note 2"}) {
+		t.Error("Expected n2.LinkedFrom==['Note 1','Note 2'], got", n2.LinkedFrom())
+	}
+	if !util.StringSlicesEqual(n3.LinkedFrom(), []string{"Note 2"}) {
+		t.Error("Expected n3.LinkedFrom==['Note 2'], got", n3.LinkedFrom())
 	}
 }
