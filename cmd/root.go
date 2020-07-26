@@ -36,13 +36,11 @@ var settingsFile = "settings.yml"
 
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
-	readline.PcItem("add",
-		readline.PcItem("event"),
-		readline.PcItem("note"),
-		readline.PcItem("person"),
-		readline.PcItem("place"),
-		readline.PcItem("thing"),
-	),
+	readline.PcItem("add-event"),
+	readline.PcItem("add-note"),
+	readline.PcItem("add-person"),
+	readline.PcItem("add-place"),
+	readline.PcItem("add-thing"),
 	readline.PcItem("detail"),
 	readline.PcItem("ls",
 		readline.PcItem("--types"),
@@ -73,7 +71,7 @@ var rootCmd = &cobra.Command{
 	Use:   "memory",
 	Short: "A database for human experience",
 	Long: `Memory is a CLI application that captures and stores the people, places, 
-things and events that make up human experience and links them together 
+things and events that make up human experience and helps you link them together 
 in interesting ways.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		welcomeMessage()
