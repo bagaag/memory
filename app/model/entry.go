@@ -29,6 +29,7 @@ type IEntry interface {
 	LinkedFrom() []string
 	Created() time.Time
 	Modified() time.Time
+	Type() string
 
 	SetName(name string)
 	SetDescription(description string)

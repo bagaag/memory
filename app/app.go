@@ -205,6 +205,7 @@ func Init() error {
 		for _, note := range fromSave.Notes {
 			data.Names[note.Name()] = &note
 		}
+		PopulateLinks()
 	}
 	return nil
 }

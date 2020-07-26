@@ -18,6 +18,7 @@ import (
 	"memory/app/config"
 	"memory/app/model"
 	"memory/cmd/display"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -84,7 +85,12 @@ func detailInteractiveLoop(entry model.IEntry) {
 	defer rl.SetPrompt(config.Prompt)
 	// display detail and prompt for command
 	display.EntryTable(entry)
-	fmt.Println("Entry options: [e]dit, [d]elete, [b]rowse relations, [Q]uit")
+	hasLinks := len(entry.LinksTo())+len(entry.LinkedFrom()) > 0
+	if hasLinks {
+		fmt.Println("Entry options: [e]dit, [d]elete, [l]inks, [Q]uit")
+	} else {
+		fmt.Println("Entry options: [e]dit, [d]elete, [Q]uit")
+	}
 	// interactive loop
 	for {
 		cmd, err := rl.Readline()
@@ -94,10 +100,60 @@ func detailInteractiveLoop(entry model.IEntry) {
 		} else if strings.ToLower(cmd) == "e" || strings.ToLower(cmd) == "edit" {
 			editInteractive(entry.Name())
 			break
+		} else if hasLinks && strings.ToLower(cmd) == "l" {
+			if !linksInteractiveLoop(entry) {
+				break
+			}
 		} else if cmd == "" || strings.ToLower(cmd) == "q" || strings.ToLower(cmd) == "quit" {
 			break
 		} else {
 			fmt.Println("Error: Unrecognized command:", cmd)
 		}
 	}
+}
+
+// linksInteractiveLoop handles display of an entry's links and
+// commands related to them. Returns false if user selects [Q]uit
+func linksInteractiveLoop(entry model.IEntry) bool {
+	linkCount := len(entry.LinksTo()) + len(entry.LinkedFrom())
+	// display links and prompt for command
+	display.LinksMenu(entry)
+	fmt.Println("\nLinks options: # for details, [b]ack, [Q]uit")
+	// interactive loop
+	for {
+		cmd, err := rl.Readline()
+		if err != nil {
+			fmt.Println("Error:", err)
+			return true
+		} else if num, err := strconv.Atoi(cmd); err == nil {
+			ix := num - 1
+			if ix < 0 || ix >= linkCount {
+				fmt.Printf("Error: %d is not a valid link number.\n", num)
+			} else {
+				nextDetail, exists := getLinkedEntry(entry, ix)
+				if exists {
+					detailInteractiveLoop(nextDetail)
+				}
+			}
+		} else if strings.ToLower(cmd) == "b" {
+			return true
+		} else if cmd == "" || strings.ToLower(cmd) == "q" || strings.ToLower(cmd) == "quit" {
+			return false
+		} else {
+			fmt.Println("Error: Unrecognized command:", cmd)
+		}
+	}
+}
+
+// getLinkedEntry returns the entry and an 'exists' boolean at the
+// given index of an array that combines the LinksTo and LinkedFrom
+// slices of the given entry.
+func getLinkedEntry(entry model.IEntry, ix int) (model.IEntry, bool) {
+	a := append(entry.LinksTo(), entry.LinkedFrom()...)
+	name := a[ix]
+	entry, exists := app.GetEntry(name)
+	if !exists {
+		fmt.Printf("There is no entry named '%s'.\n", name)
+	}
+	return entry, exists
 }

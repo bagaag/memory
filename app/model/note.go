@@ -46,6 +46,11 @@ func NewNote(name string, description string, tags []string) Note {
 	return note
 }
 
+// Type returns the display name of this type
+func (note Note) Type() string {
+	return "Note"
+}
+
 // Name getter
 func (note Note) Name() string {
 	return note.name

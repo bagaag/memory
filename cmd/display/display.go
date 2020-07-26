@@ -289,7 +289,7 @@ func EntryTables(entries []model.IEntry) {
 			// holds table contents
 			data := [][]string{}
 			// add note name row
-			data = append(data, []string{"Type", "Note"})
+			data = append(data, []string{"Type", typedEntry.Type()})
 			data = append(data, []string{"Name", typedEntry.Name()})
 			// description row
 			desc := typedEntry.Description()
@@ -329,4 +329,37 @@ func EntryTables(entries []model.IEntry) {
 func EntryTable(entry model.IEntry) {
 	entries := []model.IEntry{entry}
 	EntryTables(entries)
+}
+
+// LinksMenu displays a list of entry names in its LinksTo
+// and LinkedFrom slices along with numbers for selection.
+func LinksMenu(entry model.IEntry) {
+	fmt.Printf("Links for %s [%s]\n\n", entry.Name(), entry.Type())
+	ix := 1
+	if len(entry.LinksTo()) > 0 {
+		fmt.Println("  Links to:")
+		for _, name := range entry.LinksTo() {
+			entry, exists := app.GetEntry(name)
+			if !exists {
+				fmt.Printf("     X. %s [Not Found]\n", name)
+			} else {
+				fmt.Printf("    %2d. %s [%s]", ix, name, entry.Type())
+				ix = ix + 1
+			}
+		}
+		fmt.Println("")
+	}
+	if len(entry.LinkedFrom()) > 0 {
+		fmt.Println("  Linked from:")
+		for _, name := range entry.LinkedFrom() {
+			entry, exists := app.GetEntry(name)
+			if !exists {
+				fmt.Printf("     X. %s [Not Found]\n", name)
+			} else {
+				fmt.Printf("    %2d. %s [%s]", ix, name, entry.Type())
+				ix = ix + 1
+			}
+		}
+		fmt.Println("")
+	}
 }

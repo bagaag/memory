@@ -14,11 +14,10 @@ displayed without the tilde. Links that cannot be resolved
 will be replaced with a ! prefix as in [!Entry Name].
 */
 
-package link
+package app
 
 import (
 	"fmt"
-	"memory/app"
 	"memory/app/model"
 	"memory/util"
 	"regexp"
@@ -61,7 +60,7 @@ func ParseLinks(s string) (string, []string) {
 			hadBang = true
 		}
 		// add to results if exists, otherwise add ! prefix
-		if _, exists := app.GetEntry(name); exists {
+		if _, exists := GetEntry(name); exists {
 			if !util.StringSliceContains(links, name) {
 				links = append(links, name)
 			}
@@ -84,7 +83,7 @@ func ParseLinks(s string) (string, []string) {
 func ResolveLinks(links []string) []model.IEntry {
 	resolved := []model.IEntry{}
 	for _, name := range links {
-		if entry, exists := app.GetEntry(name); exists {
+		if entry, exists := GetEntry(name); exists {
 			resolved = append(resolved, entry)
 		}
 	}
@@ -95,7 +94,7 @@ func ResolveLinks(links []string) []model.IEntry {
 // parsing the descriptions for links.
 func PopulateLinks() {
 	fromLinks := make(map[string][]string)
-	results := app.GetEntries(app.EntryTypes{}, "", "", "", []string{}, app.SortName, -1)
+	results := GetEntries(EntryTypes{}, "", "", "", []string{}, SortName, -1)
 	for _, entry := range results.Entries {
 		// parse and save outgoing links for this entry
 		searchText := entry.Description()
@@ -116,7 +115,7 @@ func PopulateLinks() {
 	}
 	// save the fromLinks in corresponding entries
 	for name, linkedFrom := range fromLinks {
-		entry, exists := app.GetEntry(name)
+		entry, exists := GetEntry(name)
 		if exists {
 			entry.SetLinkedFrom(linkedFrom)
 		}
