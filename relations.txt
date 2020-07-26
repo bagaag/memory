@@ -19,19 +19,19 @@ In the example above:
 Example output for browsing relations from detail view, which is the 
 [r]eferences command provided by Details ouput:
 
-  Relations for Rockport (Place)
+  Links for Rockport (Place)
 
-    Referenced by Rockport:
-      1. Massachusetts (Place) 
-      2. Cap Ann (Place)
-      3. Captain's Bounty (Place)
-      4. Front Beach (Place)
-      5. Rockport General Store (Place)
+    Links to:
+      1. Massachusetts [Place] 
+      2. Cap Ann [Place]
+      3. Captain's Bounty [Place]
+      4. Front Beach [Place]
+      5. Rockport General Store [Place]
 
-    Referencing Rockport:
-      6. Towns in MA (Note)
-      7. Rockport Firemans Parade and Bonfire (Thing)
-      8. Audrey (Person)
+    Linked from:
+      6. Towns in MA [Note]
+      7. Rockport Firemans Parade and Bonfire [Thing]
+      8. Audrey [Person]
 
   Options: # for details, [b]ack, [Q]uit
   : 
