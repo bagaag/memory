@@ -105,7 +105,7 @@ func lsInteractive(sargs string) {
 			break
 		} else if num, err := strconv.Atoi(cmd); err == nil {
 			ix := num - 1
-			if num < 0 || num > len(results.Entries) {
+			if ix < 0 || ix >= len(results.Entries) {
 				fmt.Printf("Error: %d is not a valid result number.\n", num)
 			} else {
 				detailInteractiveLoop(results.Entries[ix])
