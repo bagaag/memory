@@ -165,7 +165,7 @@ func TestDeleteNote(t *testing.T) {
 
 func TestSave(t *testing.T) {
 	setupCrud()
-	file, err := ioutil.TempFile(".", "prefix")
+	file, err := ioutil.TempFile(".", "TestSave")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -177,6 +177,14 @@ func TestSave(t *testing.T) {
 	Init()
 	if len(data.Names) != 10 {
 		t.Error("Expected 10 entries, got", len(data.Names))
+	}
+	entry, exists := GetEntry("note #3")
+	if !exists {
+		t.Error("Expected note #3 to exist, it does not")
+	}
+	fmt.Println(data.Names)
+	if entry.Name() != "note #3" {
+		t.Error("Expected 'note #3', got", entry.Name())
 	}
 }
 
