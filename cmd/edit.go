@@ -15,10 +15,8 @@ package cmd
 import (
 	"fmt"
 	"memory/app"
-	"memory/app/model"
 	"memory/cmd/display"
 	"memory/util"
-	"reflect"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -48,27 +46,16 @@ var editCmd = &cobra.Command{
 			return
 		}
 		// track if we've found a home for the named field across types
-		fieldMatched := false
-		// cast entry to editable type and update field
-		switch typedEntry := entry.(type) {
-		case *model.Note:
-			switch flagEditField {
-			case "description":
-				typedEntry.SetDescription(flagEditValue)
-				fieldMatched = true
-			case "tags":
-				typedEntry.SetTags(processTags(flagEditValue))
-				fieldMatched = true
-			}
-			app.PutEntry(typedEntry)
-			entry = typedEntry
+		switch flagEditField {
+		case "description":
+			entry.Description = flagEditValue
+			app.PutEntry(entry)
+		case "tags":
+			entry.Tags = processTags(flagEditValue)
+			app.PutEntry(entry)
 		default:
-			fmt.Println("Error: unexpected entry type:", reflect.TypeOf(entry))
-			return
-		}
-		// error if still no field match
-		if !fieldMatched {
-			fmt.Printf("Error: '%s' is not a valid field name for '%s'.", flagEditField, entry.Name())
+			// error if still no field match
+			fmt.Printf("Error: '%s' is not a valid field name for '%s'.", flagEditField, entry.Name)
 			return
 		}
 		// save data
@@ -76,7 +63,7 @@ var editCmd = &cobra.Command{
 			fmt.Println("Failed to save data:", err)
 			return
 		}
-		fmt.Printf("Updated entry: %s.\n", entry.Name())
+		fmt.Printf("Updated entry: %s.\n", entry.Name)
 		display.EntryTable(entry)
 	},
 }
@@ -106,13 +93,6 @@ func editInteractive(name string) {
 
 	// get list of editable fields based on type
 	editableFields := []string{"Edit all fields interactively", "Description", "Tags"}
-	switch entry.(type) {
-	case *model.Note:
-		// add entry specific field here
-	default:
-		fmt.Printf("Error: unexpected entry type '%T'.", reflect.TypeOf(entry))
-		return
-	}
 
 	// prompt user for which field(s) to edit
 	fieldSelection, err := listPrompt("Select a field to edit:", editableFields)
@@ -122,31 +102,25 @@ func editInteractive(name string) {
 	}
 
 	// update the selected field(s)
-	switch typedEntry := entry.(type) {
-	case *model.Note:
-		if fieldSelection == 0 || editableFields[fieldSelection] == "Description" {
-			desc, err := subPromptEditor("Description", typedEntry.Description(), "Enter a description: ", emptyValidator)
-			if err != nil {
-				fmt.Println(util.FormatErrorForDisplay(err))
-				return
-			}
-			typedEntry.SetDescription(desc)
-
-		} else if fieldSelection == 0 || editableFields[fieldSelection] == "Tags" {
-			sTags, err := subPrompt("Enter one or more tags separated by commas: ", strings.Join(typedEntry.Tags(), ","), emptyValidator)
-			if err != nil {
-				fmt.Println(util.FormatErrorForDisplay(err))
-				return
-			}
-			tags := processTags(sTags)
-			typedEntry.SetTags(tags)
+	if fieldSelection == 0 || editableFields[fieldSelection] == "Description" {
+		desc, err := subPromptEditor("Description", entry.Description, "Enter a description: ", emptyValidator)
+		if err != nil {
+			fmt.Println(util.FormatErrorForDisplay(err))
+			return
 		}
-		// update entry in collection
-		app.PutEntry(typedEntry)
-		entry = typedEntry
-	default:
-		fmt.Printf("Error: unexpected entry type: %T\n", reflect.TypeOf(entry))
+		entry.Description = desc
+
+	} else if fieldSelection == 0 || editableFields[fieldSelection] == "Tags" {
+		sTags, err := subPrompt("Enter one or more tags separated by commas: ", strings.Join(entry.Tags, ","), emptyValidator)
+		if err != nil {
+			fmt.Println(util.FormatErrorForDisplay(err))
+			return
+		}
+		tags := processTags(sTags)
+		entry.Tags = tags
 	}
+	// update entry in collection
+	app.PutEntry(entry)
 	// save data
 	if err := app.Save(); err != nil {
 		fmt.Println("Failed to save data:", err)

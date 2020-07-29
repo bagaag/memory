@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/config"
-	"memory/app/model"
 	"memory/cmd/display"
 	"strconv"
 	"strings"
@@ -76,7 +75,7 @@ func detailInteractive(sargs string) {
 // detailInteractiveLoop displays the given entry and prompts for actions
 // to take on that entry. Called from the ls interactive loop and from
 // detailInteractive.
-func detailInteractiveLoop(entry model.IEntry) {
+func detailInteractiveLoop(entry app.Entry) {
 	// setup subloop readline mode
 	rl.HistoryDisable()
 	rl.SetPrompt(config.SubPrompt)
@@ -85,7 +84,7 @@ func detailInteractiveLoop(entry model.IEntry) {
 	defer rl.SetPrompt(config.Prompt)
 	// display detail and prompt for command
 	display.EntryTable(entry)
-	hasLinks := len(entry.LinksTo())+len(entry.LinkedFrom()) > 0
+	hasLinks := len(entry.LinksTo)+len(entry.LinkedFrom) > 0
 	if hasLinks {
 		fmt.Println("Entry options: [e]dit, [d]elete, [l]inks, [Q]uit")
 	} else {
@@ -98,7 +97,7 @@ func detailInteractiveLoop(entry model.IEntry) {
 			fmt.Println("Error:", err)
 			break
 		} else if strings.ToLower(cmd) == "e" || strings.ToLower(cmd) == "edit" {
-			editInteractive(entry.Name())
+			editInteractive(entry.Name)
 			break
 		} else if hasLinks && strings.ToLower(cmd) == "l" {
 			if !linksInteractiveLoop(entry) {
@@ -114,8 +113,8 @@ func detailInteractiveLoop(entry model.IEntry) {
 
 // linksInteractiveLoop handles display of an entry's links and
 // commands related to them. Returns false if user selects [Q]uit
-func linksInteractiveLoop(entry model.IEntry) bool {
-	linkCount := len(entry.LinksTo()) + len(entry.LinkedFrom())
+func linksInteractiveLoop(entry app.Entry) bool {
+	linkCount := len(entry.LinksTo) + len(entry.LinkedFrom)
 	// display links and prompt for command
 	display.LinksMenu(entry)
 	fmt.Println("\nLinks options: # for details, [b]ack, [Q]uit")
@@ -148,8 +147,8 @@ func linksInteractiveLoop(entry model.IEntry) bool {
 // getLinkedEntry returns the entry and an 'exists' boolean at the
 // given index of an array that combines the LinksTo and LinkedFrom
 // slices of the given entry.
-func getLinkedEntry(entry model.IEntry, ix int) (model.IEntry, bool) {
-	a := append(entry.LinksTo(), entry.LinkedFrom()...)
+func getLinkedEntry(entry app.Entry, ix int) (app.Entry, bool) {
+	a := append(entry.LinksTo, entry.LinkedFrom...)
 	name := a[ix]
 	entry, exists := app.GetEntry(name)
 	if !exists {

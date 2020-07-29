@@ -18,7 +18,6 @@ package app
 
 import (
 	"fmt"
-	"memory/app/model"
 	"memory/util"
 	"regexp"
 	"strings"
@@ -80,8 +79,8 @@ func ParseLinks(s string) (string, []string) {
 
 // ResolveLinks accepts a slice of Entry names and returns
 // a slice of Entries that exist with those names.
-func ResolveLinks(links []string) []model.IEntry {
-	resolved := []model.IEntry{}
+func ResolveLinks(links []string) []Entry {
+	resolved := []Entry{}
 	for _, name := range links {
 		if entry, exists := GetEntry(name); exists {
 			resolved = append(resolved, entry)
@@ -97,12 +96,13 @@ func PopulateLinks() {
 	results := GetEntries(EntryTypes{}, "", "", "", []string{}, SortName, -1)
 	for _, entry := range results.Entries {
 		// parse and save outgoing links for this entry
-		searchText := entry.Description()
+		searchText := entry.Description
 		newDesc, links := ParseLinks(searchText)
-		entry.SetDescription(newDesc)
-		entry.SetLinksTo(links)
+		entry.Description = newDesc
+		entry.LinksTo = links
+		PutEntry(entry)
 		// add links in reverse direction
-		fromName := entry.Name()
+		fromName := entry.Name
 		for _, toName := range links {
 			names, exists := fromLinks[toName]
 			if !exists {
@@ -117,7 +117,8 @@ func PopulateLinks() {
 	for name, linkedFrom := range fromLinks {
 		entry, exists := GetEntry(name)
 		if exists {
-			entry.SetLinkedFrom(linkedFrom)
+			entry.LinkedFrom = linkedFrom
+			PutEntry(entry)
 		}
 	}
 }

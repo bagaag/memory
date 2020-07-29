@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"math"
 	"memory/app"
-	"memory/app/model"
 	"os"
 	"reflect"
 	"strings"
@@ -209,24 +208,24 @@ func displayHeight(pager EntryPager) int {
 //       A seaside town on Cape Ann, North Shore of Massachusetts. We go there
 //       every year for 4th of July and usually several other random times...
 //       ----------------------------------------------------------------------
-func renderEntry(pager EntryPager, ix int, entry model.IEntry) []string {
+func renderEntry(pager EntryPager, ix int, entry app.Entry) []string {
 	leftMargin := 6 // "  1.  "
 	blankLeftMargin := strings.Repeat(" ", leftMargin)
 	contentWidth := displayWidth(pager) - leftMargin
 	// ex. Place
 	typeName := strings.Title(reflect.TypeOf(entry).Name())
 	// ex. "  1.  [Place] Rockport, MA"
-	titleLine := fmt.Sprintf("%3d.  [%s] %s", ix+1, typeName, entry.Name())
+	titleLine := fmt.Sprintf("%3d.  [%s] %s", ix+1, typeName, entry.Name)
 	// `lines` will be the return value
 	lines := []string{titleLine}
 	// add Tags line, ex. "      Tags: town, vacation"
-	if len(entry.Tags()) > 0 {
-		tagLine := blankLeftMargin + "Tags: " + strings.Join(entry.Tags(), ", ")
+	if len(entry.Tags) > 0 {
+		tagLine := blankLeftMargin + "Tags: " + strings.Join(entry.Tags, ", ")
 		lines = append(lines, tagLine)
 	}
 	// add Description, ex. "      A seaside town..." - Max 2 lines w/ elipsis if truncated
-	if entry.Description() != "" {
-		descWrapped := wordwrap.WrapString(entry.Description(), uint(contentWidth))
+	if entry.Description != "" {
+		descWrapped := wordwrap.WrapString(entry.Description, uint(contentWidth))
 		descLines := strings.Split(descWrapped, "\n")
 		// add elipses to 2nd line if more than 2 lines and truncate array
 		if len(descLines) > 2 {
@@ -280,83 +279,78 @@ func calculatePages(pager EntryPager) []Page {
 
 // EntryTables displays a table of entries, used when we're dumping all results after
 // a non-interactive ls request, or when displaying a single entry details.
-func EntryTables(entries []model.IEntry) {
+func EntryTables(entries []app.Entry) {
 	width := goterm.Width() - 30
 	fmt.Println("") // prefix with blank line
 	for ix, entry := range entries {
-		switch typedEntry := entry.(type) {
-		case *model.Note:
-			// holds table contents
-			data := [][]string{}
-			// add note name row
-			data = append(data, []string{"Type", typedEntry.Type()})
-			data = append(data, []string{"Name", typedEntry.Name()})
-			// description row
-			desc := typedEntry.Description()
-			if desc != "" {
-				data = append(data, []string{"Description", desc})
-			}
-			// tags row
-			if len(typedEntry.Tags()) > 0 {
-				data = append(data, []string{"Tags", strings.Join(typedEntry.Tags(), ", ")})
-			}
-			//TODO: add created and modified dates
-			// create and configure table
-			table := tablewriter.NewWriter(os.Stdout)
-			// add border to top unless this is the first
-			if ix == len(entries)-1 {
-				table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: true})
-			} else {
-				table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: false})
-			}
-			table.SetRowLine(false)
-			table.SetColMinWidth(0, 12)
-			table.SetColMinWidth(1, width)
-			table.SetColWidth(width)
-			table.SetAutoWrapText(true)
-			table.SetReflowDuringAutoWrap(true)
-			// add data and render
-			table.AppendBulk(data)
-			table.Render()
-		default:
-			fmt.Printf("Error: unexpected type %T\n", reflect.TypeOf(entry))
+		// holds table contents
+		data := [][]string{}
+		// add note name row
+		data = append(data, []string{"Type", entry.Type})
+		data = append(data, []string{"Name", entry.Name})
+		// description row
+		desc := entry.Description
+		if desc != "" {
+			data = append(data, []string{"Description", desc})
 		}
+		// tags row
+		if len(entry.Tags) > 0 {
+			data = append(data, []string{"Tags", strings.Join(entry.Tags, ", ")})
+		}
+		//TODO: add created and modified dates
+		// create and configure table
+		table := tablewriter.NewWriter(os.Stdout)
+		// add border to top unless this is the first
+		if ix == len(entries)-1 {
+			table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: true})
+		} else {
+			table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: false})
+		}
+		table.SetRowLine(false)
+		table.SetColMinWidth(0, 12)
+		table.SetColMinWidth(1, width)
+		table.SetColWidth(width)
+		table.SetAutoWrapText(true)
+		table.SetReflowDuringAutoWrap(true)
+		// add data and render
+		table.AppendBulk(data)
+		table.Render()
 	}
 	fmt.Println("") // finish with blank line
 }
 
 // EntryTable displays a single entry with full detail
-func EntryTable(entry model.IEntry) {
-	entries := []model.IEntry{entry}
+func EntryTable(entry app.Entry) {
+	entries := []app.Entry{entry}
 	EntryTables(entries)
 }
 
 // LinksMenu displays a list of entry names in its LinksTo
 // and LinkedFrom slices along with numbers for selection.
-func LinksMenu(entry model.IEntry) {
-	fmt.Printf("Links for %s [%s]\n\n", entry.Name(), entry.Type())
+func LinksMenu(entry app.Entry) {
+	fmt.Printf("Links for %s [%s]\n\n", entry.Name, entry.Type)
 	ix := 1
-	if len(entry.LinksTo()) > 0 {
+	if len(entry.LinksTo) > 0 {
 		fmt.Println("  Links to:")
-		for _, name := range entry.LinksTo() {
+		for _, name := range entry.LinksTo {
 			entry, exists := app.GetEntry(name)
 			if !exists {
 				fmt.Printf("     X. %s [Not Found]\n", name)
 			} else {
-				fmt.Printf("    %2d. %s [%s]", ix, name, entry.Type())
+				fmt.Printf("    %2d. %s [%s]", ix, name, entry.Type)
 				ix = ix + 1
 			}
 		}
 		fmt.Println("")
 	}
-	if len(entry.LinkedFrom()) > 0 {
+	if len(entry.LinkedFrom) > 0 {
 		fmt.Println("  Linked from:")
-		for _, name := range entry.LinkedFrom() {
+		for _, name := range entry.LinkedFrom {
 			entry, exists := app.GetEntry(name)
 			if !exists {
 				fmt.Printf("     X. %s [Not Found]\n", name)
 			} else {
-				fmt.Printf("    %2d. %s [%s]", ix, name, entry.Type())
+				fmt.Printf("    %2d. %s [%s]", ix, name, entry.Type)
 				ix = ix + 1
 			}
 		}

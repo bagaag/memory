@@ -76,7 +76,7 @@ func renameEntryInteractive(name string) {
 		fmt.Println(util.FormatErrorForDisplay(err))
 		return
 	}
-	if err = app.RenameEntry(entry.Name(), flagRenameTo); err != nil {
+	if err = app.RenameEntry(entry.Name, flagRenameTo); err != nil {
 		fmt.Println(util.FormatErrorForDisplay(err))
 		return
 	}
@@ -91,6 +91,6 @@ func renameEntryInteractive(name string) {
 		fmt.Println("Failed to save data:", err)
 		return
 	}
-	fmt.Printf("Renamed '%s' to '%s'.\n", flagRenameFrom, entry.Name())
+	fmt.Printf("Renamed '%s' to '%s'.\n", flagRenameFrom, entry.Name)
 	resetRenameFlags()
 }

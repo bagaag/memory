@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/config"
-	"memory/app/model"
 	"memory/cmd/display"
 	"memory/util"
 
@@ -46,14 +45,14 @@ var addNoteCmd = &cobra.Command{
 			fmt.Println("Cannot add note: Name is required and must not exceed 50 characters.")
 			return
 		}
-		note := model.NewNote(flagAddNoteName, flagAddNoteDescription, flagAddNoteTags)
-		app.PutEntry(&note)
+		note := app.NewEntry(app.EntryTypeNote, flagAddNoteName, flagAddNoteDescription, flagAddNoteTags)
+		app.PutEntry(note)
 		if err := app.Save(); err != nil {
 			fmt.Println("Failed to save data:", err)
 			return
 		}
-		fmt.Printf("Added note: %s.\n", note.Name())
-		display.EntryTable(&note)
+		fmt.Printf("Added note: %s.\n", note.Name)
+		display.EntryTable(note)
 	},
 }
 
@@ -89,8 +88,8 @@ func addNoteInteractive(sargs string) {
 		}
 		tagSlice := processTags(tags)
 		if name != "" {
-			note := model.NewNote(name, desc, tagSlice)
-			app.PutEntry(&note)
+			note := app.NewEntry(app.EntryTypeNote, name, desc, tagSlice)
+			app.PutEntry(note)
 			app.Save()
 			fmt.Println("Note added.")
 		}

@@ -12,13 +12,12 @@ import (
 	"io/ioutil"
 	"log"
 	"memory/app/config"
-	"memory/app/model"
 	"os"
 	"testing"
 )
 
 func clearTestData() {
-	data.Names = make(map[string]model.IEntry)
+	data.Names = make(map[string]Entry)
 }
 
 func generateTestData() {
@@ -35,8 +34,8 @@ func generateTestData() {
 		}
 		name := fmt.Sprintf("note #%d", i)
 		desc := fmt.Sprintf("note desc #%d", i)
-		note := model.NewNote(name, desc, tags)
-		data.Names[note.Name()] = &note
+		note := NewEntry(EntryTypeNote, name, desc, tags)
+		data.Names[note.Name] = note
 	}
 }
 
@@ -44,8 +43,8 @@ func setupCrud() {
 	clearTestData()
 	for i := 0; i < 10; i++ {
 		num := i + 1
-		note := model.NewNote(fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
-		data.Names[note.Name()] = &note
+		note := NewEntry(EntryTypeNote, fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
+		data.Names[note.Name] = note
 	}
 }
 
@@ -57,8 +56,8 @@ func TestGetEntries(t *testing.T) {
 		t.Errorf("Expected 50 entries, got %d", len(results.Entries))
 		return
 	}
-	if results.Entries[9].Name() != "note #41" {
-		t.Errorf("Expected 'note #41', got '%s'", results.Entries[9].Name())
+	if results.Entries[9].Name != "note #41" {
+		t.Errorf("Expected 'note #41', got '%s'", results.Entries[9].Name)
 		return
 	}
 	// no types selected
@@ -73,8 +72,8 @@ func TestGetEntries(t *testing.T) {
 		t.Errorf("Expected 25 entries, got %d", len(results.Entries))
 		return
 	}
-	if results.Entries[1].Name() != "note #11" {
-		t.Errorf("Expected 'note #11', got '%s'", results.Entries[1].Name())
+	if results.Entries[1].Name != "note #11" {
+		t.Errorf("Expected 'note #11', got '%s'", results.Entries[1].Name)
 		return
 	}
 	// filter by 2 tags, sort recent, limit 5
@@ -83,8 +82,8 @@ func TestGetEntries(t *testing.T) {
 		t.Errorf("Expected 5 entries, got %d", len(results.Entries))
 		return
 	}
-	if results.Entries[1].Name() != "note #48" {
-		t.Errorf("Expected 'note #48', got '%s'", results.Entries[1].Name())
+	if results.Entries[1].Name != "note #48" {
+		t.Errorf("Expected 'note #48', got '%s'", results.Entries[1].Name)
 		return
 	}
 }
@@ -95,27 +94,27 @@ func TestGetEntry(t *testing.T) {
 	if !exists {
 		t.Error("Unexpected entry not found")
 	}
-	if entry.Name() != "note #42" {
-		t.Error("Expected 'note #42', got", entry.Name())
+	if entry.Name != "note #42" {
+		t.Error("Expected 'note #42', got", entry.Name)
 	}
 	entry, exists = GetEntry("invalid")
 	if exists {
-		t.Error("Expected nil entry, got", entry.Name())
+		t.Error("Expected nil entry, got", entry.Name)
 	}
 }
 
 // GetNote retrieves and returns the specified note from the collection.
 func TestGetNote(t *testing.T) {
 	setupCrud()
-	var entry model.IEntry
-	var note *model.Note
+	var entry Entry
+	var note Entry
 	var exists bool
 	entry, exists = GetEntry("note #3")
-	note = entry.(*model.Note)
+	note = entry
 	if !exists {
 		t.Error("Unexpected not exists")
-	} else if note.Name() != "note #3" || note.Description() != "desc #3" {
-		t.Error("Did not get expected note name (test #3) or description (desc #3):", note.Name(), ",", note.Description())
+	} else if note.Name != "note #3" || note.Description != "desc #3" {
+		t.Error("Did not get expected note name (test #3) or description (desc #3):", note.Name, ",", note.Description)
 	}
 	_, exists = GetEntry("not found")
 	if exists {
@@ -126,21 +125,21 @@ func TestGetNote(t *testing.T) {
 // PutNote adds or replaces the given note in the collection.
 func TestPutNote(t *testing.T) {
 	setupCrud()
-	newNote := model.NewNote("new note", "", []string{})
-	PutEntry(&newNote)
+	newNote := NewEntry(EntryTypeNote, "new note", "", []string{})
+	PutEntry(newNote)
 	if len(data.Names) != 11 {
 		t.Errorf("Expected 11 notes (1st pass), found %d", len(data.Names))
 	}
-	existingNote := model.NewNote("note #3", "different desc", []string{})
-	PutEntry(&existingNote)
+	existingNote := NewEntry(EntryTypeNote, "note #3", "different desc", []string{})
+	PutEntry(existingNote)
 	if len(data.Names) != 11 {
 		t.Errorf("Expected 11 notes (2nd pass), found %d", len(data.Names))
 	}
 	gotNote, exists := GetEntry("note #3")
 	if !exists {
 		t.Error("updated note does not exist")
-	} else if gotNote.Description() != "different desc" {
-		t.Error("Expected 'different desc', got", gotNote.Description())
+	} else if gotNote.Description != "different desc" {
+		t.Error("Expected 'different desc', got", gotNote.Description)
 	}
 }
 
@@ -154,12 +153,9 @@ func TestDeleteNote(t *testing.T) {
 	if len(data.Names) != 9 {
 		t.Errorf("Expected 9 notes, got %d", len(data.Names))
 	}
-	gotNote, exists := GetEntry("note #3")
+	_, exists := GetEntry("note #3")
 	if exists {
 		t.Error("Deleted note exists")
-	}
-	if gotNote != nil {
-		t.Error("Expected nil, got", gotNote.Name())
 	}
 }
 
@@ -173,7 +169,7 @@ func TestSave(t *testing.T) {
 	config.MemoryHome = "."
 	config.DataFile = file.Name()
 	Save()
-	data.Names = make(map[string]model.IEntry)
+	data.Names = make(map[string]Entry)
 	Init()
 	if len(data.Names) != 10 {
 		t.Error("Expected 10 entries, got", len(data.Names))
@@ -182,9 +178,8 @@ func TestSave(t *testing.T) {
 	if !exists {
 		t.Error("Expected note #3 to exist, it does not")
 	}
-	fmt.Println(data.Names)
-	if entry.Name() != "note #3" {
-		t.Error("Expected 'note #3', got", entry.Name())
+	if entry.Name != "note #3" {
+		t.Error("Expected 'note #3', got", entry.Name)
 	}
 }
 
@@ -200,8 +195,8 @@ func TestRename(t *testing.T) {
 	if !exists {
 		t.Error("Renamed note doesn't exist")
 		return
-	} else if entry.Name() != newName {
-		t.Errorf("Expected '%s', got '%s", newName, entry.Name())
+	} else if entry.Name != newName {
+		t.Errorf("Expected '%s', got '%s", newName, entry.Name)
 		return
 	}
 	if len(data.Names) != 10 {
@@ -215,18 +210,13 @@ func TestEdit(t *testing.T) {
 	if !exists {
 		t.Error("note #3 doesn't exist, but should")
 	}
-	switch typedEntry := entry.(type) {
-	case *model.Note:
-		typedEntry.SetDescription("different")
-		PutEntry(typedEntry)
-	default:
-		t.Error("Unexpected entry type")
-	}
+	entry.Description = "different"
+	PutEntry(entry)
 	entry2, exists := GetEntry("note #3")
 	if !exists {
 		t.Error("note #3 doesn't exist (2nd), but should")
 	}
-	if entry2.Description() != "different" {
-		t.Errorf("Expected '%s', got '%s'", "different", entry2.Description())
+	if entry2.Description != "different" {
+		t.Errorf("Expected '%s', got '%s'", "different", entry2.Description)
 	}
 }

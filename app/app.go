@@ -13,9 +13,8 @@ import (
 	"errors"
 	"fmt"
 	"memory/app/config"
-	"memory/app/model"
 	"memory/app/persist"
-	"reflect"
+	"memory/util"
 	"sort"
 	"strings"
 )
@@ -24,29 +23,20 @@ const dataVersion = 1
 
 // root contains all the data to be saved
 type root struct {
-	Names map[string]model.IEntry
+	Names map[string]Entry
 }
 
 // saveData is just the data we need to save to file - eliminating any
 // calculated data in the root struct.
 type saveData struct {
-	Notes   []model.Note
+	Entries []Entry
 	Version int // for migrations
-}
-
-// EntryTypes is used to indicate one or more entry types in a single argument
-type EntryTypes struct {
-	Note   bool
-	Event  bool
-	Person bool
-	Place  bool
-	Thing  bool
 }
 
 // EntryResults is used to contain the results of GetEntries and the settings used
 // to generate those results.
 type EntryResults struct {
-	Entries    []model.IEntry
+	Entries    []Entry
 	Types      EntryTypes
 	StartsWith string
 	Contains   string
@@ -57,8 +47,8 @@ type EntryResults struct {
 }
 
 // PutEntry adds or replaces the given entry in the collection.
-func PutEntry(entry model.IEntry) {
-	data.Names[entry.Name()] = entry
+func PutEntry(entry Entry) {
+	data.Names[entry.Name] = entry
 }
 
 // DeleteEntry removes the specified entry from the collection.
@@ -86,6 +76,7 @@ func (t EntryTypes) String() string {
 	if !t.HasAll() {
 		a := []string{}
 		if t.Note {
+			// TODO: Codify plural entry types in entry.go
 			a = append(a, "Notes")
 		}
 		if t.Event {
@@ -116,7 +107,7 @@ const SortName = SortOrder(1)
 
 // The data variable stores all the things that get saved.
 var data = root{
-	Names: make(map[string]model.IEntry),
+	Names: make(map[string]Entry),
 }
 
 // EntryCount returns the total number of entries under management.
@@ -130,7 +121,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	search string, tags []string, sort SortOrder, limit int) EntryResults {
 
 	// holds the results
-	entries := []model.IEntry{}
+	entries := []Entry{}
 
 	// convert filters to lower case
 	startsWith = strings.ToLower(startsWith)
@@ -141,7 +132,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 
 	// run through the collection and apply filters
 	for _, entry := range data.Names {
-		lowerName := strings.ToLower(entry.Name())
+		lowerName := strings.ToLower(entry.Name)
 
 		if !filterType(entry, types) {
 			continue
@@ -186,7 +177,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 }
 
 // GetEntry returns a single entry or throws an error.
-func GetEntry(entryName string) (model.IEntry, bool) {
+func GetEntry(entryName string) (Entry, bool) {
 	entry, exists := data.Names[entryName]
 	return entry, exists
 }
@@ -202,8 +193,8 @@ func Init() error {
 		}
 		//TODO: handle version difference w/ migration
 		// setup runtime data structure from saved data
-		for _, note := range fromSave.Notes {
-			data.Names[note.Name()] = &note
+		for _, entry := range fromSave.Entries {
+			data.Names[entry.Name] = entry
 		}
 		PopulateLinks()
 	}
@@ -220,30 +211,18 @@ func RenameEntry(name string, newName string) error {
 	if !exists {
 		return fmt.Errorf("an entry named %s does not exist", name)
 	}
-	DeleteEntry(entry.Name())
-	switch castEntry := entry.(type) {
-	case *model.Note:
-		castEntry.SetName(newName)
-		PutEntry(castEntry)
-	default:
-		return errors.New("unsupported entry type during rename")
-	}
+	DeleteEntry(name)
+	entry.Name = newName
+	PutEntry(entry)
 	return nil
 }
 
 // Save writes application data to file storage.
 func Save() error {
 	toSave := saveData{Version: dataVersion}
-	toSave.Notes = []model.Note{}
+	toSave.Entries = []Entry{}
 	for _, entry := range data.Names {
-		switch typedEntry := entry.(type) {
-		// case *model.Note:
-		// 	toSave.Notes = append(toSave.Notes, entry.(model.Note))
-		case *model.Note:
-			toSave.Notes = append(toSave.Notes, *typedEntry)
-		default:
-			return fmt.Errorf("unexpected type: %s", reflect.TypeOf(entry))
-		}
+		toSave.Entries = append(toSave.Entries, entry)
 	}
 	return persist.Save(config.SavePath(), toSave)
 }
@@ -281,48 +260,52 @@ func ValidateEntryName(name string) error {
 }
 
 // filterType returns true if the entry is one of the true EntryTypes
-func filterType(entry model.IEntry, types EntryTypes) bool {
+func filterType(entry Entry, types EntryTypes) bool {
 	if types.HasAll() {
 		return true
 	}
-	switch entry.(type) {
-	case *model.Note:
+	switch entry.Type {
+	case EntryTypeEvent:
+		return types.Event
+	case EntryTypeNote:
 		return types.Note
-	// TODO: add Event, Person, Place, Thing models as they're created here
-	default:
-		return false
+	case EntryTypePerson:
+		return types.Person
+	case EntryTypePlace:
+		return types.Place
+	case EntryTypeThing:
+		return types.Thing
 	}
+	return false
 }
 
 // tagMatches returns true if any of the tags in searchTags match the tags
 // on the provided Entry.
-func tagMatches(entry model.IEntry, searchTags []string) bool {
+func tagMatches(entry Entry, searchTags []string) bool {
 	for _, searchTag := range searchTags {
-		for _, tag := range entry.Tags() {
-			if tag == searchTag {
-				return true
-			}
+		if util.StringSliceContains(entry.Tags, searchTag) {
+			return true
 		}
 	}
 	return false
 }
 
-func sortEntries(arr []model.IEntry, field string, ascending bool) {
+func sortEntries(arr []Entry, field string, ascending bool) {
 	var less func(i, j int) bool
 	switch field {
 	case "Modified":
 		less = func(i, j int) bool {
 			if ascending {
-				return arr[i].Modified().UnixNano() < arr[j].Modified().UnixNano()
+				return arr[i].Modified.UnixNano() < arr[j].Modified.UnixNano()
 			}
-			return arr[i].Modified().UnixNano() > arr[j].Modified().UnixNano()
+			return arr[i].Modified.UnixNano() > arr[j].Modified.UnixNano()
 		}
 	default: // Name
 		less = func(i, j int) bool {
 			if ascending {
-				return arr[i].Name() < arr[j].Name()
+				return arr[i].Name < arr[j].Name
 			}
-			return arr[i].Name() > arr[j].Name()
+			return arr[i].Name > arr[j].Name
 		}
 	}
 	sort.Slice(arr, less)
