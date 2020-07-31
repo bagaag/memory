@@ -220,11 +220,3 @@ func initConfig() {
 		panic("Failed to initialize application state: " + err.Error())
 	}
 }
-
-// welcomeMessage personalizes the app with a message tailored to the visitors
-// current journey.
-//TODO: Flesh out the welcome journey
-func welcomeMessage() {
-	fmt.Printf("Welcome. You have %d entries under management. "+
-		"Type 'help' for assistance.\n", app.EntryCount())
-}
