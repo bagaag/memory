@@ -7,7 +7,10 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 
 package app
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // Entry represents a Person, Place, Thing, Event or Note.
 type Entry struct {
@@ -78,3 +81,8 @@ const EntryTypeThing = "Thing"
 
 // EntryTypeThingPlural indicates multiple things.
 const EntryTypeThingPlural = "Things"
+
+// TagsString returns the entrys tags as a comma-separated string.
+func (entry Entry) TagsString() string {
+	return strings.Join(entry.Tags, ",")
+}
