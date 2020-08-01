@@ -90,10 +90,10 @@ func ParseEntryFile(content string) (Entry, error) {
 		entry.Type = t
 	}
 	// Name
-	if name, exists := attrs["name"]; !exists {
-		return Entry{}, errors.New("missing required 'name' attribute")
-	} else {
+	if name, exists := attrs["name"]; exists {
 		entry.Name = name
+	} else {
+		return Entry{}, errors.New("missing required 'name' attribute")
 	}
 	// Tags
 	if tags, exists := attrs["tags"]; exists {
