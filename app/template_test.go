@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestParseEntryFile(t *testing.T) {
+func TestParseYamlDown(t *testing.T) {
 	s := `---
 Type: Note
 Name: Note #1
@@ -23,7 +23,7 @@ Tags: one,two,three
 
 Hey now. This is the description.
 `
-	entry, err := ParseEntryFile(s)
+	entry, err := ParseYamlDown(s)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -42,17 +42,17 @@ Hey now. This is the description.
 	}
 }
 
-func TestRenderEntryFile(t *testing.T) {
+func TestRenderYamlDown(t *testing.T) {
 	entry := NewEntry(EntryTypeNote, "Note #1", "Hey now. This is the description.", []string{"one", "two", "three"})
 	expect := `---
 Name: Note #1
 Type: Note
 Tags: one,two,three
 ---
+`
 
 Hey now. This is the description.
-`
-	s, err := RenderEntryFile(entry)
+	s, err := RenderYamlDown(entry)
 	if err != nil {
 		t.Error(err)
 	}

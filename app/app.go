@@ -15,11 +15,14 @@ import (
 	"memory/app/config"
 	"memory/app/persist"
 	"memory/util"
+	"os"
 	"sort"
 	"strings"
 )
 
 const dataVersion = 1
+
+var inited = false // run Init() only once
 
 // root contains all the data to be saved
 type root struct {
@@ -182,9 +185,30 @@ func GetEntry(entryName string) (Entry, bool) {
 	return entry, exists
 }
 
-// Init reads data stored on the file system
-// and initializes application variable.
-func Init() error {
+// Init reads data stored on the file system and initializes application variables.
+// homeDir provides an optional override to the default location of ~/.memory where
+// settings and data are stored.
+func Init(homeDir string) error {
+	if inited {
+		return nil
+	}
+	// set home dir
+	if homeDir == "" {
+		homeDir = util.GetHomeDir() + string(os.PathSeparator) + config.MemoryHome
+	}
+	config.MemoryHome = homeDir
+	// load config
+	if persist.PathExists(config.SettingsPath()) {
+		settings := config.StoredSettings{}
+		if err := persist.Load(config.SettingsPath(), &settings); err != nil {
+			return fmt.Errorf("failed to load settings: %s", err.Error)
+		}
+		config.UpdateSettingsFromStorage(settings)
+		// initialize settings file
+	} else if err := persist.Save(config.SettingsPath(), config.GetSettingsForStorage()); err != nil {
+		return fmt.Errorf("failed to initialize settings: %w", err)
+	}
+	// load data
 	if persist.PathExists(config.SavePath()) {
 		// read saved file into saveData struct
 		fromSave := saveData{}
@@ -198,6 +222,7 @@ func Init() error {
 		}
 		PopulateLinks()
 	}
+	inited = true
 	return nil
 }
 

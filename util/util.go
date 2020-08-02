@@ -7,7 +7,13 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 
 package util
 
-import "strings"
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/mitchellh/go-homedir"
+)
 
 // FormatErrorForDisplay takes an error message, which idiomatically should not be capitalized or
 // in sentence format, and returns a string with the first letter capitalized and a period at the
@@ -39,4 +45,19 @@ func StringSlicesEqual(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// GetHomeDir returns the path to the user's home directory, falling back to cwd and then ".".
+func GetHomeDir() string {
+	// Find home directory.
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Println("Could not find home directory:", err)
+		// Fail gracefully and use current working directory if home can't be located
+		if home, err = os.Getwd(); err != nil {
+			fmt.Println("Could not find working directory:", err)
+			home = "."
+		}
+	}
+	return home
 }

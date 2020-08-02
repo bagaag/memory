@@ -21,8 +21,8 @@ import (
 
 var tmpl *template.Template
 
-// RenderEntryFile returns a string with attributes in yaml frontmatter followed by the description.
-func RenderEntryFile(entry Entry) (string, error) {
+// RenderYamlDown returns a string with attributes in yaml frontmatter followed by the description.
+func RenderYamlDown(entry Entry) (string, error) {
 	if tmpl == nil {
 		var err error
 		tmpl, err = template.New("Entry").Parse(Template)
@@ -38,8 +38,8 @@ func RenderEntryFile(entry Entry) (string, error) {
 	return buf.String(), nil
 }
 
-// ParseEntryFile converts a string of yaml frontmatter followed by description into an Entry.
-func ParseEntryFile(content string) (Entry, error) {
+// ParseYamlDown converts a string of yaml frontmatter followed by description into an Entry.
+func ParseYamlDown(content string) (Entry, error) {
 	// break the string into a slice of lines
 	lines := strings.Split(content, "\n")
 	// first line validation

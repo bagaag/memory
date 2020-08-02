@@ -8,13 +8,16 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"memory/app"
 	"memory/app/config"
+	"memory/app/persist"
 	"memory/cmd/display"
 	"os"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -50,7 +53,6 @@ var cliApp *cli.App
 var interactive = -1
 
 func main() {
-
 	cliApp = &cli.App{
 		Name:  "memory",
 		Usage: `A CLI tool to collect and browse the elements of human experience.`,
@@ -69,9 +71,8 @@ func main() {
 				Required: false,
 			},
 			&cli.StringFlag{
-				Name:     "data-file",
-				Value:    "~/.memory.db",
-				Usage:    "path to data file where entries are read from and saved to",
+				Name:     "home",
+				Usage:    "directory path where data and settings are read from and saved to",
 				Required: false,
 			},
 			&cli.BoolFlag{
@@ -81,11 +82,11 @@ func main() {
 			},
 		},
 		Action: cmdDefault,
+		Before: cmdInit,
 		Commands: []cli.Command{
 			{
-				Name:   "add",
-				Usage:  "adds a new entry",
-				Action: cmdAdd,
+				Name:  "add",
+				Usage: "adds a new entry",
 				Subcommands: []cli.Command{
 					{
 						Name:   "event",
@@ -221,6 +222,15 @@ func setInteractive(subCommand bool, interactiveFlag bool) {
 	}
 }
 
+// cmdInit runs before any of the cli-invoked cmd functions
+var cmdInit = func(c *cli.Context) error {
+	home := c.String("home")
+	if home != "" {
+		fmt.Printf("Using '%s' as home directory.\n", home)
+	}
+	return app.Init(home)
+}
+
 // cmdDefault command enters the interactive command loop.
 var cmdDefault = func(c *cli.Context) error {
 	setInteractive(false, c.Bool("interactive"))
@@ -231,11 +241,20 @@ var cmdDefault = func(c *cli.Context) error {
 // cmdAdd adds a new entry. Requires a sub-command indicating type.
 var cmdAdd = func(c *cli.Context) error {
 	setInteractive(true, c.Bool("interactive"))
-	t := c.Command.Name
-	if t == "" {
-		fmt.Println("USAGE:\n   add [event, person, place, thing, note]")
+	entryType := strings.Title(c.Command.Name)
+	if entryType == "" {
+		return errors.New("missing entry type: [event, person, place, thing, note]")
 	}
-	fmt.Println(t)
+	name := c.String("name")
+	newEntry := app.NewEntry(entryType, name, "", []string{})
+	entry, err := editEntry(newEntry)
+	if err != nil {
+		return err
+	}
+	app.PutEntry(entry)
+	app.Save()
+	fmt.Println("Added new entry:", entry.Name)
+	display.EntryTable(entry)
 	return nil
 }
 
@@ -243,7 +262,20 @@ var cmdAdd = func(c *cli.Context) error {
 var cmdEdit = func(c *cli.Context) error {
 	setInteractive(true, c.Bool("interactive"))
 	name := c.String("name")
-	fmt.Printf("cmdEdit(%s)\n", name)
+	origEntry, exists := app.GetEntry(name)
+	if !exists {
+		return fmt.Errorf("there is no entry named '%s'", name)
+	}
+	entry, err := editEntry(origEntry)
+	if err != nil {
+		return err
+	}
+	if origEntry.Name != entry.Name {
+		app.DeleteEntry(origEntry.Name)
+		//TODO: update links on rename
+	}
+	app.PutEntry(entry)
+	app.Save()
 	return nil
 }
 
@@ -418,7 +450,10 @@ func mainLoop() {
 			break
 		}
 		line = strings.TrimSpace(line)
-		cliApp.Run(append([]string{"memory"}, strings.Split(line, " ")...))
+		err = cliApp.Run(append([]string{"memory"}, strings.Split(line, " ")...))
+		if err != nil {
+			fmt.Println("Doh!", err)
+		}
 	}
 }
 
@@ -446,7 +481,10 @@ func detailInteractiveLoop(entry app.Entry) {
 			fmt.Println("Error:", err)
 			break
 		} else if strings.ToLower(cmd) == "e" || strings.ToLower(cmd) == "edit" {
-			cliApp.Run([]string{"memory", "edit", entry.Name})
+			err := cliApp.Run([]string{"memory", "edit", entry.Name})
+			if err != nil {
+				fmt.Println("Doh!", err)
+			}
 			break
 		} else if hasLinks && strings.ToLower(cmd) == "l" {
 			if !linksInteractiveLoop(entry) {
@@ -543,4 +581,46 @@ func getChar() (ascii int, keyCode int, err error) {
 	t.Restore()
 	t.Close()
 	return
+}
+
+// editEntry converts an entry to YamlDown, launches an external editor, parses
+// the edited content back into an entry and returns the edited entry.
+func editEntry(entry app.Entry) (app.Entry, error) {
+	initial, err := app.RenderYamlDown(entry)
+	if err != nil {
+		return app.Entry{}, err
+	}
+	edited, err := useEditor(initial)
+	if err != nil {
+		return app.Entry{}, err
+	}
+	editedEntry, err := app.ParseYamlDown(edited)
+	if err != nil {
+		return app.Entry{}, err
+	}
+	return editedEntry, nil
+}
+
+// useEditor launches config.editor with a temporary file containing the given string
+// waits for the editor to exit and returns a string with the updated content.
+func useEditor(s string) (string, error) {
+	tmp, err := persist.CreateTempFile(s)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary file: %s", err.Error())
+	}
+	cmd := exec.Command(config.EditorCommand, tmp)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err = cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to interact with editor: %s", err.Error())
+	}
+	var edited string
+	if edited, err = persist.ReadTempFile(tmp); err != nil {
+		return "", fmt.Errorf("failed to read temporary file: %s", err.Error())
+	}
+	if err := persist.RemoveTempFile(tmp); err != nil {
+		return edited, fmt.Errorf("failed to delete temporary file: %s", err.Error())
+	}
+	return edited, nil
 }
