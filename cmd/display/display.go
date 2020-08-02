@@ -285,9 +285,9 @@ func EntryTables(entries []app.Entry) {
 	for ix, entry := range entries {
 		// holds table contents
 		data := [][]string{}
-		// add note name row
-		data = append(data, []string{"Type", entry.Type})
+		// add note name and type rows
 		data = append(data, []string{"Name", entry.Name})
+		data = append(data, []string{"Type", entry.Type})
 		// description row
 		desc := entry.Description
 		if desc != "" {
