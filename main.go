@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"memory/app"
 	"memory/app/config"
 	"memory/app/persist"
@@ -50,13 +49,14 @@ var completer = readline.NewPrefixCompleter(
 )
 
 var cliApp *cli.App
-var interactive = -1
+
+// interactive is true only if program is entered with no sub-command
+var interactive = false
 
 func main() {
 	cliApp = &cli.App{
 		Name:  "memory",
 		Usage: `A CLI tool to collect and browse the elements of human experience.`,
-		//TODO: Figure out settings file
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "format",
@@ -65,19 +65,8 @@ func main() {
 				Required: false,
 			},
 			&cli.StringFlag{
-				Name:     "editor",
-				Value:    "/usr/bin/vim",
-				Usage:    "command to invoke when editing an entry",
-				Required: false,
-			},
-			&cli.StringFlag{
 				Name:     "home",
 				Usage:    "directory path where data and settings are read from and saved to",
-				Required: false,
-			},
-			&cli.BoolFlag{
-				Name:     "interactive",
-				Usage:    "enter an interactive session after completing command",
 				Required: false,
 			},
 		},
@@ -178,10 +167,6 @@ func main() {
 						Value: -1,
 						Usage: "how many entries to return, or -1 for all matching entries",
 					},
-					&cli.BoolFlag{
-						Name:  "no-paging",
-						Usage: "disable interactive paging of results",
-					},
 				},
 			},
 			{
@@ -204,43 +189,37 @@ func main() {
 
 	err := cliApp.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 
-// setInteractive establishes whether the app was entered in interactive
-// mode or if --interactive was included with a command. If interactive
-// is false, the program exits after completing an initial command.
-func setInteractive(subCommand bool, interactiveFlag bool) {
-	if interactive > -1 {
-		return
-	}
-	if subCommand && interactiveFlag {
-		interactive = 1
-	} else {
-		interactive = 0
-	}
-}
-
-// cmdInit runs before any of the cli-invoked cmd functions
+// cmdInit runs before any of the cli-invoked cmd functions; exits program on error
 var cmdInit = func(c *cli.Context) error {
 	home := c.String("home")
 	if home != "" {
+		if !persist.PathExists(home) {
+			fmt.Printf("home directory does not exist: %s\n", home)
+			os.Exit(1)
+		}
 		fmt.Printf("Using '%s' as home directory.\n", home)
 	}
-	return app.Init(home)
+	err := app.Init(home)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return nil
 }
 
 // cmdDefault command enters the interactive command loop.
 var cmdDefault = func(c *cli.Context) error {
-	setInteractive(false, c.Bool("interactive"))
+	interactive = true
 	mainLoop()
 	return nil
 }
 
 // cmdAdd adds a new entry. Requires a sub-command indicating type.
 var cmdAdd = func(c *cli.Context) error {
-	setInteractive(true, c.Bool("interactive"))
 	entryType := strings.Title(c.Command.Name)
 	if entryType == "" {
 		return errors.New("missing entry type: [event, person, place, thing, note]")
@@ -260,7 +239,6 @@ var cmdAdd = func(c *cli.Context) error {
 
 // cmdEdit edits an existing entry, identified by name.
 var cmdEdit = func(c *cli.Context) error {
-	setInteractive(true, c.Bool("interactive"))
 	name := c.String("name")
 	origEntry, exists := app.GetEntry(name)
 	if !exists {
@@ -281,7 +259,6 @@ var cmdEdit = func(c *cli.Context) error {
 
 // cmdDelete deletes an existing entry, identified by name.
 var cmdDelete = func(c *cli.Context) error {
-	setInteractive(true, c.Bool("interactive"))
 	name := c.String("name")
 	fmt.Printf("cmdDelete(%s)\n", name)
 	return nil
@@ -289,11 +266,9 @@ var cmdDelete = func(c *cli.Context) error {
 
 // cmdList lists entries, optionally filtered and sorted.
 var cmdList = func(c *cli.Context) error {
-	setInteractive(true, c.Bool("interactive"))
 	contains := c.String("contains")
 	anyTags := strings.Split(c.String("any-tags"), ",")
 	//onlyTags := strings.Split(c.String("only-tags"), ",") //TODO: Implement onlyTags ls option
-	noPaging := c.Bool("no-paging")
 	order := app.SortRecent
 	if c.String("order") == "name" {
 		order = app.SortName
@@ -304,7 +279,7 @@ var cmdList = func(c *cli.Context) error {
 	search := ""     //TODO: Implement or remove ls search
 
 	results := app.GetEntries(parseTypes(types), startsWith, contains, search, anyTags, order, limit)
-	if !noPaging {
+	if interactive {
 
 		pager := display.NewEntryPager(results)
 		pager.PrintPage()
@@ -315,11 +290,12 @@ var cmdList = func(c *cli.Context) error {
 		for {
 			//char, err := readChar()
 			ascii, _, err := getChar()
-			s := string(rune(ascii))
 			if err != nil {
 				fmt.Println("Error:", err)
 				break
-			} else if num, err := strconv.Atoi(s); err == nil {
+			}
+			s := string(rune(ascii))
+			if num, err := strconv.Atoi(s); err == nil {
 				ix := num - 1
 				if ix < 0 || ix >= len(results.Entries) {
 					fmt.Printf("Error: %d is not a valid result number.\n", num)
@@ -350,7 +326,6 @@ var cmdList = func(c *cli.Context) error {
 
 // cmdLinks lists the entries linked to and from an existing entry, identified by name.
 var cmdLinks = func(c *cli.Context) error {
-	setInteractive(true, c.Bool("interactive"))
 	name := c.String("name")
 	fmt.Printf("cmdLinks(%s)\n", name)
 	return nil
@@ -358,7 +333,6 @@ var cmdLinks = func(c *cli.Context) error {
 
 // cmdDetail displays details of an entry and, if interactive, provides a menu prompt.
 func cmdDetail(c *cli.Context) {
-	setInteractive(true, c.Bool("interactive"))
 	// --name flag label is optional, "detail 27th Birthday" also works
 	var name = c.Args().First()
 	if strings.HasPrefix(name, "-") {
