@@ -267,7 +267,10 @@ var cmdDelete = func(c *cli.Context) error {
 // cmdList lists entries, optionally filtered and sorted.
 var cmdList = func(c *cli.Context) error {
 	contains := c.String("contains")
-	anyTags := strings.Split(c.String("any-tags"), ",")
+	anyTags := []string{}
+	if c.IsSet("any-tags") {
+		anyTags = strings.Split(c.String("any-tags"), ",")
+	}
 	//onlyTags := strings.Split(c.String("only-tags"), ",") //TODO: Implement onlyTags ls option
 	order := app.SortRecent
 	if c.String("order") == "name" {
