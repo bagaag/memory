@@ -292,12 +292,14 @@ var cmdList = func(c *cli.Context) error {
 		//defer rl.SetPrompt(config.Prompt)
 		for {
 			//char, err := readChar()
+			fmt.Print(config.SubPrompt)
 			ascii, _, err := getChar()
 			if err != nil {
 				fmt.Println("Error:", err)
 				break
 			}
 			s := string(rune(ascii))
+			fmt.Print(s)
 			if num, err := strconv.Atoi(s); err == nil {
 				ix := num - 1
 				if ix < 0 || ix >= len(results.Entries) {
