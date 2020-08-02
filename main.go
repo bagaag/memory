@@ -7,7 +7,6 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -28,6 +27,9 @@ import (
 
 // the rl library provides bash-like completion in interactive mode
 var rl *readline.Instance
+
+// inited makes sure we only run cmdInit once
+var inited = false
 
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
@@ -191,10 +193,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	rl.Close()
 }
 
 // cmdInit runs before any of the cli-invoked cmd functions; exits program on error
 var cmdInit = func(c *cli.Context) error {
+	if inited {
+		return nil
+	}
+	// init app data
 	home := c.String("home")
 	if home != "" {
 		if !persist.PathExists(home) {
@@ -208,6 +215,22 @@ var cmdInit = func(c *cli.Context) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	// setup readline
+	rl, err = readline.NewEx(&readline.Config{
+		Prompt:              config.Prompt,
+		HistoryFile:         config.HistoryPath(),
+		AutoComplete:        completer,
+		InterruptPrompt:     "^C",
+		EOFPrompt:           "exit",
+		HistorySearchFold:   true,
+		FuncFilterInputRune: filterInput,
+	})
+	if err != nil {
+		panic(err)
+	}
+	// say hi
+	welcomeMessage()
+	inited = true
 	return nil
 }
 
@@ -254,6 +277,7 @@ var cmdEdit = func(c *cli.Context) error {
 	}
 	app.PutEntry(entry)
 	app.Save()
+	detailInteractiveLoop(entry)
 	return nil
 }
 
@@ -286,40 +310,29 @@ var cmdList = func(c *cli.Context) error {
 
 		pager := display.NewEntryPager(results)
 		pager.PrintPage()
-		//rl.HistoryDisable()
-		//rl.SetPrompt(config.SubPrompt)
-		//defer rl.HistoryEnable()
-		//defer rl.SetPrompt(config.Prompt)
 		for {
-			//char, err := readChar()
-			fmt.Print(config.SubPrompt)
-			ascii, _, err := getChar()
-			if err != nil {
-				fmt.Println("Error:", err)
+			input := getSingleCharInput()
+			if strings.ToLower(input) == "n" {
+				if !pager.Next() {
+					fmt.Println("Error: Already on the last page.")
+				}
+			} else if strings.ToLower(input) == "p" {
+				if !pager.Prev() {
+					fmt.Println("Error: Already on the first page.")
+				}
+			} else if input == "" || input == "^C" || strings.ToLower(input) == "q" || strings.ToLower(input) == "b" {
 				break
-			}
-			s := string(rune(ascii))
-			fmt.Print(s)
-			if num, err := strconv.Atoi(s); err == nil {
+			} else if num, err := strconv.Atoi(input); err == nil {
 				ix := num - 1
 				if ix < 0 || ix >= len(results.Entries) {
 					fmt.Printf("Error: %d is not a valid result number.\n", num)
 				} else {
-					detailInteractiveLoop(results.Entries[ix])
-					break
+					if !detailInteractiveLoop(results.Entries[ix]) {
+						break
+					}
 				}
-			} else if strings.ToLower(s) == "n" {
-				if !pager.Next() {
-					fmt.Println("Error: Already on the last page.")
-				}
-			} else if strings.ToLower(s) == "p" {
-				if !pager.Prev() {
-					fmt.Println("Error: Already on the first page.")
-				}
-			} else if s == "" || strings.ToLower(s) == "q" {
-				break
 			} else {
-				fmt.Println("Error: Unrecognized option:", s)
+				fmt.Println("Error: Unrecognized option:", input)
 			}
 			pager.PrintPage()
 		}
@@ -349,16 +362,6 @@ func cmdDetail(c *cli.Context) {
 	} else {
 		detailInteractiveLoop(entry)
 	}
-}
-
-// readChar reads a single keystroke from the console
-func readChar() (string, error) {
-	//reader := bufio.NewReader(os.Stdin)
-	//char, _, err := reader.ReadRune()
-	//return char, err
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	return scanner.Text(), nil
 }
 
 // filterInput allows certain keys to be intercepted during readline
@@ -400,22 +403,6 @@ func parseTypes(typesArg []string) app.EntryTypes {
 
 // mainLoop provides the main prompt where interactive commands are accepted.
 func mainLoop() {
-	welcomeMessage()
-	// readline setup
-	var err error
-	rl, err = readline.NewEx(&readline.Config{
-		Prompt:              config.Prompt,
-		HistoryFile:         config.HistoryPath(),
-		AutoComplete:        completer,
-		InterruptPrompt:     "^C",
-		EOFPrompt:           "exit",
-		HistorySearchFold:   true,
-		FuncFilterInputRune: filterInput,
-	})
-	if err != nil {
-		panic(err)
-	}
-	defer rl.Close()
 	// input loop
 	for {
 		line, err := rl.Readline()
@@ -438,39 +425,32 @@ func mainLoop() {
 
 // detailInteractiveLoop displays the given entry and prompts for actions
 // to take on that entry. Called from the ls interactive loop and from
-// detailInteractive.
-func detailInteractiveLoop(entry app.Entry) {
-	// setup subloop readline mode
-	rl.HistoryDisable()
-	rl.SetPrompt(config.SubPrompt)
-	defer rl.HistoryEnable()
-	defer rl.SetPrompt(config.Prompt)
-	// display detail and prompt for command
-	display.EntryTable(entry)
-	hasLinks := len(entry.LinksTo)+len(entry.LinkedFrom) > 0
-	if hasLinks {
-		fmt.Println("Entry options: [e]dit, [d]elete, [l]inks, [Q]uit")
-	} else {
-		fmt.Println("Entry options: [e]dit, [d]elete, [Q]uit")
-	}
+// detailInteractive. Returns the bool, true for [b]ack or false for [Q]uit)
+func detailInteractiveLoop(entry app.Entry) bool {
 	// interactive loop
 	for {
-		cmd, err := rl.Readline()
-		if err != nil {
-			fmt.Println("Error:", err)
-			break
-		} else if strings.ToLower(cmd) == "e" || strings.ToLower(cmd) == "edit" {
-			err := cliApp.Run([]string{"memory", "edit", entry.Name})
+		// display detail and prompt for command
+		display.EntryTable(entry)
+		hasLinks := len(entry.LinksTo)+len(entry.LinkedFrom) > 0
+		if hasLinks {
+			fmt.Println("Entry options: [e]dit, [d]elete, [l]inks, [b]ack, [Q]uit")
+		} else {
+			fmt.Println("Entry options: [e]dit, [d]elete, [b]ack, [Q]uit")
+		}
+		cmd := getSingleCharInput()
+		if strings.ToLower(cmd) == "e" {
+			err := cliApp.Run([]string{"memory", "edit", "-name", entry.Name})
 			if err != nil {
 				fmt.Println("Doh!", err)
 			}
-			break
 		} else if hasLinks && strings.ToLower(cmd) == "l" {
 			if !linksInteractiveLoop(entry) {
-				break
+				return false
 			}
-		} else if cmd == "" || strings.ToLower(cmd) == "q" || strings.ToLower(cmd) == "quit" {
-			break
+		} else if strings.ToLower(cmd) == "b" {
+			return true
+		} else if cmd == "" || cmd == "^C" || strings.ToLower(cmd) == "q" {
+			return false
 		} else {
 			fmt.Println("Error: Unrecognized command:", cmd)
 		}
@@ -478,12 +458,12 @@ func detailInteractiveLoop(entry app.Entry) {
 }
 
 // linksInteractiveLoop handles display of an entry's links and
-// commands related to them. Returns false if user selects [Q]uit
+// commands related to them. Returns false if user selects [B]ack
 func linksInteractiveLoop(entry app.Entry) bool {
 	linkCount := len(entry.LinksTo) + len(entry.LinkedFrom)
 	// display links and prompt for command
 	display.LinksMenu(entry)
-	fmt.Println("\nLinks options: # for details, [b]ack, [Q]uit")
+	fmt.Println("\nLinks options: # for details, [b]ack or [Q]uit")
 	// interactive loop
 	for {
 		cmd, err := rl.Readline()
@@ -502,7 +482,7 @@ func linksInteractiveLoop(entry app.Entry) bool {
 			}
 		} else if strings.ToLower(cmd) == "b" {
 			return true
-		} else if cmd == "" || strings.ToLower(cmd) == "q" || strings.ToLower(cmd) == "quit" {
+		} else if cmd == "" || strings.ToLower(cmd) == "q" {
 			return false
 		} else {
 			fmt.Println("Error: Unrecognized command:", cmd)
@@ -524,9 +504,15 @@ func getLinkedEntry(entry app.Entry, ix int) (app.Entry, bool) {
 }
 
 // Returns either an ascii code, or (if input is an arrow) a Javascript key code.
-func getChar() (ascii int, keyCode int, err error) {
-	t, _ := term.Open("/dev/tty")
-	term.RawMode(t)
+func readKeyStroke() (ascii int, keyCode int, err error) {
+	t, err := term.Open("/dev/tty")
+	if err != nil {
+		return
+	}
+	err = term.RawMode(t)
+	if err != nil {
+		return
+	}
 	bytes := make([]byte, 3)
 
 	var numRead int
@@ -559,6 +545,7 @@ func getChar() (ascii int, keyCode int, err error) {
 	}
 	t.Restore()
 	t.Close()
+	fmt.Print("ks:", ascii, keyCode, err, ": ")
 	return
 }
 
@@ -602,4 +589,22 @@ func useEditor(s string) (string, error) {
 		return edited, fmt.Errorf("failed to delete temporary file: %s", err.Error())
 	}
 	return edited, nil
+}
+
+// Displays prompt for single character input and returns the character entered, or empty string.
+func getSingleCharInput() string {
+	fmt.Print(config.SubPrompt)
+	ascii, _, err := readKeyStroke()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return ""
+	}
+	s := string(rune(ascii))
+	if ascii == 3 { // Ctrl+C
+		s = "^C"
+	} else if ascii == 13 { // Enter
+		s = ""
+	}
+	fmt.Println(s)
+	return s
 }
