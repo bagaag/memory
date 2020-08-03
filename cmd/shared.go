@@ -14,12 +14,12 @@ import (
 	"memory/app"
 	"memory/app/config"
 	"memory/app/persist"
+	"memory/util"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/pkg/term"
 )
 
 // filterInput allows certain keys to be intercepted during readline
@@ -63,51 +63,6 @@ func getLinkedEntry(entry app.Entry, ix int) (app.Entry, bool) {
 		fmt.Printf("There is no entry named '%s'.\n", name)
 	}
 	return entry, exists
-}
-
-// Returns either an ascii code, or (if input is an arrow) a Javascript key code.
-func readKeyStroke() (ascii int, keyCode int, err error) {
-	t, err := term.Open("/dev/tty")
-	if err != nil {
-		return
-	}
-	err = term.RawMode(t)
-	if err != nil {
-		return
-	}
-	bytes := make([]byte, 3)
-
-	var numRead int
-	numRead, err = t.Read(bytes)
-	if err != nil {
-		return
-	}
-	if numRead == 3 && bytes[0] == 27 && bytes[1] == 91 {
-		// Three-character control sequence, beginning with "ESC-[".
-
-		// Since there are no ASCII codes for arrow keys, we use
-		// Javascript key codes.
-		if bytes[2] == 65 {
-			// Up
-			keyCode = 38
-		} else if bytes[2] == 66 {
-			// Down
-			keyCode = 40
-		} else if bytes[2] == 67 {
-			// Right
-			keyCode = 39
-		} else if bytes[2] == 68 {
-			// Left
-			keyCode = 37
-		}
-	} else if numRead == 1 {
-		ascii = int(bytes[0])
-	} else {
-		// Two characters read??
-	}
-	t.Restore()
-	t.Close()
-	return
 }
 
 // editEntry converts an entry to YamlDown, launches an external editor, parses
@@ -161,7 +116,7 @@ func useEditor(s string) (string, error) {
 // Displays prompt for single character input and returns the character entered, or empty string.
 func getSingleCharInput() string {
 	fmt.Print(config.SubPrompt)
-	ascii, _, err := readKeyStroke()
+	ascii, _, err := util.ReadKeyStroke()
 	if err != nil {
 		fmt.Println("Error:", err)
 		return ""
