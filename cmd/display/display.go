@@ -328,7 +328,7 @@ func EntryTable(entry app.Entry) {
 // LinksMenu displays a list of entry names in its LinksTo
 // and LinkedFrom slices along with numbers for selection.
 func LinksMenu(entry app.Entry) {
-	fmt.Printf("Links for %s [%s]\n\n", entry.Name, entry.Type)
+	fmt.Printf("\nLinks for %s [%s]\n\n", entry.Name, entry.Type)
 	ix := 1
 	if len(entry.LinksTo) > 0 {
 		fmt.Println("  Links to:")
@@ -356,4 +356,11 @@ func LinksMenu(entry app.Entry) {
 		}
 		fmt.Println("")
 	}
+}
+
+// welcomeMessage personalizes the app with a message tailored to the visitors current journey.
+//TODO: Flesh out the welcome journey
+func WelcomeMessage() {
+	fmt.Printf("Welcome. You have %d entries under management. "+
+		"Type 'help' for assistance.\n", app.EntryCount())
 }

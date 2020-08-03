@@ -5,34 +5,22 @@ Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
-/*
-This file contains variables and functions to handle the default
-command line behavior (interactive mode) or to pass sub-commands
-to one of the cobra commands defined in other files within this
-package, such as add_note.go.
-*/
+/* This file contains code for the main cli flow. */
 
 package cmd
 
 import (
-	"fmt"
-	"io"
-	"memory/app"
-	"memory/app/config"
-	"memory/app/persist"
-	"os"
-	"strings"
+	"sort"
 
 	"github.com/chzyer/readline"
-
-	homedir "github.com/mitchellh/go-homedir"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/urfave/cli"
 )
 
-var memoryHome string
-var memoryHomeName = ".memory"
-var settingsFile = "settings.yml"
+// the rl library provides bash-like completion in interactive mode
+var rl *readline.Instance
+
+// inited makes sure we only run cmdInit once
+var inited = false
 
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
@@ -53,170 +41,144 @@ var completer = readline.NewPrefixCompleter(
 	readline.PcItem("edit"),
 )
 
-// filterInput allows certain keys to be intercepted during readline
-func filterInput(r rune) (rune, bool) {
-	switch r {
-	// block CtrlZ feature
-	case readline.CharCtrlZ:
-		return r, false
-	}
-	return r, true
-}
+var cliApp *cli.App
 
-// the rl library provides bash-like completion in interactive mode
-var rl *readline.Instance
+// interactive is true only if program is entered with no sub-command
+var interactive = false
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "memory",
-	Short: "A database for human experience",
-	Long: `Memory is a CLI application that captures and stores the people, places, 
-things and events that make up human experience and helps you link them together 
-in interesting ways.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		welcomeMessage()
-		// readline setup
-		var err error
-		rl, err = readline.NewEx(&readline.Config{
-			Prompt:              config.Prompt,
-			HistoryFile:         config.HistoryPath(),
-			AutoComplete:        completer,
-			InterruptPrompt:     "^C",
-			EOFPrompt:           "exit",
-			HistorySearchFold:   true,
-			FuncFilterInputRune: filterInput,
-		})
-		if err != nil {
-			panic(err)
-		}
-		defer rl.Close()
-		// input loop
-		for {
-			line, err := rl.Readline()
-			if err == readline.ErrInterrupt {
-				if len(line) == 0 {
-					break
-				} else {
-					continue
-				}
-			} else if err == io.EOF {
-				break
-			}
-			line = strings.TrimSpace(line)
-			switch {
-			case line == "exit" || line == "quit":
-				os.Exit(0)
-			case strings.HasPrefix(line, "add-note"):
-				addNoteInteractive(line[4:]) // in add_note.go
-			case line == "ls" || strings.HasPrefix(line, "ls "):
-				args := ""
-				if len(line) > 3 {
-					args = line[3:]
-				}
-				lsInteractive(args) // in ls.go
-			case strings.HasPrefix(line, "detail ") || line == "detail":
-				if line == "detail" {
-					fmt.Println("Usage: detail [name]")
-					continue
-				}
-				line = strings.TrimSpace(line[7:])
-				detailInteractive(line)
-			case strings.HasPrefix(line, "delete ") || line == "delete":
-				if line == "delete" {
-					fmt.Println("Usage: delete [name]")
-					continue
-				}
-				line = strings.TrimSpace(line[7:])
-				deleteEntryInteractive(line)
-			case strings.HasPrefix(line, "edit ") || line == "edit":
-				if line == "edit" {
-					fmt.Println("Usage: edit [name]")
-					continue
-				}
-				line = strings.TrimSpace(line[5:])
-				editInteractive(line)
-			default:
-				//TODO: Implement help command in interactive mode
-				fmt.Printf("Sorry, I don't understand '%s'. Try 'help'.\n", line)
-			}
-		}
-	},
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
-func init() {
-	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	//TODO: This isn't getting set when specified
-	rootCmd.PersistentFlags().StringVar(&memoryHome, "home", "", "Config and save folder, default is $HOME/.memory")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-
-	// Set default settings in viper
-	viper.SetDefault("bagaag", "kneeg")
-
-	// Find home directory.
-	home, err := homedir.Dir()
-	if err != nil {
-		fmt.Println("Could not find home directory:", err)
-		// Fail gracefully and use current working directory if home can't be located
-		if home, err = os.Getwd(); err != nil {
-			fmt.Println("Could not find working directory:", err)
-			home = "."
-		}
-	}
-
-	slash := string(os.PathSeparator)
-
-	// Set home location if not set in flag
-	if memoryHome == "" {
-		memoryHome = home + slash + memoryHomeName
+// CreateApp sets up the cli commands and general application flow via the cli lib.
+func CreateApp() *cli.App {
+	cliApp = &cli.App{
+		Name:  "memory",
+		Usage: `A CLI tool to collect and browse the elements of human experience.`,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "format",
+				Value:    "human",
+				Usage:    "how data returned in cli mode is formatted: human or json",
+				Required: false,
+			},
+			&cli.StringFlag{
+				Name:     "home",
+				Usage:    "directory path where data and settings are read from and saved to",
+				Required: false,
+			},
+		},
+		Action: cmdDefault,
+		Before: cmdInit,
+		Commands: []cli.Command{
+			{
+				Name:  "add",
+				Usage: "adds a new entry",
+				Subcommands: []cli.Command{
+					{
+						Name:   "event",
+						Usage:  "adds a new Event entry",
+						Action: cmdAdd,
+					},
+					{
+						Name:   "person",
+						Usage:  "adds a new Person entry",
+						Action: cmdAdd,
+					},
+					{
+						Name:   "place",
+						Usage:  "adds a new Place entry",
+						Action: cmdAdd,
+					},
+					{
+						Name:   "thing",
+						Usage:  "adds a new Thing entry",
+						Action: cmdAdd,
+					},
+					{
+						Name:   "note",
+						Usage:  "adds a new Note entry",
+						Action: cmdAdd,
+					},
+				},
+			},
+			{
+				Name:   "detail",
+				Usage:  "displays details of an entry",
+				Action: cmdEdit,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "name of the entry to edit",
+						Required: true,
+					},
+				},
+			},
+			{
+				Name:   "edit",
+				Usage:  "edits an entry",
+				Action: cmdEdit,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "name of the entry to edit",
+						Required: true,
+					},
+				},
+			},
+			{
+				Name:   "delete",
+				Usage:  "deletes an entry",
+				Action: cmdDelete,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "name of the entry to delete",
+						Required: true,
+					},
+				},
+			},
+			{
+				Name:   "ls",
+				Usage:  "lists entries",
+				Action: cmdList,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "contains",
+						Usage: "filter on a word or phrase in the name or description",
+					},
+					&cli.StringFlag{
+						Name:  "any-tags",
+						Usage: "limit to entries with at least one of these tags, comma-separated",
+					},
+					&cli.StringFlag{
+						Name:  "only-tags",
+						Usage: "limit to entries with all of these tags, comma-separated",
+					},
+					&cli.StringFlag{
+						Name:  "order",
+						Value: "recent",
+						Usage: "order entries by 'recent' or 'name'",
+					},
+					&cli.IntFlag{
+						Name:  "limit",
+						Value: -1,
+						Usage: "how many entries to return, or -1 for all matching entries",
+					},
+				},
+			},
+			{
+				Name:   "links",
+				Usage:  "displays links to and from an entry",
+				Action: cmdLinks,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "name of the entry",
+						Required: true,
+					},
+				},
+			},
+		},
 	}
 
-	// Create MemoryHome folder if it doesn't exist
-	if !persist.PathExists(memoryHome) {
-		os.Mkdir(memoryHome, os.ModeDir+0700)
-		fmt.Println("Created save folder:", memoryHome)
-	}
-
-	// Populate viper settings
-	viper.SetConfigFile(memoryHome + slash + settingsFile)
-	viper.AutomaticEnv() // read in environment variables that match
-
-	if err := viper.ReadInConfig(); err != nil {
-		fmt.Println(err)
-		// Otherwise, save the defaults
-		saveAs := memoryHome + slash + settingsFile
-		viper.SafeWriteConfigAs(saveAs)
-		fmt.Println("Created default settings file:", saveAs)
-	}
-
-	// Set app config values from viper
-	config.MemoryHome = memoryHome
-
-	//TODO: Add config settings to settings file
-
-	// Initialize app state
-	if err := app.Init(); err != nil {
-		panic("Failed to initialize application state: " + err.Error())
-	}
+	sort.Sort(cli.FlagsByName(cliApp.Flags))
+	sort.Sort(cli.CommandsByName(cliApp.Commands))
+	return cliApp
 }

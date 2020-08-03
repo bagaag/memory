@@ -179,6 +179,13 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	}
 }
 
+// RefreshResults re-runs a search query and gets fresh results to avoid showing
+// stale entries when results are revisited.
+func RefreshResults(results EntryResults) EntryResults {
+	return GetEntries(results.Types, results.StartsWith, results.Contains,
+		results.Search, results.Tags, results.Sort, results.Limit)
+}
+
 // GetEntry returns a single entry or throws an error.
 func GetEntry(entryName string) (Entry, bool) {
 	entry, exists := data.Names[entryName]

@@ -13,7 +13,6 @@ package cmd
 
 import (
 	"fmt"
-	"memory/app"
 	"memory/app/config"
 	"strings"
 )
@@ -22,24 +21,13 @@ import (
 // message (failure) or empty string (success)
 type validator func(input string) string
 
-// validateName checks for general name issues, regardless of type
+// ValidateName checks for general name issues, regardless of type
 func validateName(name string) string {
 	if name == "" {
 		return "A unique name is required."
 	}
 	if len(name) > config.MaxNameLen {
 		return fmt.Sprintf("Names must be 50 or fewer characters. This one is %d characters.", len(name))
-	}
-	return ""
-}
-
-// validateNoteName checks for general name issues and that the name isn't already in use
-func validateNoteName(name string) string {
-	if msg := validateName(name); msg != "" {
-		return msg
-	}
-	if _, exists := app.GetEntry(name); exists {
-		return "A unique name is required. This name is already in use."
 	}
 	return ""
 }
