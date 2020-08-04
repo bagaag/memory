@@ -24,21 +24,32 @@ var inited = false
 
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
-	readline.PcItem("add-event"),
-	readline.PcItem("add-note"),
-	readline.PcItem("add-person"),
-	readline.PcItem("add-place"),
-	readline.PcItem("add-thing"),
-	readline.PcItem("detail"),
-	readline.PcItem("ls",
-		readline.PcItem("--types"),
-		readline.PcItem("--tags"),
-		readline.PcItem("--contains"),
-		readline.PcItem("--start-with"),
+	readline.PcItem("add",
+		readline.PcItem("event"),
+		readline.PcItem("note"),
+		readline.PcItem("person"),
+		readline.PcItem("place"),
+		readline.PcItem("thing"),
 	),
-	readline.PcItem("delete"),
-	readline.PcItem("rename"),
-	readline.PcItem("edit"),
+	readline.PcItem("detail",
+		readline.PcItem("-name"),
+	),
+	readline.PcItem("ls",
+		readline.PcItem("-types"),
+		readline.PcItem("-tags"),
+		readline.PcItem("-contains"),
+		readline.PcItem("-start-with"),
+	),
+	readline.PcItem("delete",
+		readline.PcItem("-name"),
+		readline.PcItem("-yes"),
+	),
+	readline.PcItem("edit",
+		readline.PcItem("-name"),
+	),
+	readline.PcItem("links",
+		readline.PcItem("-name"),
+	),
 )
 
 var cliApp *cli.App
@@ -101,7 +112,7 @@ func CreateApp() *cli.App {
 			{
 				Name:   "detail",
 				Usage:  "displays details of an entry",
-				Action: cmdEdit,
+				Action: cmdDetail,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "name",
@@ -131,6 +142,10 @@ func CreateApp() *cli.App {
 						Name:     "name",
 						Usage:    "name of the entry to delete",
 						Required: true,
+					},
+					&cli.BoolFlag{
+						Name:  "yes",
+						Usage: "do not prompt for confirmation",
 					},
 				},
 			},

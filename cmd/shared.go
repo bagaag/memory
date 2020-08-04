@@ -89,6 +89,32 @@ func editEntry(origEntry app.Entry) (app.Entry, error) {
 	return editedEntry, nil
 }
 
+// deleteEntry deletes the entry, saves, and prints an error if any. Returns true if successful.
+func deleteEntry(name string, ask bool) bool {
+	s := "y"
+	var err error
+	if ask {
+		s, err = subPrompt("Are you sure you want to delete "+name+"? [y,N]: ", "", validateYesNo)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return false
+		}
+	}
+	if s == "y" {
+		if !app.DeleteEntry(name) {
+			fmt.Println("Entry '" + name + "' could not be found.")
+			return false
+		}
+		if err := app.Save(); err != nil {
+			fmt.Println("Error:", err)
+			return false
+		}
+		fmt.Println("Entry deleted.")
+		return true
+	}
+	return false
+}
+
 // useEditor launches config.editor with a temporary file containing the given string
 // waits for the editor to exit and returns a string with the updated content.
 func useEditor(s string) (string, error) {

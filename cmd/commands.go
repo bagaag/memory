@@ -33,7 +33,7 @@ var cmdInit = func(c *cli.Context) error {
 	home := c.String("home")
 	if home != "" {
 		if !persist.PathExists(home) {
-			fmt.Printf("home directory does not exist: %s\n", home)
+			fmt.Printf("Error: Home directory does not exist: %s\n", home)
 			os.Exit(1)
 		}
 		fmt.Printf("Using '%s' as home directory.\n", home)
@@ -43,22 +43,24 @@ var cmdInit = func(c *cli.Context) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	// setup readline
-	rl, err = readline.NewEx(&readline.Config{
-		Prompt:              config.Prompt,
-		HistoryFile:         config.HistoryPath(),
-		AutoComplete:        completer,
-		InterruptPrompt:     "^C",
-		EOFPrompt:           "exit",
-		HistorySearchFold:   true,
-		FuncFilterInputRune: filterInput,
-	})
-	if err != nil {
-		panic(err)
+	if len(c.Args()) == 0 {
+		// setup readline if we're going to be interactive
+		rl, err = readline.NewEx(&readline.Config{
+			Prompt:              config.Prompt,
+			HistoryFile:         config.HistoryPath(),
+			AutoComplete:        completer,
+			InterruptPrompt:     "^C",
+			EOFPrompt:           "exit",
+			HistorySearchFold:   true,
+			FuncFilterInputRune: filterInput,
+		})
+		if err != nil {
+			panic(err)
+		}
+		// say hi
+		display.WelcomeMessage()
+		inited = true
 	}
-	// say hi
-	display.WelcomeMessage()
-	inited = true
 	return nil
 }
 
@@ -106,23 +108,8 @@ var cmdEdit = func(c *cli.Context) error {
 // cmdDelete deletes an existing entry, identified by name.
 var cmdDelete = func(c *cli.Context) error {
 	name := c.String("name")
-	var confirm string
-	var err error
-	if !c.Bool("yes") {
-		confirm, err = subPrompt("Are you sure you want to delete this entry? [N/y]: ", "", validateYesNo)
-		if err != nil {
-			return err
-		}
-	} else {
-		confirm = "y"
-	}
-	if strings.ToLower(confirm) == "y" {
-		if app.DeleteEntry(name) {
-			fmt.Println("Deleted entry:", name)
-		} else {
-			fmt.Println("Could not find entry to delete.")
-		}
-	}
+	ask := !c.Bool("yes")
+	deleteEntry(name, ask)
 	return nil
 }
 
@@ -185,21 +172,29 @@ var cmdList = func(c *cli.Context) error {
 // cmdLinks lists the entries linked to and from an existing entry, identified by name.
 var cmdLinks = func(c *cli.Context) error {
 	name := c.String("name")
-	fmt.Printf("cmdLinks(%s)\n", name)
+	entry, exists := app.GetEntry(name)
+	if !exists {
+		fmt.Println("Cannot find entry named", name)
+		return errors.New("entry not found")
+	}
+	if interactive {
+		linksInteractiveLoop(entry)
+	} else {
+		display.LinksMenu(entry)
+		fmt.Println("")
+	}
 	return nil
 }
 
 // cmdDetail displays details of an entry and, if interactive, provides a menu prompt.
 func cmdDetail(c *cli.Context) {
-	// --name flag label is optional, "detail 27th Birthday" also works
-	var name = c.Args().First()
-	if strings.HasPrefix(name, "-") {
-		name = c.String("name")
-	}
+	name := c.String("name")
 	entry, exists := app.GetEntry(name)
 	if !exists {
 		fmt.Printf("Entry named '%s' does not exist.\n", name)
-	} else {
+	} else if interactive {
 		detailInteractiveLoop(entry)
+	} else {
+		display.EntryTable(entry)
 	}
 }

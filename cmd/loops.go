@@ -78,7 +78,9 @@ func detailInteractiveLoop(entry app.Entry) bool {
 				return false
 			}
 		} else if strings.ToLower(cmd) == "d" {
-			app.DeleteEntry(entry.Name)
+			if deleteEntry(entry.Name, true) {
+				return false
+			}
 		} else if strings.ToLower(cmd) == "b" {
 			return true
 		} else if cmd == "" || cmd == "^C" || strings.ToLower(cmd) == "q" {
