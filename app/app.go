@@ -208,7 +208,7 @@ func Init(homeDir string) error {
 	if persist.PathExists(config.SettingsPath()) {
 		settings := config.StoredSettings{}
 		if err := persist.Load(config.SettingsPath(), &settings); err != nil {
-			return fmt.Errorf("failed to load settings: %s", err.Error)
+			return fmt.Errorf("failed to load settings: %s", err.Error())
 		}
 		config.UpdateSettingsFromStorage(settings)
 		// initialize settings file

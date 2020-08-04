@@ -49,9 +49,9 @@ Name: Note #1
 Type: Note
 Tags: one,two,three
 ---
-`
 
 Hey now. This is the description.
+`
 	s, err := RenderYamlDown(entry)
 	if err != nil {
 		t.Error(err)

@@ -170,7 +170,7 @@ func TestSave(t *testing.T) {
 	config.DataFile = file.Name()
 	Save()
 	data.Names = make(map[string]Entry)
-	Init()
+	Init("")
 	if len(data.Names) != 10 {
 		t.Error("Expected 10 entries, got", len(data.Names))
 	}

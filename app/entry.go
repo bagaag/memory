@@ -22,6 +22,10 @@ type Entry struct {
 	Created     time.Time
 	Modified    time.Time
 	Type        EntryType
+	Start       string // Events
+	End         string // Events
+	Latitude    string // Place
+	Longitude   string // Place
 }
 
 // NewEntry initializes and returns an Entry object.

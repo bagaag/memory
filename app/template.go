@@ -106,10 +106,13 @@ func ParseYamlDown(content string) (Entry, error) {
 // Template is a generic entry template.
 var Template = `---
 Name: {{.Name}}
-{{if eq .Type "Event"}}start: 
-{{end}}Type: {{.Type}}
+Type: {{.Type}}
 Tags: {{.TagsString}}
----
+{{if eq .Type "Event"}}Start: 
+End: 
+{{end}}{{if eq .Type "Place"}}Latitude: 
+Longitude: 
+{{end}}---
 
 {{.Description}}
 `
