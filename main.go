@@ -7,6 +7,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package main
 
 import (
+	"fmt"
 	"memory/cmd"
 	"os"
 )
@@ -15,6 +16,7 @@ func main() {
 	cliApp := cmd.CreateApp()
 	err := cliApp.Run(os.Args)
 	if err != nil {
-		panic(err)
+		fmt.Println("Error:", err)
+		os.Exit(1)
 	}
 }
