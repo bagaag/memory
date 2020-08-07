@@ -23,7 +23,7 @@ func clearTestData() {
 func generateTestData() {
 	clearTestData()
 	for i := 1; i <= 50; i++ {
-		tags := []string{"All"}
+		tags := []string{"all"}
 		if i%2 == 0 {
 			tags = append(tags, "even")
 		} else {
@@ -218,5 +218,23 @@ func TestEdit(t *testing.T) {
 	}
 	if entry2.Description != "different" {
 		t.Errorf("Expected '%s', got '%s'", "different", entry2.Description)
+	}
+}
+
+func TestGetTags(t *testing.T) {
+	generateTestData()
+	tags := GetTags()
+	if len(tags) != 4 {
+		t.Errorf("Expected 4 tags, got %d", len(tags))
+	}
+	names := tags["even"]
+	if len(names) != 25 {
+		t.Errorf("Expected 25 even names, got %d", len(names))
+	}
+	if names[0] != "note #10" {
+		t.Errorf("Expected first even note to be 'note #10', got %s", names[0])
+	}
+	if names[24] != "note #8" {
+		t.Errorf("Expected last even note to be 'note #8', got %s", names[24])
 	}
 }

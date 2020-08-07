@@ -49,6 +49,20 @@ type EntryResults struct {
 	Limit      int
 }
 
+// SortOrder is used to indicate one of the Sort constants
+type SortOrder int
+
+// SortRecent sorts entries by descending modified date
+const SortRecent = SortOrder(0)
+
+// SortName sorts entries alphabetically by name
+const SortName = SortOrder(1)
+
+// The data variable stores all the things that get saved.
+var data = root{
+	Names: make(map[string]Entry),
+}
+
 // PutEntry adds or replaces the given entry in the collection.
 func PutEntry(entry Entry) {
 	data.Names[entry.Name] = entry
@@ -97,20 +111,6 @@ func (t EntryTypes) String() string {
 		s = strings.Join(a, ", ")
 	}
 	return s
-}
-
-// SortOrder is used to indicate one of the Sort constants
-type SortOrder int
-
-// SortRecent sorts entries by descending modified date
-const SortRecent = SortOrder(0)
-
-// SortName sorts entries alphabetically by name
-const SortName = SortOrder(1)
-
-// The data variable stores all the things that get saved.
-var data = root{
-	Names: make(map[string]Entry),
 }
 
 // EntryCount returns the total number of entries under management.
@@ -341,4 +341,25 @@ func sortEntries(arr []Entry, field string, ascending bool) {
 		}
 	}
 	sort.Slice(arr, less)
+}
+
+// GetTags returns a map of all defined tags, each with a sorted slice of
+// associated entry names.
+func GetTags() map[string][]string {
+	tags := make(map[string][]string)
+	for _, entry := range data.Names {
+		for _, tag := range entry.Tags {
+			names, exists := tags[tag]
+			if !exists {
+				names = []string{entry.Name}
+			} else {
+				if !util.StringSliceContains(names, entry.Name) {
+					names = append(names, entry.Name)
+					sort.Strings(names)
+				}
+			}
+			tags[tag] = names
+		}
+	}
+	return tags
 }
