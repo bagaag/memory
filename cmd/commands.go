@@ -73,15 +73,36 @@ var cmdDefault = func(c *cli.Context) error {
 
 // cmdAdd adds a new entry. Requires a sub-command indicating type.
 var cmdAdd = func(c *cli.Context) error {
-	entryType := strings.Title(c.Command.Name)
-	if entryType == "" {
-		return errors.New("missing entry type: [event, person, place, thing, note]")
+	var entry app.Entry
+	var success = false
+	// read from file if -file is provided
+	if c.IsSet("file") {
+		content, err := persist.ReadFile(c.String("file"))
+		if err != nil {
+			return err
+		}
+		entry, err = parseEntryText(content)
+		if err != nil {
+			return err
+		} else {
+			_, exists := app.GetEntry(entry.Name)
+			if exists {
+				return errors.New("an entry with this name already exists")
+			}
+		}
+		success = true
+	} else {
+		// validate entry type
+		entryType := strings.Title(c.Command.Name)
+		if entryType == "" {
+			return errors.New("missing entry type: [event, person, place, thing, note]")
+		}
+		// display editor w/ template if no file is provided
+		newEntry := app.NewEntry(entryType, "", "", []string{})
+		entry, success = editEntryValidationLoop(newEntry)
 	}
-	name := c.String("name")
-	newEntry := app.NewEntry(entryType, name, "", []string{})
-	entry, err := editEntry(newEntry)
-	if err != nil {
-		return err
+	if !success {
+		return errors.New("failed to add a valid entry")
 	}
 	app.PutEntry(entry)
 	app.Save()
@@ -93,15 +114,41 @@ var cmdAdd = func(c *cli.Context) error {
 // cmdEdit edits an existing entry, identified by name.
 var cmdEdit = func(c *cli.Context) error {
 	name := c.String("name")
+	var entry app.Entry
 	origEntry, exists := app.GetEntry(name)
 	if !exists {
 		return fmt.Errorf("there is no entry named '%s'", name)
 	}
-	entry, err := editEntry(origEntry)
-	if err != nil {
-		return err
+	var success = false
+	// read from file if -file is provided
+	if c.IsSet("file") {
+		content, err := persist.ReadFile(c.String("file"))
+		if err != nil {
+			return err
+		}
+		entry, err = parseEntryText(content)
+		if err != nil {
+			return err
+		} else if origEntry.Name != entry.Name {
+			// entry being renamed
+			_, exists := app.GetEntry(entry.Name)
+			if exists {
+				return errors.New("cannot rename entry; an entry with this name already exists")
+			}
+			app.DeleteEntry(origEntry.Name)
+		}
+		success = true
+	} else {
+		// display editor w/ template if no file is provided
+		entry, success = editEntryValidationLoop(origEntry)
 	}
-	detailInteractiveLoop(entry)
+	if !success {
+		return errors.New("failed to add a valid entry")
+	}
+	app.PutEntry(entry)
+	app.Save()
+	fmt.Println("Added new entry:", entry.Name)
+	display.EntryTable(entry)
 	return nil
 }
 

@@ -81,10 +81,10 @@ func ParseYamlDown(content string) (Entry, error) {
 	}
 	// Type
 	if t, exists := attrs["type"]; !exists {
-		return Entry{}, errors.New("missing required 'type' attribute")
+		return Entry{}, errors.New("missing required Type attribute")
 	} else if t != EntryTypeEvent && t != EntryTypePerson && t != EntryTypePlace &&
 		t != EntryTypeThing && t != EntryTypeNote {
-		return Entry{}, fmt.Errorf("'type' is not one of the valid entry types: %s, %s, %s, %s, %s",
+		return Entry{}, fmt.Errorf("Type is not one of the valid entry types: %s, %s, %s, %s, %s",
 			EntryTypeEvent, EntryTypePerson, EntryTypePlace, EntryTypeThing, EntryTypeNote)
 	} else {
 		entry.Type = t

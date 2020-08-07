@@ -60,10 +60,8 @@ func detailInteractiveLoop(entry app.Entry) bool {
 		cmd := getSingleCharInput()
 		if strings.ToLower(cmd) == "e" {
 			// edit entry
-			edited, err := editEntry(entry)
-			if err != nil {
-				fmt.Println("Error:", err)
-			} else {
+			edited, success := editEntryValidationLoop(entry)
+			if success {
 				entry = edited
 			}
 		} else if hasLinks && strings.ToLower(cmd) == "l" {
@@ -124,4 +122,36 @@ func linksInteractiveLoop(entry app.Entry) bool {
 			fmt.Println("Error: Unrecognized command:", cmd)
 		}
 	}
+}
+
+// editEntryValidationLoop loads the editor for an entry repeatedly
+// until validation passes or the user chooses to discard their edits.
+func editEntryValidationLoop(entry app.Entry) (app.Entry, bool) {
+	valid := true
+	retry := ""
+	for {
+		var err error
+		var edited app.Entry
+		edited, retry, err = editEntry(entry, retry)
+		_ = retry // eliminates 'retry is declared but not used'
+		if err != nil {
+			if continueEditingPrompt(err) {
+				continue
+			} else {
+				valid = false
+			}
+		}
+		entry = edited
+		break
+	}
+	return entry, valid
+}
+
+// continueEditingPrompt asks the user if they want to continue editing after encountering an error
+// preventing a save of the entry after editing.
+func continueEditingPrompt(err error) bool {
+	fmt.Println("Entry is invalid:", err)
+	fmt.Println("Type any key to continue editing or 'd' to discard your changes: ")
+	c := getSingleCharInput()
+	return c != "d"
 }

@@ -13,6 +13,7 @@ package cmd
 
 import (
 	"fmt"
+	"memory/app"
 	"memory/app/config"
 	"strings"
 )
@@ -28,6 +29,15 @@ func validateName(name string) string {
 	}
 	if len(name) > config.MaxNameLen {
 		return fmt.Sprintf("Names must be 50 or fewer characters. This one is %d characters.", len(name))
+	}
+	return ""
+}
+
+func validateType(t string) string {
+	if t != app.EntryTypeEvent && t != app.EntryTypePerson && t != app.EntryTypePlace &&
+		t != app.EntryTypeThing && t != app.EntryTypeNote {
+		return fmt.Sprintf("Type is not one of the valid entry types (%s, %s, %s, %s, %s).",
+			app.EntryTypeEvent, app.EntryTypePerson, app.EntryTypePlace, app.EntryTypeThing, app.EntryTypeNote)
 	}
 	return ""
 }

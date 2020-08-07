@@ -50,7 +50,7 @@ func TestTempFile(t *testing.T) {
 	if path, err := CreateTempFile(temp); err != nil {
 		t.Errorf("%s", err)
 	} else {
-		if s, err2 := ReadTempFile(path); err2 != nil {
+		if s, err2 := ReadFile(path); err2 != nil {
 			t.Errorf("%s", err)
 		} else if s != temp {
 			t.Errorf("%s != %s", temp, s)

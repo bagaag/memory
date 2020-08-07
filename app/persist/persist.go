@@ -91,13 +91,13 @@ func CreateTempFile(value string) (string, error) {
 	return file.Name(), nil
 }
 
-// ReadTempFile returns the string contents of the temp text file
-func ReadTempFile(path string) (string, error) {
+// ReadFile returns the string contents of the text file
+func ReadFile(path string) (string, error) {
 	bytes, err := ioutil.ReadFile(path)
 	return string(bytes), err
 }
 
-// RemoveTempFile deletes the temporary editing file
-func RemoveTempFile(path string) error {
+// RemoveFile deletes the temporary editing file
+func RemoveFile(path string) error {
 	return os.Remove(path)
 }

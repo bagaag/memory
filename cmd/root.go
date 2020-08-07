@@ -79,8 +79,15 @@ func CreateApp() *cli.App {
 		Before: cmdInit,
 		Commands: []cli.Command{
 			{
-				Name:  "add",
-				Usage: "adds a new entry",
+				Name:   "add",
+				Usage:  "adds a new entry",
+				Action: cmdAdd,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "file",
+						Usage: "file containing the entry content",
+					},
+				},
 				Subcommands: []cli.Command{
 					{
 						Name:   "event",
@@ -130,6 +137,10 @@ func CreateApp() *cli.App {
 						Name:     "name",
 						Usage:    "name of the entry to edit",
 						Required: true,
+					},
+					&cli.StringFlag{
+						Name:  "file",
+						Usage: "file containing the entry content",
 					},
 				},
 			},

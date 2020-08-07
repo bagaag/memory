@@ -10,6 +10,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"memory/app"
 	"memory/app/config"
@@ -67,25 +68,42 @@ func getLinkedEntry(entry app.Entry, ix int) (app.Entry, bool) {
 
 // editEntry converts an entry to YamlDown, launches an external editor, parses
 // the edited content back into an entry and returns the edited entry.
-func editEntry(origEntry app.Entry) (app.Entry, error) {
-	initial, err := app.RenderYamlDown(origEntry)
-	if err != nil {
-		return app.Entry{}, err
+func editEntry(origEntry app.Entry, initialText string) (app.Entry, string, error) {
+	var err error
+	if initialText == "" {
+		initialText, err = app.RenderYamlDown(origEntry)
+		if err != nil {
+			return app.Entry{}, "", err
+		}
 	}
-	edited, err := useEditor(initial)
+	edited, err := useEditor(initialText)
 	if err != nil {
-		return app.Entry{}, err
+		return app.Entry{}, edited, err
 	}
-	editedEntry, err := app.ParseYamlDown(edited)
+	editedEntry, err := parseEntryText(edited)
 	if err != nil {
-		return app.Entry{}, err
+		return app.Entry{}, edited, err
 	}
 	if origEntry.Name != editedEntry.Name {
+		if _, exists := app.GetEntry(editedEntry.Name); exists {
+			return editedEntry, edited, errors.New("entry named '" + editedEntry.Name + "' already exists")
+		}
 		app.DeleteEntry(origEntry.Name)
 		//TODO: update links on rename
 	}
 	app.PutEntry(editedEntry)
 	app.Save()
+	return editedEntry, "", nil
+}
+
+func parseEntryText(entryText string) (app.Entry, error) {
+	editedEntry, err := app.ParseYamlDown(entryText)
+	if err != nil {
+		return app.Entry{}, err
+	}
+	if msg := validateName(editedEntry.Name); msg != "" {
+		return editedEntry, errors.New(msg)
+	}
 	return editedEntry, nil
 }
 
@@ -130,10 +148,10 @@ func useEditor(s string) (string, error) {
 		return "", fmt.Errorf("failed to interact with editor: %s", err.Error())
 	}
 	var edited string
-	if edited, err = persist.ReadTempFile(tmp); err != nil {
+	if edited, err = persist.ReadFile(tmp); err != nil {
 		return "", fmt.Errorf("failed to read temporary file: %s", err.Error())
 	}
-	if err := persist.RemoveTempFile(tmp); err != nil {
+	if err := persist.RemoveFile(tmp); err != nil {
 		return edited, fmt.Errorf("failed to delete temporary file: %s", err.Error())
 	}
 	return edited, nil
