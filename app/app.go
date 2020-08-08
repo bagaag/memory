@@ -342,24 +342,3 @@ func sortEntries(arr []Entry, field string, ascending bool) {
 	}
 	sort.Slice(arr, less)
 }
-
-// GetTags returns a map of all defined tags, each with a sorted slice of
-// associated entry names.
-func GetTags() map[string][]string {
-	tags := make(map[string][]string)
-	for _, entry := range data.Names {
-		for _, tag := range entry.Tags {
-			names, exists := tags[tag]
-			if !exists {
-				names = []string{entry.Name}
-			} else {
-				if !util.StringSliceContains(names, entry.Name) {
-					names = append(names, entry.Name)
-					sort.Strings(names)
-				}
-			}
-			tags[tag] = names
-		}
-	}
-	return tags
-}
