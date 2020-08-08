@@ -107,3 +107,10 @@ func ReadKeyStroke() (ascii int, keyCode int, err error) {
 	t.Close()
 	return
 }
+
+// StringSliceToLower converts all the strings in a slice to lower case.
+func StringSliceToLower(ss []string) {
+	for i, s := range ss {
+		ss[i] = strings.ToLower(s)
+	}
+}
