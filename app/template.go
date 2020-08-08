@@ -127,7 +127,7 @@ func processTags(tags string) []string {
 	}
 	arr := strings.Split(tags, ",")
 	for i, tag := range arr {
-		arr[i] = strings.ToLower(strings.TrimSpace(tag))
+		arr[i] = strings.TrimSpace(tag)
 	}
 	return arr
 }

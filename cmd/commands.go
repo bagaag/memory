@@ -183,16 +183,16 @@ var cmdList = func(c *cli.Context) error {
 		pager := display.NewEntryPager(results)
 		pager.PrintPage()
 		for {
-			input := getSingleCharInput()
-			if strings.ToLower(input) == "n" {
+			input := strings.ToLower(getSingleCharInput())
+			if input == "n" {
 				if !pager.Next() {
 					fmt.Println("Error: Already on the last page.")
 				}
-			} else if strings.ToLower(input) == "p" {
+			} else if input == "p" {
 				if !pager.Prev() {
 					fmt.Println("Error: Already on the first page.")
 				}
-			} else if input == "" || input == "^C" || strings.ToLower(input) == "q" || strings.ToLower(input) == "b" {
+			} else if input == "" || input == "^c" || input == "q" || input == "b" {
 				break
 			} else if num, err := strconv.Atoi(input); err == nil {
 				ix := num - 1
@@ -244,4 +244,17 @@ func cmdDetail(c *cli.Context) {
 	} else {
 		display.EntryTable(entry)
 	}
+}
+
+// cmdTags displays a list of tags in use and how many entries each has
+func cmdTags(c *cli.Context) {
+	tags := app.GetTags()
+	sorted := app.GetSortedTags(tags)
+	fmt.Println()
+	for _, tag := range sorted {
+		names := tags[tag]
+		fmt.Printf("%s [%d]  ", tag, len(names))
+	}
+	fmt.Println()
+	fmt.Println()
 }

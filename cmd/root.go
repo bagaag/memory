@@ -201,6 +201,11 @@ func CreateApp() *cli.App {
 					},
 				},
 			},
+			{
+				Name:   "tags",
+				Usage:  "displays summary of entry tags",
+				Action: cmdTags,
+			},
 		},
 	}
 
