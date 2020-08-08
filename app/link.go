@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"memory/util"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -50,7 +51,7 @@ func ParseLinks(s string) (string, []string) {
 		name := link[1 : len(link)-1]
 		name = strings.ReplaceAll(name, "\n", " ")
 		for strings.Contains(name, "  ") {
-			name = strings.ReplaceAll(name, "  ", " ")
+			name = strings.ReplaceAll(name, "  ", " ") //TODO: use regex to replace 2+ whitespace
 		}
 		// remove ! if it's already there (! prefix indicates non-existent entry)
 		hadBang := false
@@ -60,9 +61,6 @@ func ParseLinks(s string) (string, []string) {
 		}
 		// add to results if exists, otherwise add ! prefix
 		if _, exists := GetEntry(name); exists {
-			if !util.StringSliceContains(links, name) {
-				links = append(links, name)
-			}
 			// remove erroneous ! prefix if needed
 			if hadBang {
 				linkWithoutBang := "[" + link[2:]
@@ -72,6 +70,9 @@ func ParseLinks(s string) (string, []string) {
 			// entry doesn't exist, add a ! if needed
 			link404 := "[!" + link[1:]
 			parsed = strings.Replace(parsed, link, link404, 1)
+		}
+		if !util.StringSliceContains(links, name) {
+			links = append(links, name)
 		}
 	}
 	return parsed, links
@@ -90,8 +91,8 @@ func ResolveLinks(links []string) []Entry {
 }
 
 // populateLinks populates the LinksTo and LinkedFrom slices on all entries by
-// parsing the descriptions for links. Assumes there is already a lock on data
-// by the calling function.
+// parsing the descriptions for links. Assumes the calling function already
+// has a lock on data.
 func populateLinks() {
 	fromLinks := make(map[string][]string)
 	for _, entry := range data.Names {
@@ -121,4 +122,28 @@ func populateLinks() {
 			data.Names[entry.Name] = entry
 		}
 	}
+}
+
+// BrokenLinks returns a map of string slices containing names of linked-to pages that don't
+// exist; the name of the page containing the link is the key.
+func BrokenLinks() map[string][]string {
+	ret := make(map[string][]string)
+	data.Mux.Lock()
+	for fromName, fromEntry := range data.Names {
+		for _, toName := range fromEntry.LinksTo {
+			if _, entryExists := data.Names[toName]; !entryExists {
+				var brokenLinks []string
+				var existingList bool
+				if brokenLinks, existingList = ret[fromName]; existingList {
+					brokenLinks = append(brokenLinks, toName)
+					sort.Strings(brokenLinks)
+				} else {
+					brokenLinks = []string{toName}
+				}
+				ret[fromName] = brokenLinks
+			}
+		}
+	}
+	data.Mux.Unlock()
+	return ret
 }

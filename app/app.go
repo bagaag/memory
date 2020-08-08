@@ -350,3 +350,13 @@ func sortEntries(arr []Entry, field string, ascending bool) {
 	}
 	sort.Slice(arr, less)
 }
+
+// GetSortedNames returns a slice of all entry names sorted alphabetically.
+func GetSortedNames() []string {
+	keys := []string{}
+	for name := range data.Names {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+	return keys
+}

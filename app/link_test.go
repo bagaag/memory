@@ -88,3 +88,23 @@ func TestPopulateLinks(t *testing.T) {
 		t.Error("Expected n3.LinkedFrom==['Note 2'], got", n3.LinkedFrom)
 	}
 }
+
+func TestBrokenLinks(t *testing.T) {
+	nA := NewEntry(EntryTypeNote, "Note 1", "This note has a link to [Note A].", []string{})
+	nB := NewEntry(EntryTypeNote, "Note 2", "This note [has a] link to [note 4] and [Note 1].", []string{})
+	nC := NewEntry(EntryTypeNote, "Note 3", "This note has no links.", []string{})
+	PutEntry(nA)
+	PutEntry(nB)
+	PutEntry(nC)
+	populateLinks()
+	entriesWithBL := BrokenLinks()
+	if !util.StringSlicesEqual(entriesWithBL["Note 1"], []string{"Note A"}) {
+		t.Errorf("Expected %s, got %s", []string{"Note A"}, entriesWithBL["Note 1"])
+	}
+	if !util.StringSlicesEqual(entriesWithBL["Note 2"], []string{"has a", "note 4"}) {
+		t.Errorf("Expected %s, got %s", []string{"has a", "Note 4"}, entriesWithBL["Note 2"])
+	}
+	if !util.StringSlicesEqual(entriesWithBL["Note 3"], []string{}) {
+		t.Errorf("Expected %s, got %s", []string{}, entriesWithBL["Note 1"])
+	}
+}
