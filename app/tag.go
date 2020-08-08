@@ -45,3 +45,17 @@ func GetSortedTags(tags map[string][]string) []string {
 	sort.Strings(keys)
 	return keys
 }
+
+// tagMatches returns true if any of the tags in searchTags match the tags
+// on the provided Entry.
+func tagMatches(entry Entry, searchTags []string, matchesAll bool) bool {
+	for _, searchTag := range searchTags {
+		matches := util.StringSliceContains(entry.Tags, searchTag)
+		if matches && !matchesAll {
+			return true
+		} else if !matches && matchesAll {
+			return false
+		}
+	}
+	return matchesAll
+}

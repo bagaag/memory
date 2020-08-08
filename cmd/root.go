@@ -170,12 +170,12 @@ func CreateApp() *cli.App {
 						Usage: "filter on a word or phrase in the name or description",
 					},
 					&cli.StringFlag{
-						Name:  "any-tags",
+						Name:  "tags",
 						Usage: "limit to entries with at least one of these tags, comma-separated",
 					},
 					&cli.StringFlag{
-						Name:  "only-tags",
-						Usage: "limit to entries with all of these tags, comma-separated",
+						Name:  "tag",
+						Usage: "limit to entries to those with this tag or tags, comma-separated",
 					},
 					&cli.StringFlag{
 						Name:  "order",

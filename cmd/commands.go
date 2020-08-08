@@ -164,10 +164,13 @@ var cmdDelete = func(c *cli.Context) error {
 var cmdList = func(c *cli.Context) error {
 	contains := c.String("contains")
 	anyTags := []string{}
-	if c.IsSet("any-tags") {
+	if c.IsSet("tags") {
 		anyTags = strings.Split(c.String("any-tags"), ",")
 	}
-	//onlyTags := strings.Split(c.String("only-tags"), ",") //TODO: Implement onlyTags ls option
+	onlyTags := []string{}
+	if c.IsSet("tag") {
+		onlyTags = strings.Split(c.String("tag"), ",")
+	}
 	order := app.SortRecent
 	if c.String("order") == "name" {
 		order = app.SortName
@@ -177,7 +180,7 @@ var cmdList = func(c *cli.Context) error {
 	startsWith := "" //TODO: Implement or remove ls startsWith
 	search := ""     //TODO: Implement or remove ls search
 
-	results := app.GetEntries(parseTypes(types), startsWith, contains, search, anyTags, order, limit)
+	results := app.GetEntries(parseTypes(types), startsWith, contains, search, onlyTags, anyTags, order, limit)
 
 	if interactive {
 		pager := display.NewEntryPager(results)

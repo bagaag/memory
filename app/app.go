@@ -18,6 +18,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 )
 
 const dataVersion = 1
@@ -27,6 +28,7 @@ var inited = false // run Init() only once
 // root contains all the data to be saved
 type root struct {
 	Names map[string]Entry
+	Mux   sync.Mutex
 }
 
 // saveData is just the data we need to save to file - eliminating any
@@ -44,7 +46,8 @@ type EntryResults struct {
 	StartsWith string
 	Contains   string
 	Search     string
-	Tags       []string
+	AnyTags    []string
+	OnlyTags   []string
 	Sort       SortOrder
 	Limit      int
 }
@@ -65,16 +68,20 @@ var data = root{
 
 // PutEntry adds or replaces the given entry in the collection.
 func PutEntry(entry Entry) {
+	data.Mux.Lock()
 	data.Names[entry.Name] = entry
+	data.Mux.Unlock()
 }
 
 // DeleteEntry removes the specified entry from the collection.
 func DeleteEntry(name string) bool {
+	data.Mux.Lock()
 	_, exists := data.Names[name]
 	if !exists {
 		return false
 	}
 	delete(data.Names, name)
+	data.Mux.Unlock()
 	return true
 }
 
@@ -121,7 +128,8 @@ func EntryCount() int {
 // GetEntries returns an array of entries of the specified type(s) with
 // specified filters and sorting applied.
 func GetEntries(types EntryTypes, startsWith string, contains string,
-	search string, tags []string, sort SortOrder, limit int) EntryResults {
+	search string, onlyTags []string, anyTags []string, sort SortOrder,
+	limit int) EntryResults {
 
 	// holds the results
 	entries := []Entry{}
@@ -129,11 +137,11 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	// convert filters to lower case
 	startsWith = strings.ToLower(startsWith)
 	contains = strings.ToLower(startsWith)
-	for i, tag := range tags {
-		tags[i] = strings.ToLower(tag)
-	}
+	util.StringSliceToLower(onlyTags)
+	util.StringSliceToLower(anyTags)
 
 	// run through the collection and apply filters
+	data.Mux.Lock()
 	for _, entry := range data.Names {
 		lowerName := strings.ToLower(entry.Name)
 
@@ -146,13 +154,17 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 		if contains != "" && !strings.Contains(lowerName, contains) {
 			continue
 		}
-		if len(tags) > 0 && !tagMatches(entry, tags) {
+		if len(anyTags) > 0 && !tagMatches(entry, anyTags, false) {
+			continue
+		}
+		if len(onlyTags) > 0 && !tagMatches(entry, onlyTags, true) {
 			continue
 		}
 		//TODO: implement search
 		// if we made it this far, add to return slice
 		entries = append(entries, entry)
 	}
+	data.Mux.Unlock()
 
 	// sort entries
 	if sort == SortName {
@@ -173,7 +185,8 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 		StartsWith: startsWith,
 		Contains:   contains,
 		Search:     search,
-		Tags:       tags,
+		OnlyTags:   onlyTags,
+		AnyTags:    anyTags,
 		Sort:       sort,
 		Limit:      limit,
 	}
@@ -183,7 +196,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 // stale entries when results are revisited.
 func RefreshResults(results EntryResults) EntryResults {
 	return GetEntries(results.Types, results.StartsWith, results.Contains,
-		results.Search, results.Tags, results.Sort, results.Limit)
+		results.Search, results.OnlyTags, results.AnyTags, results.Sort, results.Limit)
 }
 
 // GetEntry returns a single entry or throws an error.
@@ -216,6 +229,7 @@ func Init(homeDir string) error {
 		return fmt.Errorf("failed to initialize settings: %w", err)
 	}
 	// load data
+	data.Mux.Lock()
 	if persist.PathExists(config.SavePath()) {
 		// read saved file into saveData struct
 		fromSave := saveData{}
@@ -227,14 +241,16 @@ func Init(homeDir string) error {
 		for _, entry := range fromSave.Entries {
 			data.Names[entry.Name] = entry
 		}
-		PopulateLinks()
+		populateLinks()
 	}
+	data.Mux.Unlock()
 	inited = true
 	return nil
 }
 
 // RenameEntry changes an entry name and updates associated data structures.
 func RenameEntry(name string, newName string) error {
+	data.Mux.Lock()
 	_, exists := GetEntry(newName)
 	if exists {
 		return fmt.Errorf("an entry named %s already exists", newName)
@@ -246,6 +262,7 @@ func RenameEntry(name string, newName string) error {
 	DeleteEntry(name)
 	entry.Name = newName
 	PutEntry(entry)
+	data.Mux.Unlock()
 	return nil
 }
 
@@ -253,9 +270,11 @@ func RenameEntry(name string, newName string) error {
 func Save() error {
 	toSave := saveData{Version: dataVersion}
 	toSave.Entries = []Entry{}
+	data.Mux.Lock()
 	for _, entry := range data.Names {
 		toSave.Entries = append(toSave.Entries, entry)
 	}
+	data.Mux.Unlock()
 	return persist.Save(config.SavePath(), toSave)
 }
 
@@ -307,17 +326,6 @@ func filterType(entry Entry, types EntryTypes) bool {
 		return types.Place
 	case EntryTypeThing:
 		return types.Thing
-	}
-	return false
-}
-
-// tagMatches returns true if any of the tags in searchTags match the tags
-// on the provided Entry.
-func tagMatches(entry Entry, searchTags []string) bool {
-	for _, searchTag := range searchTags {
-		if util.StringSliceContains(entry.Tags, searchTag) {
-			return true
-		}
 	}
 	return false
 }

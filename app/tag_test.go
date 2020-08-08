@@ -41,3 +41,20 @@ func TestGetSortedTags(t *testing.T) {
 		t.Errorf("Expected %s, got %s", expect, sorted)
 	}
 }
+
+func TestTagMatches(t *testing.T) {
+	entry := NewEntry(EntryTypeNote, "Test", "Description", []string{"one", "two"})
+	if !tagMatches(entry, []string{"one", "two"}, false) {
+		t.Errorf("Failed tagMatches test #1")
+	} else if !tagMatches(entry, []string{"one", "two"}, true) {
+		t.Errorf("Failed tagMatches test #2")
+	} else if tagMatches(entry, []string{"three", "four"}, false) {
+		t.Errorf("Failed tagMatches test #3")
+	} else if tagMatches(entry, []string{"three", "four"}, true) {
+		t.Errorf("Failed tagMatches test #4")
+	} else if tagMatches(entry, []string{"one", "three"}, true) {
+		t.Errorf("Failed tagMatches test #5")
+	} else if !tagMatches(entry, []string{"one", "three"}, false) {
+		t.Errorf("Failed tagMatches test #6")
+	}
+}

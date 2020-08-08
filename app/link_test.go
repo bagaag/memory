@@ -63,7 +63,7 @@ func TestPopulateLinks(t *testing.T) {
 	PutEntry(nA)
 	PutEntry(nB)
 	PutEntry(nC)
-	PopulateLinks()
+	populateLinks()
 	n1, _ := GetEntry("Note 1")
 	n2, _ := GetEntry("Note 2")
 	n3, _ := GetEntry("Note 3")

@@ -149,9 +149,13 @@ func renderHeader(pager EntryPager) []string {
 	} else {
 		lines = addSettingToHeader(pager, lines, "Sort", "Most recent")
 	}
-	// optional Tags filter
-	if len(pager.results.Tags) > 0 {
-		lines = addSettingToHeader(pager, lines, "Tagged with", strings.Join(pager.results.Tags, ", "))
+	// optional Any Tags filter
+	if len(pager.results.AnyTags) > 0 {
+		lines = addSettingToHeader(pager, lines, "Any tags", strings.Join(pager.results.AnyTags, ", "))
+	}
+	// optional Only Tags filter
+	if len(pager.results.OnlyTags) > 0 {
+		lines = addSettingToHeader(pager, lines, "Only tags", strings.Join(pager.results.OnlyTags, ", "))
 	}
 	// optional Contains filter
 	if pager.results.Contains != "" {

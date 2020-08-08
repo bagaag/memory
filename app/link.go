@@ -89,18 +89,18 @@ func ResolveLinks(links []string) []Entry {
 	return resolved
 }
 
-// PopulateLinks populates the LinksTo and LinkedFrom slices on all entries by
-// parsing the descriptions for links.
-func PopulateLinks() {
+// populateLinks populates the LinksTo and LinkedFrom slices on all entries by
+// parsing the descriptions for links. Assumes there is already a lock on data
+// by the calling function.
+func populateLinks() {
 	fromLinks := make(map[string][]string)
-	results := GetEntries(EntryTypes{}, "", "", "", []string{}, SortName, -1)
-	for _, entry := range results.Entries {
+	for _, entry := range data.Names {
 		// parse and save outgoing links for this entry
 		searchText := entry.Description
 		newDesc, links := ParseLinks(searchText)
 		entry.Description = newDesc
 		entry.LinksTo = links
-		PutEntry(entry)
+		data.Names[entry.Name] = entry
 		// add links in reverse direction
 		fromName := entry.Name
 		for _, toName := range links {
@@ -118,7 +118,7 @@ func PopulateLinks() {
 		entry, exists := GetEntry(name)
 		if exists {
 			entry.LinkedFrom = linkedFrom
-			PutEntry(entry)
+			data.Names[entry.Name] = entry
 		}
 	}
 }
