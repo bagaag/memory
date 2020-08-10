@@ -128,7 +128,8 @@ func populateLinks() {
 // exist; the name of the page containing the link is the key.
 func BrokenLinks() map[string][]string {
 	ret := make(map[string][]string)
-	data.Mux.Lock()
+	data.lock()
+	defer data.unlock()
 	for fromName, fromEntry := range data.Names {
 		for _, toName := range fromEntry.LinksTo {
 			if _, entryExists := data.Names[toName]; !entryExists {
@@ -144,6 +145,5 @@ func BrokenLinks() map[string][]string {
 			}
 		}
 	}
-	data.Mux.Unlock()
 	return ret
 }

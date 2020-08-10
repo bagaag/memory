@@ -28,7 +28,7 @@ var inited = false // run Init() only once
 // root contains all the data to be saved
 type root struct {
 	Names map[string]Entry
-	Mux   sync.Mutex
+	mux   sync.Mutex
 }
 
 // saveData is just the data we need to save to file - eliminating any
@@ -66,22 +66,29 @@ var data = root{
 	Names: make(map[string]Entry),
 }
 
+func (r *root) lock() {
+	r.mux.Lock()
+}
+func (r *root) unlock() {
+	r.mux.Unlock()
+}
+
 // PutEntry adds or replaces the given entry in the collection.
 func PutEntry(entry Entry) {
-	data.Mux.Lock()
+	data.lock()
 	data.Names[entry.Name] = entry
-	data.Mux.Unlock()
+	data.unlock()
 }
 
 // DeleteEntry removes the specified entry from the collection.
 func DeleteEntry(name string) bool {
-	data.Mux.Lock()
+	data.lock()
+	defer data.unlock()
 	_, exists := data.Names[name]
 	if !exists {
 		return false
 	}
 	delete(data.Names, name)
-	data.Mux.Unlock()
 	return true
 }
 
@@ -141,7 +148,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	util.StringSliceToLower(anyTags)
 
 	// run through the collection and apply filters
-	data.Mux.Lock()
+	data.lock()
 	for _, entry := range data.Names {
 		lowerName := strings.ToLower(entry.Name)
 
@@ -164,7 +171,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 		// if we made it this far, add to return slice
 		entries = append(entries, entry)
 	}
-	data.Mux.Unlock()
+	data.unlock()
 
 	// sort entries
 	if sort == SortName {
@@ -229,7 +236,8 @@ func Init(homeDir string) error {
 		return fmt.Errorf("failed to initialize settings: %w", err)
 	}
 	// load data
-	data.Mux.Lock()
+	data.lock()
+	defer data.unlock()
 	if persist.PathExists(config.SavePath()) {
 		// read saved file into saveData struct
 		fromSave := saveData{}
@@ -243,14 +251,14 @@ func Init(homeDir string) error {
 		}
 		populateLinks()
 	}
-	data.Mux.Unlock()
 	inited = true
 	return nil
 }
 
 // RenameEntry changes an entry name and updates associated data structures.
 func RenameEntry(name string, newName string) error {
-	data.Mux.Lock()
+	data.lock()
+	defer data.unlock()
 	_, exists := GetEntry(newName)
 	if exists {
 		return fmt.Errorf("an entry named %s already exists", newName)
@@ -262,7 +270,6 @@ func RenameEntry(name string, newName string) error {
 	DeleteEntry(name)
 	entry.Name = newName
 	PutEntry(entry)
-	data.Mux.Unlock()
 	return nil
 }
 
@@ -270,11 +277,11 @@ func RenameEntry(name string, newName string) error {
 func Save() error {
 	toSave := saveData{Version: dataVersion}
 	toSave.Entries = []Entry{}
-	data.Mux.Lock()
+	data.lock()
+	defer data.unlock()
 	for _, entry := range data.Names {
 		toSave.Entries = append(toSave.Entries, entry)
 	}
-	data.Mux.Unlock()
 	return persist.Save(config.SavePath(), toSave)
 }
 

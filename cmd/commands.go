@@ -84,11 +84,10 @@ var cmdAdd = func(c *cli.Context) error {
 		entry, err = parseEntryText(content)
 		if err != nil {
 			return err
-		} else {
-			_, exists := app.GetEntry(entry.Name)
-			if exists {
-				return errors.New("an entry with this name already exists")
-			}
+		}
+		_, exists := app.GetEntry(entry.Name)
+		if exists {
+			return errors.New("an entry with this name already exists")
 		}
 		success = true
 	} else {
