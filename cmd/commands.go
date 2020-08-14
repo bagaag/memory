@@ -43,21 +43,21 @@ var cmdInit = func(c *cli.Context) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	// setup readline if we're going to be interactive
+	rl, err = readline.NewEx(&readline.Config{
+		Prompt:              config.Prompt,
+		HistoryFile:         config.HistoryPath(),
+		AutoComplete:        completer,
+		InterruptPrompt:     "^C",
+		EOFPrompt:           "exit",
+		HistorySearchFold:   true,
+		FuncFilterInputRune: filterInput,
+	})
+	if err != nil {
+		panic(err)
+	}
 	if len(c.Args()) == 0 {
-		// setup readline if we're going to be interactive
-		rl, err = readline.NewEx(&readline.Config{
-			Prompt:              config.Prompt,
-			HistoryFile:         config.HistoryPath(),
-			AutoComplete:        completer,
-			InterruptPrompt:     "^C",
-			EOFPrompt:           "exit",
-			HistorySearchFold:   true,
-			FuncFilterInputRune: filterInput,
-		})
-		if err != nil {
-			panic(err)
-		}
-		// say hi
+		// say hi if we're in interactive mode
 		display.WelcomeMessage()
 		inited = true
 	}
@@ -75,31 +75,14 @@ var cmdDefault = func(c *cli.Context) error {
 var cmdAdd = func(c *cli.Context) error {
 	var entry app.Entry
 	var success = false
-	// read from file if -file is provided
-	if c.IsSet("file") {
-		content, err := persist.ReadFile(c.String("file"))
-		if err != nil {
-			return err
-		}
-		entry, err = parseEntryText(content)
-		if err != nil {
-			return err
-		}
-		_, exists := app.GetEntry(entry.Name)
-		if exists {
-			return errors.New("an entry with this name already exists")
-		}
-		success = true
-	} else {
-		// validate entry type
-		entryType := strings.Title(c.Command.Name)
-		if entryType == "" {
-			return errors.New("missing entry type: [event, person, place, thing, note]")
-		}
-		// display editor w/ template if no file is provided
-		newEntry := app.NewEntry(entryType, "", "", []string{})
-		entry, success = editEntryValidationLoop(newEntry)
+	// validate entry type
+	entryType := strings.Title(c.Command.Name)
+	if entryType == "" {
+		return errors.New("missing entry type: [event, person, place, thing, note]")
 	}
+	// display editor w/ template if no file is provided
+	newEntry := app.NewEntry(entryType, "New "+entryType, "", []string{})
+	entry, success = editEntryValidationLoop(newEntry)
 	if !success {
 		return errors.New("failed to add a valid entry")
 	}
@@ -110,43 +93,51 @@ var cmdAdd = func(c *cli.Context) error {
 	return nil
 }
 
+// cmdPut adds or updates an entry from the given file.
+var cmdPut = func(c *cli.Context) error {
+	// read from file if -file is provided
+	content, err := persist.ReadFile(c.String("file"))
+	if err != nil {
+		return err
+	}
+	entry, err := parseEntryText(content)
+	if err != nil {
+		return err
+	}
+	_, existed := app.GetEntry(entry.Slug())
+	app.PutEntry(entry)
+	app.Save()
+	if existed {
+		fmt.Println("Updated entry:", entry.Name)
+	} else {
+		fmt.Println("Added new entry:", entry.Name)
+	}
+	display.EntryTable(entry)
+	return nil
+}
+
 // cmdEdit edits an existing entry, identified by name.
 var cmdEdit = func(c *cli.Context) error {
 	name := c.String("name")
-	var entry app.Entry
-	origEntry, exists := app.GetEntry(name)
+	origEntry, exists := app.GetEntryByName(name)
 	if !exists {
 		return fmt.Errorf("there is no entry named '%s'", name)
 	}
-	var success = false
-	// read from file if -file is provided
-	if c.IsSet("file") {
-		content, err := persist.ReadFile(c.String("file"))
-		if err != nil {
-			return err
-		}
-		entry, err = parseEntryText(content)
-		if err != nil {
-			return err
-		} else if origEntry.Name != entry.Name {
-			// entry being renamed
-			_, exists := app.GetEntry(entry.Name)
-			if exists {
-				return errors.New("cannot rename entry; an entry with this name already exists")
-			}
-			app.DeleteEntry(origEntry.Name)
-		}
-		success = true
-	} else {
-		// display editor w/ template if no file is provided
-		entry, success = editEntryValidationLoop(origEntry)
-	}
+	entry, success := editEntryValidationLoop(origEntry)
 	if !success {
 		return errors.New("failed to add a valid entry")
 	}
+	if origEntry.Name != entry.Name {
+		// entry being renamed
+		_, exists := app.GetEntryByName(entry.Name)
+		if exists {
+			return errors.New("cannot rename entry; an entry with this name already exists")
+		}
+		app.DeleteEntry(app.GetSlug(origEntry.Name))
+	}
 	app.PutEntry(entry)
 	app.Save()
-	fmt.Println("Added new entry:", entry.Name)
+	fmt.Println("Updated entry:", entry.Name)
 	display.EntryTable(entry)
 	return nil
 }
@@ -221,7 +212,7 @@ var cmdList = func(c *cli.Context) error {
 // cmdLinks lists the entries linked to and from an existing entry, identified by name.
 var cmdLinks = func(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists := app.GetEntry(name)
+	entry, exists := app.GetEntryByName(name)
 	if !exists {
 		fmt.Println("Cannot find entry named", name)
 		return errors.New("entry not found")
@@ -235,10 +226,25 @@ var cmdLinks = func(c *cli.Context) error {
 	return nil
 }
 
+// cmdGet displays the editable content of an entry
+func cmdGet(c *cli.Context) error {
+	name := c.String("name")
+	entry, exists := app.GetEntry(app.GetSlug(name))
+	if !exists {
+		return nil
+	}
+	content, err := app.RenderYamlDown(entry)
+	if err != nil {
+		return err
+	}
+	fmt.Println(content)
+	return nil
+}
+
 // cmdDetail displays details of an entry and, if interactive, provides a menu prompt.
 func cmdDetail(c *cli.Context) {
 	name := c.String("name")
-	entry, exists := app.GetEntry(name)
+	entry, exists := app.GetEntry(app.GetSlug(name))
 	if !exists {
 		fmt.Printf("Entry named '%s' does not exist.\n", name)
 	} else if interactive {

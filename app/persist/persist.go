@@ -10,12 +10,16 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package persist
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"memory/app/config"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -75,20 +79,23 @@ func PathExists(path string) bool {
 }
 
 // CreateTempFile returns the full path to a new temporary file containing
-// the given value
-func CreateTempFile(value string) (string, error) {
-	var file *os.File
+// a copy of the source file identified by the given slug.
+func CreateTempFile(slug string, content string) (string, error) {
+	var tempFile *os.File
 	var err error
-	if file, err = ioutil.TempFile("", "tmp-"); err != nil {
+	// TODO: Clean up temp files older than 24 hrs at startup
+
+	// temp file we'll write to and return the name of
+	if tempFile, err = ioutil.TempFile(config.TempPath(), slug+"-*"+config.EntryExt); err != nil {
 		return "", err
 	}
-	if _, err := file.WriteString(value); err != nil {
-		return file.Name(), err
-	}
-	if err = file.Close(); err != nil {
-		return file.Name(), err
-	}
-	return file.Name(), nil
+	defer tempFile.Close()
+
+	w := bufio.NewWriter(tempFile)
+	w.WriteString(content)
+	w.Flush()
+
+	return tempFile.Name(), err
 }
 
 // ReadFile returns the string contents of the text file
@@ -100,4 +107,58 @@ func ReadFile(path string) (string, error) {
 // RemoveFile deletes the temporary editing file
 func RemoveFile(path string) error {
 	return os.Remove(path)
+}
+
+// InitHome checks that the home, entries and temp folders exist and creates them if needed.
+func InitHome() error {
+	if !PathExists(config.MemoryHome) {
+		err := os.MkdirAll(config.EntriesPath(), 0740)
+		if err != nil {
+			fmt.Println("Failed to initialize settings folder at", config.MemoryHome)
+			panic(err)
+		}
+	}
+	if !PathExists(config.EntriesPath()) {
+		err := os.MkdirAll(config.EntriesPath(), 0740)
+		if err != nil {
+			fmt.Println("Failed to initialize entries folder at", config.EntriesPath())
+			panic(err)
+		}
+	}
+	if !PathExists(config.TempPath()) {
+		err := os.MkdirAll(config.TempPath(), 0740)
+		if err != nil {
+			fmt.Println("Failed to initialize temp folder at", config.TempPath())
+			panic(err)
+		}
+	}
+	return nil
+}
+
+// EntryFiles returns a string slice of entry file paths
+func EntryFiles() ([]string, error) {
+	return filepath.Glob(config.EntriesPath() + config.Slash + "*" + config.EntryExt)
+}
+
+// EntryFileName returns the storage identifier for an entry given the slug
+func EntryFileName(slug string) string {
+	return config.EntriesPath() + config.Slash + slug + config.EntryExt
+}
+
+// SaveEntry saves the text content of an entry to storage
+func SaveEntry(slug string, content string) error {
+	f, err := os.Create(EntryFileName(slug))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	w.WriteString(content)
+	w.Flush()
+	return err
+}
+
+// DeleteEntry deletes the entry identified by the slug
+func DeleteEntry(slug string) error {
+	return os.Remove(EntryFileName(slug))
 }

@@ -31,6 +31,12 @@ var completer = readline.NewPrefixCompleter(
 		readline.PcItem("place"),
 		readline.PcItem("thing"),
 	),
+	readline.PcItem("get",
+		readline.PcItem("-name"),
+	),
+	readline.PcItem("put",
+		readline.PcItem("-file"),
+	),
 	readline.PcItem("detail",
 		readline.PcItem("-name"),
 	),
@@ -82,12 +88,6 @@ func CreateApp() *cli.App {
 				Name:   "add",
 				Usage:  "adds a new entry",
 				Action: cmdAdd,
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "file",
-						Usage: "file containing the entry content",
-					},
-				},
 				Subcommands: []cli.Command{
 					{
 						Name:   "event",
@@ -129,6 +129,30 @@ func CreateApp() *cli.App {
 				},
 			},
 			{
+				Name:   "get",
+				Usage:  "prints the editable form of an entry",
+				Action: cmdGet,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "name of the entry to retrieve",
+						Required: true,
+					},
+				},
+			},
+			{
+				Name:   "put",
+				Usage:  "adds or updates an entry from a file",
+				Action: cmdPut,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "file",
+						Usage:    "file containing the entry content",
+						Required: true,
+					},
+				},
+			},
+			{
 				Name:   "edit",
 				Usage:  "edits an entry",
 				Action: cmdEdit,
@@ -137,10 +161,6 @@ func CreateApp() *cli.App {
 						Name:     "name",
 						Usage:    "name of the entry to edit",
 						Required: true,
-					},
-					&cli.StringFlag{
-						Name:  "file",
-						Usage: "file containing the entry content",
 					},
 				},
 			},

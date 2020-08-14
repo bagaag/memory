@@ -68,34 +68,38 @@ func getLinkedEntry(entry app.Entry, ix int) (app.Entry, bool) {
 
 // editEntry converts an entry to YamlDown, launches an external editor, parses
 // the edited content back into an entry and returns the edited entry.
-func editEntry(origEntry app.Entry, initialText string) (app.Entry, string, error) {
+func editEntry(origEntry app.Entry, tempFile string) (app.Entry, string, error) {
 	var err error
-	if initialText == "" {
-		initialText, err = app.RenderYamlDown(origEntry)
-		if err != nil {
-			return app.Entry{}, "", err
-		}
-	}
-	edited, err := useEditor(initialText)
+	// launch editor and get path to edited temp file
+	tempFile, err = useEditor(origEntry, tempFile)
 	if err != nil {
-		return app.Entry{}, edited, err
+		return app.Entry{}, tempFile, err
 	}
+	// get contents of temp file
+	edited, err := persist.ReadFile(tempFile)
+	if err != nil {
+		return app.Entry{}, tempFile, err
+	}
+	// parse contents into entry
 	editedEntry, err := parseEntryText(edited)
 	if err != nil {
-		return app.Entry{}, edited, err
+		return app.Entry{}, tempFile, err
 	}
+	// handle name change
 	if origEntry.Name != editedEntry.Name {
-		if _, exists := app.GetEntry(editedEntry.Name); exists {
-			return editedEntry, edited, errors.New("entry named '" + editedEntry.Name + "' already exists")
+		if _, exists := app.GetEntry(editedEntry.Slug()); exists {
+			return editedEntry, tempFile, errors.New("entry named '" + editedEntry.Name + "' already exists")
 		}
-		app.DeleteEntry(origEntry.Name)
+		app.DeleteEntry(origEntry.Slug())
 		//TODO: update links on rename
 	}
+	// save changes
 	app.PutEntry(editedEntry)
 	app.Save()
 	return editedEntry, "", nil
 }
 
+// parseEntryText converts text to an entry and validates the name.
 func parseEntryText(entryText string) (app.Entry, error) {
 	editedEntry, err := app.ParseYamlDown(entryText)
 	if err != nil {
@@ -111,6 +115,10 @@ func parseEntryText(entryText string) (app.Entry, error) {
 func deleteEntry(name string, ask bool) bool {
 	s := "y"
 	var err error
+	if _, exists := app.GetEntry(app.GetSlug(name)); !exists {
+		fmt.Println("Entry '" + name + "' could not be found.")
+		return false
+	}
 	if ask {
 		s, err = subPrompt("Are you sure you want to delete "+name+"? [y,N]: ", "", validateYesNo)
 		if err != nil {
@@ -119,7 +127,7 @@ func deleteEntry(name string, ask bool) bool {
 		}
 	}
 	if s == "y" {
-		if !app.DeleteEntry(name) {
+		if !app.DeleteEntry(app.GetSlug(name)) {
 			fmt.Println("Entry '" + name + "' could not be found.")
 			return false
 		}
@@ -133,10 +141,29 @@ func deleteEntry(name string, ask bool) bool {
 	return false
 }
 
-// useEditor launches config.editor with a temporary file containing the given string
-// waits for the editor to exit and returns a string with the updated content.
-func useEditor(s string) (string, error) {
-	tmp, err := persist.CreateTempFile(s)
+// useEditor launches config.editor with a temporary file containing a copy of the entry
+// identified by slug, waits for the editor to exit and returns the temp file path. If
+// existingTempFilePath is not empty, reuses that file rather than creating a new copy.
+func useEditor(entry app.Entry, existingTempFile string) (string, error) {
+	tmp := existingTempFile
+	var err error
+	slug := entry.Slug()
+	if tmp == "" {
+		fileName := persist.EntryFileName(slug)
+		if persist.PathExists(fileName) {
+			content, err := persist.ReadFile(persist.EntryFileName(slug))
+			if err != nil {
+				return "", fmt.Errorf("failed to read entry from storage: %s", err.Error())
+			}
+			tmp, err = persist.CreateTempFile(slug, content)
+		} else {
+			content, err := app.RenderYamlDown(entry)
+			if err != nil {
+				return "", fmt.Errorf("failed to render new entry: %s", err.Error())
+			}
+			tmp, err = persist.CreateTempFile(slug, content)
+		}
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary file: %s", err.Error())
 	}
@@ -147,14 +174,7 @@ func useEditor(s string) (string, error) {
 	if err = cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to interact with editor: %s", err.Error())
 	}
-	var edited string
-	if edited, err = persist.ReadFile(tmp); err != nil {
-		return "", fmt.Errorf("failed to read temporary file: %s", err.Error())
-	}
-	if err := persist.RemoveFile(tmp); err != nil {
-		return edited, fmt.Errorf("failed to delete temporary file: %s", err.Error())
-	}
-	return edited, nil
+	return tmp, nil
 }
 
 // Displays prompt for single character input and returns the character entered, or empty string.
@@ -177,6 +197,9 @@ func getSingleCharInput() string {
 
 // subPrompt asks for additional info within a command.
 func subPrompt(prompt string, value string, validate validator) (string, error) {
+	if rl == nil {
+		return "", errors.New("readline not initialized")
+	}
 	rl.HistoryDisable()
 	rl.SetPrompt(prompt)
 	var err error

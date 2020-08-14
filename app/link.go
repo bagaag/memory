@@ -101,11 +101,11 @@ func populateLinks() {
 		newDesc, links := ParseLinks(searchText)
 		entry.Description = newDesc
 		entry.LinksTo = links
-		data.Names[entry.Name] = entry
+		data.Names[GetSlug(entry.Name)] = entry
 		// add links in reverse direction
 		fromName := entry.Name
 		for _, toName := range links {
-			names, exists := fromLinks[toName]
+			names, exists := fromLinks[GetSlug(toName)]
 			if !exists {
 				names = []string{fromName}
 			} else if !util.StringSliceContains(names, fromName) {
@@ -119,7 +119,7 @@ func populateLinks() {
 		entry, exists := GetEntry(name)
 		if exists {
 			entry.LinkedFrom = linkedFrom
-			data.Names[entry.Name] = entry
+			data.Names[GetSlug(entry.Name)] = entry
 		}
 	}
 }
@@ -132,7 +132,7 @@ func BrokenLinks() map[string][]string {
 	defer data.unlock()
 	for fromName, fromEntry := range data.Names {
 		for _, toName := range fromEntry.LinksTo {
-			if _, entryExists := data.Names[toName]; !entryExists {
+			if _, entryExists := data.Names[GetSlug(toName)]; !entryExists {
 				var brokenLinks []string
 				var existingList bool
 				if brokenLinks, existingList = ret[fromName]; existingList {

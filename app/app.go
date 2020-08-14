@@ -19,23 +19,20 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/gosimple/slug"
 )
 
 const dataVersion = 1
 
 var inited = false // run Init() only once
 
+var deletes = []string{}
+
 // root contains all the data to be saved
 type root struct {
 	Names map[string]Entry
 	mux   sync.Mutex
-}
-
-// saveData is just the data we need to save to file - eliminating any
-// calculated data in the root struct.
-type saveData struct {
-	Entries []Entry
-	Version int // for migrations
 }
 
 // EntryResults is used to contain the results of GetEntries and the settings used
@@ -73,22 +70,30 @@ func (r *root) unlock() {
 	r.mux.Unlock()
 }
 
+// GetSlug converts a string into a slug
+func GetSlug(s string) string {
+	return slug.Make(s)
+}
+
 // PutEntry adds or replaces the given entry in the collection.
 func PutEntry(entry Entry) {
 	data.lock()
-	data.Names[entry.Name] = entry
+	entry.Dirty = true
+	slug := entry.Slug()
+	data.Names[slug] = entry
 	data.unlock()
 }
 
 // DeleteEntry removes the specified entry from the collection.
-func DeleteEntry(name string) bool {
+func DeleteEntry(slug string) bool {
 	data.lock()
 	defer data.unlock()
-	_, exists := data.Names[name]
+	_, exists := data.Names[slug]
 	if !exists {
 		return false
 	}
-	delete(data.Names, name)
+	delete(data.Names, slug)
+	deletes = append(deletes, slug)
 	return true
 }
 
@@ -207,9 +212,14 @@ func RefreshResults(results EntryResults) EntryResults {
 }
 
 // GetEntry returns a single entry or throws an error.
-func GetEntry(entryName string) (Entry, bool) {
-	entry, exists := data.Names[entryName]
+func GetEntry(slug string) (Entry, bool) {
+	entry, exists := data.Names[slug]
 	return entry, exists
+}
+
+// GetEntryByName returns a single entry or throws an error.
+func GetEntryByName(name string) (Entry, bool) {
+	return GetEntry(GetSlug(name))
 }
 
 // Init reads data stored on the file system and initializes application variables.
@@ -224,6 +234,7 @@ func Init(homeDir string) error {
 		homeDir = util.GetHomeDir() + string(os.PathSeparator) + config.MemoryHome
 	}
 	config.MemoryHome = homeDir
+	persist.InitHome()
 	// load config
 	if persist.PathExists(config.SettingsPath()) {
 		settings := config.StoredSettings{}
@@ -236,21 +247,39 @@ func Init(homeDir string) error {
 		return fmt.Errorf("failed to initialize settings: %w", err)
 	}
 	// load data
+	files, err := persist.EntryFiles()
+	if err != nil {
+		fmt.Println("Error: Cannot read entries from", config.EntriesPath())
+		panic(err)
+	}
 	data.lock()
 	defer data.unlock()
-	if persist.PathExists(config.SavePath()) {
-		// read saved file into saveData struct
-		fromSave := saveData{}
-		if err := persist.Load(config.SavePath(), &fromSave); err != nil {
-			return err
+	skipped := 0
+	for _, file := range files {
+		content, err := persist.ReadFile(file)
+		if err != nil {
+			fmt.Println("Error: Cannot read entry at ", file)
+			skipped = skipped + 1
+			continue
 		}
-		//TODO: handle version difference w/ migration
-		// setup runtime data structure from saved data
-		for _, entry := range fromSave.Entries {
-			data.Names[entry.Name] = entry
+		entry, err := ParseYamlDown(content)
+		if err != nil {
+			fmt.Printf("Error: Entry file at %s is invalid: %s\n", file, err.Error())
+			skipped = skipped + 1
+			continue
 		}
-		populateLinks()
+		slug := GetSlug(entry.Name)
+		if _, exists := data.Names[slug]; exists {
+			fmt.Printf("Error: Attempt to import duplicate entry slug '%s' from %s\n", slug, file)
+			skipped = skipped + 1
+			continue
+		}
+		data.Names[slug] = entry
 	}
+	if skipped > 0 {
+		fmt.Printf("Warning: Ignoring %d entry files due to errors reported above.\n", skipped)
+	}
+	populateLinks()
 	inited = true
 	return nil
 }
@@ -258,16 +287,18 @@ func Init(homeDir string) error {
 // RenameEntry changes an entry name and updates associated data structures.
 func RenameEntry(name string, newName string) error {
 	data.lock()
+	slug := GetSlug(name)
+	newSlug := GetSlug(newName)
 	defer data.unlock()
-	_, exists := GetEntry(newName)
+	_, exists := GetEntry(newSlug)
 	if exists {
-		return fmt.Errorf("an entry named %s already exists", newName)
+		return fmt.Errorf("an entry named %s (or very similar) already exists", newName)
 	}
-	entry, exists := GetEntry(name)
+	entry, exists := GetEntry(slug)
 	if !exists {
 		return fmt.Errorf("an entry named %s does not exist", name)
 	}
-	DeleteEntry(name)
+	DeleteEntry(slug)
 	entry.Name = newName
 	PutEntry(entry)
 	return nil
@@ -275,14 +306,29 @@ func RenameEntry(name string, newName string) error {
 
 // Save writes application data to file storage.
 func Save() error {
-	toSave := saveData{Version: dataVersion}
-	toSave.Entries = []Entry{}
 	data.lock()
 	defer data.unlock()
-	for _, entry := range data.Names {
-		toSave.Entries = append(toSave.Entries, entry)
+	for slug, entry := range data.Names {
+		if entry.Dirty {
+			content, err := RenderYamlDown(entry)
+			if err != nil {
+				return fmt.Errorf("failed to render %s: %s", slug, err.Error())
+			}
+			err = persist.SaveEntry(slug, content)
+			if err != nil {
+				return fmt.Errorf("failed to save %s: %s", slug, err.Error())
+			}
+			entry.Dirty = false
+		}
 	}
-	return persist.Save(config.SavePath(), toSave)
+	for _, slug := range deletes {
+		err := persist.DeleteEntry(slug)
+		if err != nil {
+			return fmt.Errorf("failed to delete %s: %s", slug, err.Error())
+		}
+	}
+	deletes = []string{}
+	return nil
 }
 
 // ValidateEntryName returns an error if the given name is invalid.

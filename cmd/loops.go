@@ -14,6 +14,7 @@ import (
 	"io"
 	"memory/app"
 	"memory/cmd/display"
+	"memory/util"
 	"strconv"
 	"strings"
 
@@ -37,7 +38,7 @@ func mainLoop() {
 		line = strings.TrimSpace(line)
 		err = cliApp.Run(append([]string{"memory"}, strings.Split(line, " ")...))
 		if err != nil {
-			fmt.Println("Doh!", err)
+			util.FormatErrorForDisplay(err)
 		}
 	}
 	rl.Close()
@@ -71,7 +72,7 @@ func detailInteractiveLoop(entry app.Entry) bool {
 			}
 			// update entry in case things changed in the subloops
 			var exists bool
-			entry, exists = app.GetEntry(entry.Name)
+			entry, exists = app.GetEntryByName(entry.Name)
 			if !exists {
 				return false
 			}
@@ -108,7 +109,7 @@ func linksInteractiveLoop(entry app.Entry) bool {
 				if exists {
 					detailInteractiveLoop(nextDetail)
 					var exists bool
-					entry, exists = app.GetEntry(entry.Name)
+					entry, exists = app.GetEntry(entry.Slug())
 					if !exists {
 						return false
 					}

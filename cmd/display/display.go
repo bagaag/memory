@@ -337,7 +337,7 @@ func LinksMenu(entry app.Entry) {
 	if len(entry.LinksTo) > 0 {
 		fmt.Println("  Links to:")
 		for _, name := range entry.LinksTo {
-			entry, exists := app.GetEntry(name)
+			entry, exists := app.GetEntry(app.GetSlug(name))
 			if !exists {
 				fmt.Printf("     X. %s [Not Found]\n", name)
 			} else {

@@ -19,10 +19,13 @@ type StoredSettings struct {
 	EditorCommand string
 }
 
-const slash = string(os.PathSeparator)
+const Slash = string(os.PathSeparator)
 
 // MemoryHome is the folder path where memory stores settings and data
 var MemoryHome = ".memory"
+
+// EntryDir is the folder path where entry files are stored
+var EntryDir = "entries"
 
 // DataFile is the name of the file storing entries
 var DataFile = "memory.json"
@@ -51,19 +54,32 @@ var TruncateAt = 300
 //TODO: handle editor command cross-platform
 var EditorCommand = "/usr/bin/micro"
 
+// EntryExt is the file extension (including .) used for entry files
+var EntryExt = ".txt"
+
 // SavePath returns the full path to the data file
 func SavePath() string {
-	return MemoryHome + slash + DataFile
+	return MemoryHome + Slash + DataFile
 }
 
 // HistoryPath returns the full path to the history file
 func HistoryPath() string {
-	return MemoryHome + slash + HistoryFile
+	return MemoryHome + Slash + HistoryFile
 }
 
 // SettingsPath returns the full path to the settings file
 func SettingsPath() string {
-	return MemoryHome + slash + SettingsFile
+	return MemoryHome + Slash + SettingsFile
+}
+
+// EntriesPath returns the full path to EntryDir
+func EntriesPath() string {
+	return MemoryHome + Slash + EntryDir
+}
+
+// TempPath returns the location where temporary files are stored during editing.
+func TempPath() string {
+	return MemoryHome + Slash + "tmp"
 }
 
 // GetSettingsForStorage returns a StoredSettings struct populated with current settings.

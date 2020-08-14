@@ -22,10 +22,17 @@ type Entry struct {
 	Created     time.Time
 	Modified    time.Time
 	Type        EntryType
+	Dirty       bool
 	Start       string // Events
 	End         string // Events
 	Latitude    string // Place
 	Longitude   string // Place
+}
+
+// Slug returns the slug for this entry.
+//TODO: Replace instances of GetSlug(entry.Name)
+func (entry *Entry) Slug() string {
+	return GetSlug(entry.Name)
 }
 
 // NewEntry initializes and returns an Entry object.

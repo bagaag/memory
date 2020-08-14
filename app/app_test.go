@@ -35,7 +35,7 @@ func generateTestData() {
 		name := fmt.Sprintf("note #%d", i)
 		desc := fmt.Sprintf("note desc #%d", i)
 		note := NewEntry(EntryTypeNote, name, desc, tags)
-		data.Names[note.Name] = note
+		data.Names[GetSlug(note.Name)] = note
 	}
 }
 
@@ -44,7 +44,7 @@ func setupCrud() {
 	for i := 0; i < 10; i++ {
 		num := i + 1
 		note := NewEntry(EntryTypeNote, fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
-		data.Names[note.Name] = note
+		data.Names[GetSlug(note.Name)] = note
 	}
 }
 
@@ -83,7 +83,7 @@ func TestGetEntries(t *testing.T) {
 		return
 	}
 	if results.Entries[1].Name != "note #39" {
-		t.Errorf("Expected 'note #39', got '%s' (%s)", results.Entries[1].Name, results.Entries)
+		t.Errorf("Expected 'note #39', got '%s' (%v)", results.Entries[1].Name, results.Entries)
 		return
 	}
 }

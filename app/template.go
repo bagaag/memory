@@ -64,7 +64,7 @@ func ParseYamlDown(content string) (Entry, error) {
 		}
 		// validate meta data line
 		if !strings.Contains(line, ":") {
-			return Entry{}, errors.New("invalid attribute format (missing :) on line " + string(ix+1))
+			return Entry{}, errors.New("invalid attribute format (missing :) on line " + fmt.Sprint(ix+1))
 		}
 		// parse the attribute and add it to the map
 		attr := strings.SplitN(line, ":", 2)
