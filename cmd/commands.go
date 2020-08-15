@@ -178,6 +178,9 @@ var cmdList = func(c *cli.Context) error {
 	if interactive {
 		pager := display.NewEntryPager(results)
 		pager.PrintPage()
+		if len(results.Entries) == 0 {
+			return nil
+		}
 		for {
 			input := strings.ToLower(getSingleCharInput())
 			if input == "n" {

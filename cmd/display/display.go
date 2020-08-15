@@ -61,6 +61,9 @@ func (pager *EntryPager) PrintPage() {
 		updateRenderings(pager)
 	}
 	fmt.Println(strings.Join(pager.header, "\n"))
+	if len(pager.results.Entries) == 0 {
+		return
+	}
 	page := pager.pages[pager.currentPage]
 	for i := page.StartIndex; i < page.StartIndex+page.Count; i++ {
 		fmt.Println(strings.Join(pager.renderedEntries[i], "\n"))
