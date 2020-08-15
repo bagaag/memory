@@ -148,7 +148,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 
 	// convert filters to lower case
 	startsWith = strings.ToLower(startsWith)
-	contains = strings.ToLower(startsWith)
+	contains = strings.ToLower(contains)
 	util.StringSliceToLower(onlyTags)
 	util.StringSliceToLower(anyTags)
 

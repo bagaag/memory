@@ -1,5 +1,6 @@
-- Spaces/quotes not honored on interactive cmd line 
-- ls -contains, -starts-with not working (e.g. ls -contains/-starts-with Jim)
+- exit ls loop if no results found
+- edit doesn't print anything on invalid -name
+- cmd line should print help and exit when given invalid subcommand
 - Links not working properly (entry with links doesn't offer link menu item)
 - Don't treat [brackets] that are immediately followed by a ( as an Entry link
 - Replace [!404] with [?404] to avoid confusiong with ![image]
