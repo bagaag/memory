@@ -1,4 +1,3 @@
-- Use Embedding to implement base Entry within models https://yourbasic.org/golang/inheritance-object-oriented/
-- Make backup of data file before saving
-- Replace json storage with Ponzu to allow cli and web to co-exist
-- Dynamic completer to support name entry for single entry commands
+- Don't treat [brackets] that are immediately followed by a ( as an Entry link
+- Replace [!404] with [?404] to avoid confusiong with ![image]
+- Ctrl-C sometimes hangs
