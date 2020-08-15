@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/mattn/go-shellwords"
 )
 
 // mainLoop provides the main prompt where interactive commands are accepted.
@@ -35,8 +36,15 @@ func mainLoop() {
 		} else if err == io.EOF || line == "q" || line == "quit" || line == "exit" {
 			break
 		}
-		line = strings.TrimSpace(line)
-		err = cliApp.Run(append([]string{"memory"}, strings.Split(line, " ")...))
+		// shellwords honors spaces within quotes as a single value, etc.
+		args, err := shellwords.Parse(line)
+		if err != nil {
+			util.FormatErrorForDisplay(err)
+			continue
+		}
+		// prepend "memory" to mimic the args received direclty off the command line
+		args = append([]string{"memory"}, args...)
+		err = cliApp.Run(args)
 		if err != nil {
 			util.FormatErrorForDisplay(err)
 		}

@@ -8,6 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-delve/delve v1.4.1 // indirect
 	github.com/gosimple/slug v1.9.0
+	github.com/mattn/go-shellwords v1.0.10
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
