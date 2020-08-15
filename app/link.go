@@ -90,6 +90,14 @@ func ResolveLinks(links []string) []Entry {
 	return resolved
 }
 
+// UpdateLinks runs populateLinks with a lock, for use when an entry is updated
+// and we want to refresh the links.
+func UpdateLinks() {
+	data.lock()
+	populateLinks()
+	data.unlock()
+}
+
 // populateLinks populates the LinksTo and LinkedFrom slices on all entries by
 // parsing the descriptions for links. Assumes the calling function already
 // has a lock on data.
@@ -101,6 +109,7 @@ func populateLinks() {
 		newDesc, links := ParseLinks(searchText)
 		entry.Description = newDesc
 		entry.LinksTo = links
+		entry.LinkedFrom = []string{}
 		data.Names[GetSlug(entry.Name)] = entry
 		// add links in reverse direction
 		fromName := entry.Name

@@ -88,6 +88,7 @@ var cmdAdd = func(c *cli.Context) error {
 	}
 	app.PutEntry(entry)
 	app.Save()
+	app.UpdateLinks()
 	fmt.Println("Added new entry:", entry.Name)
 	display.EntryTable(entry)
 	return nil
@@ -137,6 +138,7 @@ var cmdEdit = func(c *cli.Context) error {
 	}
 	app.PutEntry(entry)
 	app.Save()
+	app.UpdateLinks()
 	fmt.Println("Updated entry:", entry.Name)
 	display.EntryTable(entry)
 	return nil
@@ -147,6 +149,7 @@ var cmdDelete = func(c *cli.Context) error {
 	name := c.String("name")
 	ask := !c.Bool("yes")
 	deleteEntry(name, ask)
+	app.UpdateLinks()
 	return nil
 }
 
