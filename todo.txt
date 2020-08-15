@@ -1,4 +1,3 @@
-- edit doesn't print anything on invalid -name
 - cmd line should print help and exit when given invalid subcommand
 - Links not working properly (entry with links doesn't offer link menu item)
 - Don't treat [brackets] that are immediately followed by a ( as an Entry link

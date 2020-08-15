@@ -46,7 +46,7 @@ func mainLoop() {
 		args = append([]string{"memory"}, args...)
 		err = cliApp.Run(args)
 		if err != nil {
-			util.FormatErrorForDisplay(err)
+			fmt.Println(util.FormatErrorForDisplay(err))
 		}
 	}
 	rl.Close()
