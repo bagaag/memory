@@ -66,6 +66,9 @@ var cmdInit = func(c *cli.Context) error {
 
 // cmdDefault command enters the interactive command loop.
 var cmdDefault = func(c *cli.Context) error {
+	if len(c.Args()) > 0 {
+		cli.ShowAppHelpAndExit(c, 1)
+	}
 	interactive = true
 	mainLoop()
 	return nil
