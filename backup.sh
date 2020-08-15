@@ -1,8 +1,10 @@
 #!/bin/bash
-fn=`date '+%Y-%m-%d-%H-%M.zip'`
-loc="$HOME/.memory/backups"
-if [ ! -d "$loc" ] 
+MEMHOME="$HOME/.memory"
+FN=`date '+%Y-%m-%d-%H-%M.zip'`
+BU="$MEMHOME/backups"
+if [ ! -d "$BU" ] 
 then
-  mkdir $loc
+  mkdir $BU
 fi
-zip -r "$loc/$fn" ~/.memory/entries ~/.memory/files
+cd $MEMHOME
+zip -r "$BU/$FN" entries files
