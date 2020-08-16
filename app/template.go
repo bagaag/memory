@@ -15,11 +15,29 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 )
 
 var tmpl *template.Template
+
+// Template is a generic entry template.
+var Template = `---
+Name: {{.Name}}
+Type: {{.Type}}
+Tags: {{.TagsString}}
+{{if eq .Type "Event"}}Start: 
+End: 
+{{end}}{{if eq .Type "Place"}}Address: {{.Address}}
+Latitude: {{.Latitude}}
+Longitude: {{.Longitude}}
+{{end}}{{range $key, $val := .Custom}}{{$key}}: {{$val}}
+{{end}}---
+
+{{.Description}}
+`
 
 // RenderYamlDown returns a string with attributes in yaml frontmatter followed by the description.
 func RenderYamlDown(entry Entry) (string, error) {
@@ -52,9 +70,9 @@ func ParseYamlDown(content string) (Entry, error) {
 		// after metadata, everything else is description
 		if strings.TrimSpace(line) == "---" {
 			if len(lines) > ix+1 {
-				attrs["description"] = strings.TrimSpace(strings.Join(lines[ix+2:], "\n"))
+				attrs["_description"] = strings.TrimSpace(strings.Join(lines[ix+2:], "\n"))
 			} else {
-				attrs["description"] = ""
+				attrs["_description"] = ""
 			}
 			break
 		}
@@ -68,54 +86,75 @@ func ParseYamlDown(content string) (Entry, error) {
 		}
 		// parse the attribute and add it to the map
 		attr := strings.SplitN(line, ":", 2)
-		attrs[strings.ToLower(strings.TrimSpace(attr[0]))] = strings.TrimSpace(attr[1])
+		attrs[strings.TrimSpace(attr[0])] = strings.TrimSpace(attr[1])
 	}
 	// initalize return value
 	entry := Entry{}
-	// validate and set attributes
-	// Description
-	if desc, exists := attrs["description"]; exists {
-		entry.Description = desc
+	// validate Description
+	if val, exists := attrs["_description"]; exists {
+		entry.Description = val
 	} else {
 		return Entry{}, errors.New("attributes must be separated from decsription with a --- line")
 	}
-	// Type
-	if t, exists := attrs["type"]; !exists {
+	// validate Name
+	if name, exists := attrs["Name"]; exists {
+		if err := ValidateEntryName(name); err != nil {
+			return Entry{}, err
+		}
+		entry.Name = name
+	} else {
+		return Entry{}, errors.New("missing required Name attribute")
+	}
+	// validate Type
+	if t, exists := attrs["Type"]; !exists {
 		return Entry{}, errors.New("missing required Type attribute")
 	} else if t != EntryTypeEvent && t != EntryTypePerson && t != EntryTypePlace &&
 		t != EntryTypeThing && t != EntryTypeNote {
-		return Entry{}, fmt.Errorf("Type is not one of the valid entry types: %s, %s, %s, %s, %s",
+		return Entry{}, fmt.Errorf("Type is not one of the valid entry types (%s, %s, %s, %s, %s)",
 			EntryTypeEvent, EntryTypePerson, EntryTypePlace, EntryTypeThing, EntryTypeNote)
 	} else {
 		entry.Type = t
 	}
-	// Name
-	if name, exists := attrs["name"]; exists {
-		entry.Name = name
-	} else {
-		return Entry{}, errors.New("missing required 'name' attribute")
-	}
-	// Tags
-	if tags, exists := attrs["tags"]; exists {
-		// trim of brackets and split on comma
-		entry.Tags = processTags(tags)
+	// handle optional attributes
+	for key, val := range attrs {
+		switch key {
+		case "Name", "Type", "_description":
+			// handled above
+		case "Tags":
+			// trim of brackets and split on comma
+			entry.Tags = processTags(val)
+		case "Start", "End":
+			matched, err := regexp.Match(`[\d]{4})(-[\d]{2})?(-[\d]{2})?`, []byte(val))
+			if err != nil || !matched {
+				return Entry{}, errors.New("value for " + key + " is invalid: must be YYYY, YYYY-MM or YYYY-MM-DD")
+			}
+			if key == "Start" {
+				entry.Start = val
+			} else {
+				entry.End = val
+			}
+		case "Latitude", "Longitude":
+			if val != "" {
+				if _, err := strconv.ParseFloat(val, 64); err != nil {
+					return Entry{}, errors.New("value for " + key + " is invalid")
+				}
+				if key == "Latitude" {
+					entry.Latitude = val
+				} else {
+					entry.Longitude = val
+				}
+			}
+		case "Address":
+			entry.Address = val
+		default:
+			if entry.Custom == nil {
+				entry.Custom = make(map[string]string)
+			}
+			entry.Custom[key] = val
+		}
 	}
 	return entry, nil
 }
-
-// Template is a generic entry template.
-var Template = `---
-Name: {{.Name}}
-Type: {{.Type}}
-Tags: {{.TagsString}}
-{{if eq .Type "Event"}}Start: 
-End: 
-{{end}}{{if eq .Type "Place"}}Latitude: 
-Longitude: 
-{{end}}---
-
-{{.Description}}
-`
 
 // processTags takes in a comma-separated string and returns a slice of trimmed values
 func processTags(tags string) []string {

@@ -47,7 +47,7 @@ func TestRoundTrip(t *testing.T) {
 
 func TestTempFile(t *testing.T) {
 	temp := "one\n\two\three"
-	if path, err := CreateTempFile(temp); err != nil {
+	if path, err := CreateTempFile("test", temp); err != nil {
 		t.Errorf("%s", err)
 	} else {
 		if s, err2 := ReadFile(path); err2 != nil {

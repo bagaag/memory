@@ -1,4 +1,34 @@
+- Order of entries in ls isn't right
+- [Entry] shows w/ ls output instead of correct type
+- ls -contains should include description matches after matching on name
+- Misc fields added to yaml not supported
 - Links not working properly (entry with links doesn't offer link menu item)
 - Don't treat [brackets] that are immediately followed by a ( as an Entry link
 - Replace [!404] with [?404] to avoid confusiong with ![image]
 - Ctrl-C sometimes hangs
+- Orphan links
+
+Frontmatter/fields
+- Add map[string]string Custom yaml field
+- Add Address field to Place
+
+Files/Images
+- Trying to allow for linked docs and images without making it too fiddly
+- Current:
+    - Upload manually and name w/ entry tag + ### increment. 
+    - Any desc or meta data handled in description/link
+- Initial improvements: 
+    - Add cmds to push and get files (memory addfile -name "Entry Name" - file /path/image.jpg)
+- Further out:
+    - Metadata for files: name (handled like Entry names), ext, description
+        - Files
+            - f1
+                - Name: (if blank, uses entry name)
+                - Description: Optional description for a file that is displayed in a table. 
+                - Ext: png
+            - tag2
+                ...
+        - Images
+            - tag
+- Allow for reference of images and files by index ![](0)
+- Implement liquid template to support something like {% images %} and {% files %}

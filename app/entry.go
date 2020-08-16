@@ -27,6 +27,8 @@ type Entry struct {
 	End         string // Events
 	Latitude    string // Place
 	Longitude   string // Place
+	Address     string // Place
+	Custom      map[string]string
 }
 
 // Slug returns the slug for this entry.
@@ -47,6 +49,7 @@ func NewEntry(entryType EntryType, name string, description string, tags []strin
 		Created:     now,
 		Modified:    now,
 		Type:        entryType,
+		Custom:      make(map[string]string),
 	}
 	return entry
 }
