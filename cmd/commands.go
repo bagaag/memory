@@ -100,7 +100,7 @@ var cmdAdd = func(c *cli.Context) error {
 // cmdPut adds or updates an entry from the given file.
 var cmdPut = func(c *cli.Context) error {
 	// read from file if -file is provided
-	content, err := persist.ReadFile(c.String("file"))
+	content, _, err := persist.ReadFile(c.String("file"))
 	if err != nil {
 		return err
 	}

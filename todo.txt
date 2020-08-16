@@ -1,10 +1,10 @@
-- Order of entries in ls isn't right
+- Links that should be valid are marked as invalid
+- Replace [!404] with [?404] to avoid confusiong with ![image]
 - [Entry] shows w/ ls output instead of correct type
 - ls -contains should include description matches after matching on name
 - Misc fields added to yaml not supported
 - Links not working properly (entry with links doesn't offer link menu item)
 - Don't treat [brackets] that are immediately followed by a ( as an Entry link
-- Replace [!404] with [?404] to avoid confusiong with ![image]
 - Ctrl-C sometimes hangs
 - Orphan links
 

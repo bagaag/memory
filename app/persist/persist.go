@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 var lock sync.Mutex
@@ -99,9 +100,13 @@ func CreateTempFile(slug string, content string) (string, error) {
 }
 
 // ReadFile returns the string contents of the text file
-func ReadFile(path string) (string, error) {
+func ReadFile(path string) (string, time.Time, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", time.Now(), err
+	}
 	bytes, err := ioutil.ReadFile(path)
-	return string(bytes), err
+	return string(bytes), info.ModTime(), err
 }
 
 // RemoveFile deletes the temporary editing file

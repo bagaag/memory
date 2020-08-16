@@ -46,7 +46,6 @@ func NewEntry(entryType EntryType, name string, description string, tags []strin
 		Tags:        tags,
 		LinksTo:     []string{},
 		LinkedFrom:  []string{},
-		Created:     now,
 		Modified:    now,
 		Type:        entryType,
 		Custom:      make(map[string]string),

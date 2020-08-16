@@ -256,7 +256,7 @@ func Init(homeDir string) error {
 	defer data.unlock()
 	skipped := 0
 	for _, file := range files {
-		content, err := persist.ReadFile(file)
+		content, modified, err := persist.ReadFile(file)
 		if err != nil {
 			fmt.Println("Error: Cannot read entry at ", file)
 			skipped = skipped + 1
@@ -274,6 +274,7 @@ func Init(homeDir string) error {
 			skipped = skipped + 1
 			continue
 		}
+		entry.Modified = modified
 		data.Names[slug] = entry
 	}
 	if skipped > 0 {

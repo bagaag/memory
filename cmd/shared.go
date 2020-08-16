@@ -76,7 +76,7 @@ func editEntry(origEntry app.Entry, tempFile string) (app.Entry, string, error) 
 		return app.Entry{}, tempFile, err
 	}
 	// get contents of temp file
-	edited, err := persist.ReadFile(tempFile)
+	edited, _, err := persist.ReadFile(tempFile)
 	if err != nil {
 		return app.Entry{}, tempFile, err
 	}
@@ -151,7 +151,7 @@ func useEditor(entry app.Entry, existingTempFile string) (string, error) {
 	if tmp == "" {
 		fileName := persist.EntryFileName(slug)
 		if persist.PathExists(fileName) {
-			content, err := persist.ReadFile(persist.EntryFileName(slug))
+			content, _, err := persist.ReadFile(persist.EntryFileName(slug))
 			if err != nil {
 				return "", fmt.Errorf("failed to read entry from storage: %s", err.Error())
 			}
