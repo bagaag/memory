@@ -340,32 +340,43 @@ func LinksMenu(entry app.Entry) {
 	if len(entry.LinksTo) > 0 {
 		fmt.Println("  Links to:")
 		for _, name := range entry.LinksTo {
-			entry, exists := app.GetEntry(app.GetSlug(name))
-			if !exists {
-				fmt.Printf("     X. %s [Not Found]\n", name)
-			} else {
-				fmt.Printf("    %2d. %s [%s]", ix, name, entry.Type)
-				ix = ix + 1
+			entry, _ := app.GetEntry(app.GetSlug(name))
+			if entry.Type == "" {
+				entry.Type = "?"
 			}
+			fmt.Printf("    %2d. %s [%s]\n", ix, name, entry.Type)
+			ix = ix + 1
 		}
 		fmt.Println("")
 	}
 	if len(entry.LinkedFrom) > 0 {
 		fmt.Println("  Linked from:")
 		for _, name := range entry.LinkedFrom {
-			entry, exists := app.GetEntry(name)
-			if !exists {
-				fmt.Printf("     X. %s [Not Found]\n", name)
-			} else {
-				fmt.Printf("    %2d. %s [%s]", ix, name, entry.Type)
-				ix = ix + 1
+			entry, _ := app.GetEntry(name)
+			if entry.Type == "" {
+				entry.Type = "?"
 			}
+			fmt.Printf("    %2d. %s [%s]\n", ix, name, entry.Type)
+			ix = ix + 1
 		}
 		fmt.Println("")
 	}
 }
 
-// welcomeMessage personalizes the app with a message tailored to the visitors current journey.
+// MissingLinkMenu presents a list of entry types that can be created for
+// a non-existant entry name.
+func MissingLinkMenu(name string) {
+	fmt.Printf("\nEntry named '%s' does not exist.\n", name)
+	fmt.Println("  1. Event")
+	fmt.Println("  2. Person")
+	fmt.Println("  3. Place")
+	fmt.Println("  4. Thing")
+	fmt.Println("  5. Note")
+	fmt.Println("")
+	fmt.Println("Enter 1-5 to create a new entry with this name, [b]ack or [Q]uit")
+}
+
+// WelcomeMessage personalizes the app with a message tailored to the visitors current journey.
 //TODO: Flesh out the welcome journey
 func WelcomeMessage() {
 	fmt.Printf("Welcome. You have %d entries under management. "+

@@ -99,11 +99,12 @@ func detailInteractiveLoop(entry app.Entry) bool {
 }
 
 // linksInteractiveLoop handles display of an entry's links and
-// commands related to them. Returns false if user selects [B]ack
+// commands related to them. Returns true if user selects [B]ack
 func linksInteractiveLoop(entry app.Entry) bool {
 	// interactive loop
 	for {
-		linkCount := len(entry.LinksTo) + len(entry.LinkedFrom)
+		links := append(entry.LinksTo, entry.LinkedFrom...)
+		linkCount := len(links)
 		// display links and prompt for command
 		display.LinksMenu(entry)
 		fmt.Println("\nLinks options: # for details, [b]ack or [Q]uit")
@@ -113,12 +114,17 @@ func linksInteractiveLoop(entry app.Entry) bool {
 			if ix < 0 || ix >= linkCount {
 				fmt.Printf("Error: %d is not a valid link number.\n", num)
 			} else {
-				nextDetail, exists := getLinkedEntry(entry, ix)
+				linkName := links[ix]
+				nextDetail, exists := app.GetEntry(app.GetSlug(linkName))
 				if exists {
 					detailInteractiveLoop(nextDetail)
 					var exists bool
 					entry, exists = app.GetEntry(entry.Slug())
 					if !exists {
+						return false
+					}
+				} else {
+					if !missingLinkInteractiveLoop(linkName) {
 						return false
 					}
 				}
@@ -163,4 +169,33 @@ func continueEditingPrompt(err error) bool {
 	fmt.Println("Type any key to continue editing or 'd' to discard your changes: ")
 	c := getSingleCharInput()
 	return c != "d"
+}
+
+// missingLinkInteractiveLoop presents a menu of Entry types to be created
+// for the given non-existant entry name. Returns true if [b]ack or false
+// if [Q]uit
+func missingLinkInteractiveLoop(name string) bool {
+	display.MissingLinkMenu(name)
+	types := []string{app.EntryTypeEvent, app.EntryTypePerson, app.EntryTypePlace, app.EntryTypeThing, app.EntryTypeNote}
+	for {
+		c := getSingleCharInput()
+		switch strings.ToLower(c) {
+		case "1", "2", "3", "4", "5":
+			n, _ := strconv.Atoi(c)
+			entryType := types[n-1]
+			// add a new entry of the selected type
+			args := []string{"memory", "add", strings.ToLower(entryType), "-name", name}
+			err := cliApp.Run(args)
+			if err != nil {
+				fmt.Println(util.FormatErrorForDisplay(err))
+			}
+			return true
+		case "b":
+			return true
+		case "q":
+			return false
+		default:
+			continue
+		}
+	}
 }

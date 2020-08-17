@@ -25,11 +25,16 @@ var inited = false
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
 	readline.PcItem("add",
-		readline.PcItem("event"),
-		readline.PcItem("note"),
-		readline.PcItem("person"),
-		readline.PcItem("place"),
-		readline.PcItem("thing"),
+		readline.PcItem("event",
+			readline.PcItem("-name")),
+		readline.PcItem("note",
+			readline.PcItem("-name")),
+		readline.PcItem("person",
+			readline.PcItem("-name")),
+		readline.PcItem("place",
+			readline.PcItem("-name")),
+		readline.PcItem("thing",
+			readline.PcItem("-name")),
 	),
 	readline.PcItem("get",
 		readline.PcItem("-name"),
@@ -65,6 +70,11 @@ var interactive = false
 
 // CreateApp sets up the cli commands and general application flow via the cli lib.
 func CreateApp() *cli.App {
+	addNameFlag := &cli.StringFlag{
+		Name:     "name",
+		Usage:    "optional name for the new entry",
+		Required: false,
+	}
 	cliApp = &cli.App{
 		Name:  "memory",
 		Usage: `A CLI tool to collect and browse the elements of human experience.`,
@@ -93,26 +103,31 @@ func CreateApp() *cli.App {
 						Name:   "event",
 						Usage:  "adds a new Event entry",
 						Action: cmdAdd,
+						Flags:  []cli.Flag{addNameFlag},
 					},
 					{
 						Name:   "person",
 						Usage:  "adds a new Person entry",
 						Action: cmdAdd,
+						Flags:  []cli.Flag{addNameFlag},
 					},
 					{
 						Name:   "place",
 						Usage:  "adds a new Place entry",
 						Action: cmdAdd,
+						Flags:  []cli.Flag{addNameFlag},
 					},
 					{
 						Name:   "thing",
 						Usage:  "adds a new Thing entry",
 						Action: cmdAdd,
+						Flags:  []cli.Flag{addNameFlag},
 					},
 					{
 						Name:   "note",
 						Usage:  "adds a new Note entry",
 						Action: cmdAdd,
+						Flags:  []cli.Flag{addNameFlag},
 					},
 				},
 			},

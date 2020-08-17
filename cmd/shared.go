@@ -53,19 +53,6 @@ func parseTypes(typesArg []string) app.EntryTypes {
 	return types
 }
 
-// getLinkedEntry returns the entry and an 'exists' boolean at the
-// given index of an array that combines the LinksTo and LinkedFrom
-// slices of the given entry.
-func getLinkedEntry(entry app.Entry, ix int) (app.Entry, bool) {
-	a := append(entry.LinksTo, entry.LinkedFrom...)
-	name := a[ix]
-	entry, exists := app.GetEntry(name)
-	if !exists {
-		fmt.Printf("There is no entry named '%s'.\n", name)
-	}
-	return entry, exists
-}
-
 // editEntry converts an entry to YamlDown, launches an external editor, parses
 // the edited content back into an entry and returns the edited entry.
 func editEntry(origEntry app.Entry, tempFile string) (app.Entry, string, error) {

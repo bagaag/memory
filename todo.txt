@@ -1,4 +1,5 @@
 - Orphan links
+- Preserve line breaks in full detail display
 - [Entry] shows w/ ls output instead of correct type
 - ls -contains should include description matches after matching on name
 - Misc fields added to yaml not supported

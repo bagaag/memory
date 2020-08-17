@@ -84,7 +84,11 @@ var cmdAdd = func(c *cli.Context) error {
 		return errors.New("missing entry type: [event, person, place, thing, note]")
 	}
 	// display editor w/ template if no file is provided
-	newEntry := app.NewEntry(entryType, "New "+entryType, "", []string{})
+	name := "New " + entryType
+	if c.IsSet("name") {
+		name = c.String("name")
+	}
+	newEntry := app.NewEntry(entryType, name, "", []string{})
 	entry, success = editEntryValidationLoop(newEntry)
 	if !success {
 		return errors.New("failed to add a valid entry")
