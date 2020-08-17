@@ -1,4 +1,3 @@
-- Replace [!404] with [?404] to avoid confusiong with ![image]
 - Orphan links
 - [Entry] shows w/ ls output instead of correct type
 - ls -contains should include description matches after matching on name

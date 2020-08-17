@@ -37,7 +37,7 @@ func ParseLinks(s string) (string, []string) {
 	// compile links regexp
 	if linkExp == nil {
 		var err error
-		linkExp, err = regexp.Compile("\\[([[:alnum:]!][^~\\]]*)\\]\\(?")
+		linkExp, err = regexp.Compile("\\[([[:alnum:]?][^~\\]]*)\\]\\(?")
 		if err != nil {
 			fmt.Println("Error compiling link regexp:", err)
 			return s, []string{}
@@ -59,7 +59,7 @@ func ParseLinks(s string) (string, []string) {
 		}
 		// remove ! if it's already there (! prefix indicates non-existent entry)
 		hadBang := false
-		if strings.HasPrefix(name, "!") {
+		if strings.HasPrefix(name, "?") {
 			name = name[1:]
 			hadBang = true
 		}
@@ -72,7 +72,7 @@ func ParseLinks(s string) (string, []string) {
 			}
 		} else if !hadBang {
 			// entry doesn't exist, add a ! if needed
-			link404 := "[!" + link[1:]
+			link404 := "[?" + link[1:]
 			parsed = strings.Replace(parsed, link, link404, 1)
 		}
 		if !util.StringSliceContains(links, name) {
