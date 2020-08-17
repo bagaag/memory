@@ -20,13 +20,14 @@ func TestParseLinks(t *testing.T) {
 	testParseLinks(t, 1, "[Exists]", "[Exists]", []string{"Exists"})
 	testParseLinks(t, 2, "text [Exists]", "text [Exists]", []string{"Exists"})
 	testParseLinks(t, 3, "[Exists] text", "[Exists] text", []string{"Exists"})
-	testParseLinks(t, 4, "[Not Exists]", "[!Not Exists]", []string{})
+	// we record links to pages that don't exist so they can be listed as broken links
+	testParseLinks(t, 4, "[Not Exists]", "[!Not Exists]", []string{"Not Exists"})
 	testParseLinks(t, 5, "[Exists] [Exists  \n2]", "[Exists] [Exists  \n2]", []string{"Exists", "Exists 2"})
 	testParseLinks(t, 6, "", "", []string{})
 	testParseLinks(t, 7, "[Exists]\n[Exists 2]", "[Exists]\n[Exists 2]", []string{"Exists", "Exists 2"})
 	testParseLinks(t, 8, "[~Exists]", "[~Exists]", []string{})
 	testParseLinks(t, 9, "[!Exists]", "[Exists]", []string{"Exists"})
-	testParseLinks(t, 10, "[!Not Exists]", "[!Not Exists]", []string{})
+	testParseLinks(t, 10, "[!Not Exists]", "[!Not Exists]", []string{"Not Exists"})
 	testParseLinks(t, 11, "[~Not Exists]", "[~Not Exists]", []string{})
 	testParseLinks(t, 12, "[Exists 2]\n[Exists]", "[Exists 2]\n[Exists]", []string{"Exists 2", "Exists"})
 }
@@ -64,9 +65,9 @@ func TestPopulateLinks(t *testing.T) {
 	PutEntry(nB)
 	PutEntry(nC)
 	populateLinks()
-	n1, _ := GetEntry("Note 1")
-	n2, _ := GetEntry("Note 2")
-	n3, _ := GetEntry("Note 3")
+	n1, _ := GetEntry(GetSlug("Note 1"))
+	n2, _ := GetEntry(GetSlug("Note 2"))
+	n3, _ := GetEntry(GetSlug("Note 3"))
 	// test linksTo
 	if !util.StringSlicesEqual(n1.LinksTo, []string{"Note 2"}) {
 		t.Error("Expected n1.LinksTo==['Note 2'], got", n1.LinksTo)

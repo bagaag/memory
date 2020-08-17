@@ -1,12 +1,11 @@
-- Links that should be valid are marked as invalid
+- Don't treat [brackets] that are immediately followed by a ( as an Entry link
+- Orphan links
 - Replace [!404] with [?404] to avoid confusiong with ![image]
 - [Entry] shows w/ ls output instead of correct type
 - ls -contains should include description matches after matching on name
 - Misc fields added to yaml not supported
-- Links not working properly (entry with links doesn't offer link menu item)
-- Don't treat [brackets] that are immediately followed by a ( as an Entry link
+- Remove home path and data file from settings.json
 - Ctrl-C sometimes hangs
-- Orphan links
 
 Frontmatter/fields
 - Add map[string]string Custom yaml field

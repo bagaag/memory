@@ -60,7 +60,7 @@ func ParseLinks(s string) (string, []string) {
 			hadBang = true
 		}
 		// add to results if exists, otherwise add ! prefix
-		if _, exists := GetEntry(name); exists {
+		if _, exists := GetEntry(GetSlug(name)); exists {
 			// remove erroneous ! prefix if needed
 			if hadBang {
 				linkWithoutBang := "[" + link[2:]
@@ -83,7 +83,7 @@ func ParseLinks(s string) (string, []string) {
 func ResolveLinks(links []string) []Entry {
 	resolved := []Entry{}
 	for _, name := range links {
-		if entry, exists := GetEntry(name); exists {
+		if entry, exists := GetEntry(GetSlug(name)); exists {
 			resolved = append(resolved, entry)
 		}
 	}
@@ -110,11 +110,11 @@ func populateLinks() {
 		entry.Description = newDesc
 		entry.LinksTo = links
 		entry.LinkedFrom = []string{}
-		data.Names[GetSlug(entry.Name)] = entry
+		data.Names[entry.Slug()] = entry
 		// add links in reverse direction
 		fromName := entry.Name
 		for _, toName := range links {
-			names, exists := fromLinks[GetSlug(toName)]
+			names, exists := fromLinks[toName]
 			if !exists {
 				names = []string{fromName}
 			} else if !util.StringSliceContains(names, fromName) {
@@ -125,10 +125,10 @@ func populateLinks() {
 	}
 	// save the fromLinks in corresponding entries
 	for name, linkedFrom := range fromLinks {
-		entry, exists := GetEntry(name)
+		entry, exists := GetEntry(GetSlug(name))
 		if exists {
 			entry.LinkedFrom = linkedFrom
-			data.Names[GetSlug(entry.Name)] = entry
+			data.Names[entry.Slug()] = entry
 		}
 	}
 }
@@ -139,18 +139,18 @@ func BrokenLinks() map[string][]string {
 	ret := make(map[string][]string)
 	data.lock()
 	defer data.unlock()
-	for fromName, fromEntry := range data.Names {
+	for _, fromEntry := range data.Names {
 		for _, toName := range fromEntry.LinksTo {
 			if _, entryExists := data.Names[GetSlug(toName)]; !entryExists {
 				var brokenLinks []string
 				var existingList bool
-				if brokenLinks, existingList = ret[fromName]; existingList {
+				if brokenLinks, existingList = ret[fromEntry.Name]; existingList {
 					brokenLinks = append(brokenLinks, toName)
 					sort.Strings(brokenLinks)
 				} else {
 					brokenLinks = []string{toName}
 				}
-				ret[fromName] = brokenLinks
+				ret[fromEntry.Name] = brokenLinks
 			}
 		}
 	}
