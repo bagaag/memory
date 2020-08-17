@@ -1,6 +1,5 @@
-- Don't treat [brackets] that are immediately followed by a ( as an Entry link
-- Orphan links
 - Replace [!404] with [?404] to avoid confusiong with ![image]
+- Orphan links
 - [Entry] shows w/ ls output instead of correct type
 - ls -contains should include description matches after matching on name
 - Misc fields added to yaml not supported

@@ -37,7 +37,7 @@ func ParseLinks(s string) (string, []string) {
 	// compile links regexp
 	if linkExp == nil {
 		var err error
-		linkExp, err = regexp.Compile("\\[([[:alnum:]!][^~\\]]*)\\]")
+		linkExp, err = regexp.Compile("\\[([[:alnum:]!][^~\\]]*)\\]\\(?")
 		if err != nil {
 			fmt.Println("Error compiling link regexp:", err)
 			return s, []string{}
@@ -47,6 +47,10 @@ func ParseLinks(s string) (string, []string) {
 	results := linkExp.FindAllStringIndex(s, -1)
 	for _, pair := range results {
 		link := s[pair[0]:pair[1]]
+		// ignore external links, which are followed immediately by "("
+		if strings.HasSuffix(link, "(") {
+			continue
+		}
 		// strip off brackets, remove line breaks and consecutive spaces
 		name := link[1 : len(link)-1]
 		name = strings.ReplaceAll(name, "\n", " ")

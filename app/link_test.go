@@ -30,6 +30,7 @@ func TestParseLinks(t *testing.T) {
 	testParseLinks(t, 10, "[!Not Exists]", "[!Not Exists]", []string{"Not Exists"})
 	testParseLinks(t, 11, "[~Not Exists]", "[~Not Exists]", []string{})
 	testParseLinks(t, 12, "[Exists 2]\n[Exists]", "[Exists 2]\n[Exists]", []string{"Exists 2", "Exists"})
+	testParseLinks(t, 13, "[Exists](external)", "[Exists](external)", []string{})
 }
 
 func testParseLinks(t *testing.T, testNo int, input string, parsedExpected string, linksExpected []string) {
