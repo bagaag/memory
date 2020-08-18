@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"math"
 	"memory/app"
+	"memory/util"
 	"os"
 	"reflect"
 	"strings"
@@ -295,16 +296,11 @@ func EntryTables(entries []app.Entry) {
 		// add note name and type rows
 		data = append(data, []string{"Name", entry.Name})
 		data = append(data, []string{"Type", entry.Type})
-		// description row
-		desc := entry.Description
-		if desc != "" {
-			data = append(data, []string{"Description", desc})
-		}
 		// tags row
 		if len(entry.Tags) > 0 {
 			data = append(data, []string{"Tags", strings.Join(entry.Tags, ", ")})
 		}
-		//TODO: add created and modified dates
+		//TODO: add additional fields (Start, End, Address, etc.)
 		// create and configure table
 		table := tablewriter.NewWriter(os.Stdout)
 		// add border to top unless this is the first
@@ -314,7 +310,7 @@ func EntryTables(entries []app.Entry) {
 			table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: false})
 		}
 		table.SetRowLine(false)
-		table.SetColMinWidth(0, 12)
+		table.SetColMinWidth(0, 8)
 		table.SetColMinWidth(1, width)
 		table.SetColWidth(width)
 		table.SetAutoWrapText(true)
@@ -322,6 +318,7 @@ func EntryTables(entries []app.Entry) {
 		// add data and render
 		table.AppendBulk(data)
 		table.Render()
+		fmt.Println(util.Indent(entry.Description, 2))
 	}
 	fmt.Println("") // finish with blank line
 }

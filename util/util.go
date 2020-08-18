@@ -114,3 +114,12 @@ func StringSliceToLower(ss []string) {
 		ss[i] = strings.ToLower(s)
 	}
 }
+
+// Indent the text, preserving line breaks.
+func Indent(s string, n int) string {
+	lines := strings.Split(s, "\n")
+	for ix, line := range lines {
+		lines[ix] = "  " + line
+	}
+	return strings.Join(lines, "\n")
+}
