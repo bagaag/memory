@@ -17,7 +17,6 @@ import (
 	"memory/app"
 	"memory/util"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/buger/goterm"
@@ -220,10 +219,8 @@ func renderEntry(pager EntryPager, ix int, entry app.Entry) []string {
 	leftMargin := 6 // "  1.  "
 	blankLeftMargin := strings.Repeat(" ", leftMargin)
 	contentWidth := displayWidth(pager) - leftMargin
-	// ex. Place
-	typeName := strings.Title(reflect.TypeOf(entry).Name())
 	// ex. "  1.  [Place] Rockport, MA"
-	titleLine := fmt.Sprintf("%3d.  [%s] %s", ix+1, typeName, entry.Name)
+	titleLine := fmt.Sprintf("%3d.  [%s] %s", ix+1, entry.Type, entry.Name)
 	// `lines` will be the return value
 	lines := []string{titleLine}
 	// add Tags line, ex. "      Tags: town, vacation"
