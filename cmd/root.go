@@ -61,6 +61,7 @@ var completer = readline.NewPrefixCompleter(
 	readline.PcItem("links",
 		readline.PcItem("-name"),
 	),
+	readline.PcItem("seeds"),
 )
 
 var cliApp *cli.App
@@ -235,6 +236,11 @@ func CreateApp() *cli.App {
 						Required: true,
 					},
 				},
+			},
+			{
+				Name:   "seeds",
+				Usage:  "displays links to entries that don't exist yet",
+				Action: cmdSeeds,
 			},
 			{
 				Name:   "tags",

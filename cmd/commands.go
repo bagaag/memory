@@ -239,6 +239,17 @@ var cmdLinks = func(c *cli.Context) error {
 	return nil
 }
 
+// cmdSeeds lists links to entries that don't exist yet
+var cmdSeeds = func(c *cli.Context) error {
+	for from, tos := range app.BrokenLinks() {
+		fmt.Println("From:", from)
+		for _, to := range tos {
+			fmt.Println("  ", to)
+		}
+	}
+	return nil
+}
+
 // cmdGet displays the editable content of an entry
 func cmdGet(c *cli.Context) error {
 	name := c.String("name")

@@ -182,7 +182,7 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 	if sort == SortName {
 		sortEntries(entries, "Name", true)
 	} else { // SortRecent
-		sortEntries(entries, "Modified", false)
+		sortEntries(entries, "Modified", true)
 	}
 	// limit sorted results
 	if limit <= 0 {
