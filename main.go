@@ -8,6 +8,7 @@ package main
 
 import (
 	"fmt"
+	"memory/app"
 	"memory/cmd"
 	"os"
 )
@@ -18,5 +19,8 @@ func main() {
 	if err != nil {
 		fmt.Println("Error:", err)
 		os.Exit(1)
+	}
+	if err := app.Shutdown(); err != nil {
+		fmt.Println("Error shutting down:", err)
 	}
 }

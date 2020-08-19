@@ -162,7 +162,7 @@ var cmdDelete = func(c *cli.Context) error {
 
 // cmdList lists entries, optionally filtered and sorted.
 var cmdList = func(c *cli.Context) error {
-	contains := c.String("contains")
+	search := c.String("search")
 	anyTags := []string{}
 	if c.IsSet("tags") {
 		anyTags = strings.Split(c.String("any-tags"), ",")
@@ -177,10 +177,8 @@ var cmdList = func(c *cli.Context) error {
 	}
 	limit := c.Int("limit")
 	types := strings.Split(c.String("types"), "")
-	startsWith := "" //TODO: Implement or remove ls startsWith
-	search := ""     //TODO: Implement or remove ls search
 
-	results := app.GetEntries(parseTypes(types), startsWith, contains, search, onlyTags, anyTags, order, limit)
+	results := app.GetEntries(parseTypes(types), search, onlyTags, anyTags, order, limit)
 
 	if interactive {
 		pager := display.NewEntryPager(results)

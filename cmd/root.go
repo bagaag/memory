@@ -46,7 +46,7 @@ var completer = readline.NewPrefixCompleter(
 		readline.PcItem("-name"),
 	),
 	readline.PcItem("ls",
-		readline.PcItem("-contains"),
+		readline.PcItem("-search"),
 		readline.PcItem("-types"),
 		readline.PcItem("-tag"),
 		readline.PcItem("-any-tag"),
@@ -202,8 +202,8 @@ func CreateApp() *cli.App {
 				Action: cmdList,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:  "contains",
-						Usage: "filter on a word or phrase in the name or description",
+						Name:  "search",
+						Usage: "search for a word or phrase in the name, tags and description",
 					},
 					&cli.StringFlag{
 						Name:  "tags",

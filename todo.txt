@@ -1,11 +1,11 @@
-- ls -contains should include description matches after matching on name
-- Misc fields added to yaml not supported
 - Remove home path and data file from settings.json
-- Ctrl-C sometimes hangs
-
-Frontmatter/fields
-- Add map[string]string Custom yaml field
-- Add Address field to Place
+- include desc excerpt in search index
+- use search to serve all ls commands and avoid reading in all files on startup
+- boost Name in search
+- entering incorrect interactive cmd exits app
+- capture mod date in file rather than relying on file date
+- file management (list, view, add, delete)
+- Ctrl-C sometimes hangs (can't reproduce)
 
 Files/Images
 - Trying to allow for linked docs and images without making it too fiddly
@@ -14,16 +14,6 @@ Files/Images
     - Any desc or meta data handled in description/link
 - Initial improvements: 
     - Add cmds to push and get files (memory addfile -name "Entry Name" - file /path/image.jpg)
-- Further out:
-    - Metadata for files: name (handled like Entry names), ext, description
-        - Files
-            - f1
-                - Name: (if blank, uses entry name)
-                - Description: Optional description for a file that is displayed in a table. 
-                - Ext: png
-            - tag2
-                ...
-        - Images
-            - tag
-- Allow for reference of images and files by index ![](0)
-- Implement liquid template to support something like {% images %} and {% files %}
+    - Add cmds to list, view, add and delete files from interactive prompt
+    - Allow for reference of images and files by index ![](0)
+    - Implement liquid template to support something like {% images %} and {% files %}

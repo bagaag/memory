@@ -94,3 +94,8 @@ func GetSettingsForStorage() StoredSettings {
 func UpdateSettingsFromStorage(settings StoredSettings) {
 	EditorCommand = settings.EditorCommand
 }
+
+// SearchPath returns the full path to the search index database
+func SearchPath() string {
+	return MemoryHome + Slash + "entries.bleve"
+}

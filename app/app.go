@@ -82,6 +82,7 @@ func PutEntry(entry Entry) {
 	slug := entry.Slug()
 	data.Names[slug] = entry
 	data.unlock()
+	IndexEntry(entry)
 }
 
 // DeleteEntry removes the specified entry from the collection.
@@ -94,6 +95,7 @@ func DeleteEntry(slug string) bool {
 	}
 	delete(data.Names, slug)
 	deletes = append(deletes, slug)
+	RemoveFromIndex(slug)
 	return true
 }
 
@@ -139,31 +141,39 @@ func EntryCount() int {
 
 // GetEntries returns an array of entries of the specified type(s) with
 // specified filters and sorting applied.
-func GetEntries(types EntryTypes, startsWith string, contains string,
-	search string, onlyTags []string, anyTags []string, sort SortOrder,
-	limit int) EntryResults {
+func GetEntries(types EntryTypes, search string, onlyTags []string,
+	anyTags []string, sort SortOrder, limit int) EntryResults {
 
 	// holds the results
 	entries := []Entry{}
 
 	// convert filters to lower case
-	startsWith = strings.ToLower(startsWith)
-	contains = strings.ToLower(contains)
 	util.StringSliceToLower(onlyTags)
 	util.StringSliceToLower(anyTags)
 
+	// perform search
+	//TODO: use search as primary source rather than loading all entries into memory and stepping through them
+	var searchMatches []string
+	if search != "" {
+		var err error
+		searchMatches, err = executeSearch(search)
+		if err != nil {
+			fmt.Println("Error performing search:", err)
+		}
+	}
+	if searchMatches == nil {
+		searchMatches = []string{}
+	}
+
 	// run through the collection and apply filters
 	data.lock()
-	for _, entry := range data.Names {
-		lowerName := strings.ToLower(entry.Name)
-
+	for slug, entry := range data.Names {
+		if search != "" {
+			if !util.StringSliceContains(searchMatches, slug) {
+				continue
+			}
+		}
 		if !filterType(entry, types) {
-			continue
-		}
-		if startsWith != "" && !strings.HasPrefix(lowerName, startsWith) {
-			continue
-		}
-		if contains != "" && !strings.Contains(lowerName, contains) {
 			continue
 		}
 		if len(anyTags) > 0 && !tagMatches(entry, anyTags, false) {
@@ -192,23 +202,21 @@ func GetEntries(types EntryTypes, startsWith string, contains string,
 		entries = entries[:limit]
 	}
 	return EntryResults{
-		Entries:    entries,
-		Types:      types,
-		StartsWith: startsWith,
-		Contains:   contains,
-		Search:     search,
-		OnlyTags:   onlyTags,
-		AnyTags:    anyTags,
-		Sort:       sort,
-		Limit:      limit,
+		Entries:  entries,
+		Types:    types,
+		Search:   search,
+		OnlyTags: onlyTags,
+		AnyTags:  anyTags,
+		Sort:     sort,
+		Limit:    limit,
 	}
 }
 
 // RefreshResults re-runs a search query and gets fresh results to avoid showing
 // stale entries when results are revisited.
 func RefreshResults(results EntryResults) EntryResults {
-	return GetEntries(results.Types, results.StartsWith, results.Contains,
-		results.Search, results.OnlyTags, results.AnyTags, results.Sort, results.Limit)
+	return GetEntries(results.Types, results.Search, results.OnlyTags,
+		results.AnyTags, results.Sort, results.Limit)
 }
 
 // GetEntry returns a single entry or throws an error.
@@ -281,8 +289,16 @@ func Init(homeDir string) error {
 		fmt.Printf("Warning: Ignoring %d entry files due to errors reported above.\n", skipped)
 	}
 	populateLinks()
+	if err := initSearch(); err != nil {
+		return err
+	}
 	inited = true
 	return nil
+}
+
+// Shutdown performs cleanup prior to exiting application
+func Shutdown() error {
+	return closeSearch()
 }
 
 // RenameEntry changes an entry name and updates associated data structures.
@@ -382,6 +398,13 @@ func filterType(entry Entry, types EntryTypes) bool {
 		return types.Thing
 	}
 	return false
+}
+
+// searchMatches returns a score from 0 to 1 if the entry matches, where 0 is
+// a miss and 1 is a perfect match on entry name.
+func searchMatches(keywords string, entry Entry) {
+	keywords = strings.ToLower(keywords)
+	//if strings.ToLower(entry.Name) == keyw
 }
 
 func sortEntries(arr []Entry, field string, ascending bool) {

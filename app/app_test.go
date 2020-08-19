@@ -51,7 +51,7 @@ func setupCrud() {
 func TestGetEntries(t *testing.T) {
 	generateTestData()
 	// defaults
-	results := GetEntries(EntryTypes{Note: true}, "", "", "", []string{}, []string{}, 0, 0)
+	results := GetEntries(EntryTypes{Note: true}, "", []string{}, []string{}, 0, 0)
 	if len(results.Entries) != 50 {
 		t.Errorf("Expected 50 entries, got %d", len(results.Entries))
 		return
@@ -61,13 +61,13 @@ func TestGetEntries(t *testing.T) {
 		return
 	}
 	// no types selected
-	results = GetEntries(EntryTypes{}, "", "", "", []string{}, []string{}, 0, 0)
+	results = GetEntries(EntryTypes{}, "", []string{}, []string{}, 0, 0)
 	if len(results.Entries) != 50 {
 		t.Errorf("Expected 50 entries, got %d", len(results.Entries))
 		return
 	}
 	// filter by 1 tag and sort by name
-	results = GetEntries(EntryTypes{Note: true}, "", "", "", []string{}, []string{"odd"}, SortName, 50)
+	results = GetEntries(EntryTypes{Note: true}, "", []string{}, []string{"odd"}, SortName, 50)
 	if len(results.Entries) != 25 {
 		t.Errorf("Expected 25 entries, got %d", len(results.Entries))
 		return
@@ -77,7 +77,7 @@ func TestGetEntries(t *testing.T) {
 		return
 	}
 	// filter by 2 tags, sort recent, limit 5
-	results = GetEntries(EntryTypes{Note: true}, "", "", "", []string{"odd", "bythree"}, []string{}, SortRecent, 5)
+	results = GetEntries(EntryTypes{Note: true}, "", []string{"odd", "bythree"}, []string{}, SortRecent, 5)
 	if len(results.Entries) != 5 {
 		t.Errorf("Expected 5 entries, got %d", len(results.Entries))
 		return
