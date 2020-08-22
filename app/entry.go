@@ -21,7 +21,7 @@ type Entry struct {
 	LinkedFrom  []string
 	Created     time.Time
 	Modified    time.Time
-	Type        EntryType
+	Type        EntryType `json:"EntryType"`
 	Dirty       bool
 	Start       string // Events
 	End         string // Events
@@ -29,6 +29,7 @@ type Entry struct {
 	Longitude   string // Place
 	Address     string // Place
 	Custom      map[string]string
+	Exclude     bool // Supports ability to search for all entries
 }
 
 // Slug returns the slug for this entry.

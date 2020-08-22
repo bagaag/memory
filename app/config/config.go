@@ -97,5 +97,5 @@ func UpdateSettingsFromStorage(settings StoredSettings) {
 
 // SearchPath returns the full path to the search index database
 func SearchPath() string {
-	return MemoryHome + Slash + "entries.bleve"
+	return MemoryHome + Slash + "search.bleve"
 }

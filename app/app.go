@@ -38,25 +38,28 @@ type root struct {
 // EntryResults is used to contain the results of GetEntries and the settings used
 // to generate those results.
 type EntryResults struct {
-	Entries    []Entry
-	Types      EntryTypes
-	StartsWith string
-	Contains   string
-	Search     string
-	AnyTags    []string
-	OnlyTags   []string
-	Sort       SortOrder
-	Limit      int
+	Entries  []Entry
+	Types    EntryTypes
+	Search   string
+	AnyTags  []string
+	OnlyTags []string
+	Sort     SortOrder
+	Total    uint64
+	PageNo   int
+	PageSize int
 }
 
 // SortOrder is used to indicate one of the Sort constants
 type SortOrder int
 
+// SortScore sorts entries by search score
+const SortScore = SortOrder(0)
+
 // SortRecent sorts entries by descending modified date
-const SortRecent = SortOrder(0)
+const SortRecent = SortOrder(1)
 
 // SortName sorts entries alphabetically by name
-const SortName = SortOrder(1)
+const SortName = SortOrder(2)
 
 // The data variable stores all the things that get saved.
 var data = root{
@@ -139,10 +142,15 @@ func EntryCount() int {
 	return len(data.Names)
 }
 
-// GetEntries returns an array of entries of the specified type(s) with
+// GetEntriesDeprecated returns an array of entries of the specified type(s) with
 // specified filters and sorting applied.
-func GetEntries(types EntryTypes, search string, onlyTags []string,
+func GetEntriesDeprecated(types EntryTypes, search string, onlyTags []string,
 	anyTags []string, sort SortOrder, limit int) EntryResults {
+
+	// DEPRECATED: use SearchEntires instead
+	if true {
+		return EntryResults{}
+	}
 
 	// holds the results
 	entries := []Entry{}
@@ -196,7 +204,7 @@ func GetEntries(types EntryTypes, search string, onlyTags []string,
 	}
 	// limit sorted results
 	if limit <= 0 {
-		limit = 2147483647 // int32 max just to be safe
+		limit = util.MaxInt32
 	}
 	if len(entries) > limit {
 		entries = entries[:limit]
@@ -208,26 +216,13 @@ func GetEntries(types EntryTypes, search string, onlyTags []string,
 		OnlyTags: onlyTags,
 		AnyTags:  anyTags,
 		Sort:     sort,
-		Limit:    limit,
 	}
 }
 
-// RefreshResults re-runs a search query and gets fresh results to avoid showing
-// stale entries when results are revisited.
-func RefreshResults(results EntryResults) EntryResults {
-	return GetEntries(results.Types, results.Search, results.OnlyTags,
-		results.AnyTags, results.Sort, results.Limit)
-}
-
-// GetEntry returns a single entry or throws an error.
-func GetEntry(slug string) (Entry, bool) {
+// GetEntryFromStorage returns a single entry suitable for editing or throws an error.
+func GetEntryFromStorage(slug string) (Entry, bool) {
 	entry, exists := data.Names[slug]
 	return entry, exists
-}
-
-// GetEntryByName returns a single entry or throws an error.
-func GetEntryByName(name string) (Entry, bool) {
-	return GetEntry(GetSlug(name))
 }
 
 // Init reads data stored on the file system and initializes application variables.
@@ -307,11 +302,11 @@ func RenameEntry(name string, newName string) error {
 	slug := GetSlug(name)
 	newSlug := GetSlug(newName)
 	defer data.unlock()
-	_, exists := GetEntry(newSlug)
+	_, exists := GetEntryFromIndex(newSlug)
 	if exists {
 		return fmt.Errorf("an entry named %s (or very similar) already exists", newName)
 	}
-	entry, exists := GetEntry(slug)
+	entry, exists := GetEntryFromStorage(slug)
 	if !exists {
 		return fmt.Errorf("an entry named %s does not exist", name)
 	}

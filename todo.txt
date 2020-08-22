@@ -1,11 +1,13 @@
-- Remove home path and data file from settings.json
-- include desc excerpt in search index
-- use search to serve all ls commands and avoid reading in all files on startup
+- remove initial read of every entry into ram
+- slugify tags
+- fix link_test.go
 - boost Name in search
 - entering incorrect interactive cmd exits app
-- capture mod date in file rather than relying on file date
+- capture create & mod dates in file rather than relying on file date; remove from file when editing
 - file management (list, view, add, delete)
 - Ctrl-C sometimes hangs (can't reproduce)
+- bleve contrib: add match and match_phrase query types to cmd/query
+- bleve contrib: keyword mapping test case & ask/report
 
 Files/Images
 - Trying to allow for linked docs and images without making it too fiddly

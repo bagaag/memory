@@ -51,7 +51,7 @@ func setupCrud() {
 func TestGetEntries(t *testing.T) {
 	generateTestData()
 	// defaults
-	results := GetEntries(EntryTypes{Note: true}, "", []string{}, []string{}, 0, 0)
+	results := GetEntriesDeprecated(EntryTypes{Note: true}, "", []string{}, []string{}, 0, 0)
 	if len(results.Entries) != 50 {
 		t.Errorf("Expected 50 entries, got %d", len(results.Entries))
 		return
@@ -61,13 +61,13 @@ func TestGetEntries(t *testing.T) {
 		return
 	}
 	// no types selected
-	results = GetEntries(EntryTypes{}, "", []string{}, []string{}, 0, 0)
+	results = GetEntriesDeprecated(EntryTypes{}, "", []string{}, []string{}, 0, 0)
 	if len(results.Entries) != 50 {
 		t.Errorf("Expected 50 entries, got %d", len(results.Entries))
 		return
 	}
 	// filter by 1 tag and sort by name
-	results = GetEntries(EntryTypes{Note: true}, "", []string{}, []string{"odd"}, SortName, 50)
+	results = GetEntriesDeprecated(EntryTypes{Note: true}, "", []string{}, []string{"odd"}, SortName, 50)
 	if len(results.Entries) != 25 {
 		t.Errorf("Expected 25 entries, got %d", len(results.Entries))
 		return
@@ -77,7 +77,7 @@ func TestGetEntries(t *testing.T) {
 		return
 	}
 	// filter by 2 tags, sort recent, limit 5
-	results = GetEntries(EntryTypes{Note: true}, "", []string{"odd", "bythree"}, []string{}, SortRecent, 5)
+	results = GetEntriesDeprecated(EntryTypes{Note: true}, "", []string{"odd", "bythree"}, []string{}, SortRecent, 5)
 	if len(results.Entries) != 5 {
 		t.Errorf("Expected 5 entries, got %d", len(results.Entries))
 		return
@@ -90,14 +90,14 @@ func TestGetEntries(t *testing.T) {
 
 func TestGetEntry(t *testing.T) {
 	generateTestData()
-	entry, exists := GetEntry("note #42")
+	entry, exists := GetEntryFromIndex("note #42")
 	if !exists {
 		t.Error("Unexpected entry not found")
 	}
 	if entry.Name != "note #42" {
 		t.Error("Expected 'note #42', got", entry.Name)
 	}
-	entry, exists = GetEntry("invalid")
+	entry, exists = GetEntryFromIndex("invalid")
 	if exists {
 		t.Error("Expected nil entry, got", entry.Name)
 	}
@@ -109,14 +109,14 @@ func TestGetNote(t *testing.T) {
 	var entry Entry
 	var note Entry
 	var exists bool
-	entry, exists = GetEntry("note #3")
+	entry, exists = GetEntryFromIndex("note #3")
 	note = entry
 	if !exists {
 		t.Error("Unexpected not exists")
 	} else if note.Name != "note #3" || note.Description != "desc #3" {
 		t.Error("Did not get expected note name (test #3) or description (desc #3):", note.Name, ",", note.Description)
 	}
-	_, exists = GetEntry("not found")
+	_, exists = GetEntryFromIndex("not found")
 	if exists {
 		t.Error("Expected exists for invalid note name")
 	}
@@ -135,7 +135,7 @@ func TestPutNote(t *testing.T) {
 	if len(data.Names) != 11 {
 		t.Errorf("Expected 11 notes (2nd pass), found %d", len(data.Names))
 	}
-	gotNote, exists := GetEntry("note #3")
+	gotNote, exists := GetEntryFromIndex("note #3")
 	if !exists {
 		t.Error("updated note does not exist")
 	} else if gotNote.Description != "different desc" {
@@ -153,7 +153,7 @@ func TestDeleteNote(t *testing.T) {
 	if len(data.Names) != 9 {
 		t.Errorf("Expected 9 notes, got %d", len(data.Names))
 	}
-	_, exists := GetEntry("note #3")
+	_, exists := GetEntryFromIndex("note #3")
 	if exists {
 		t.Error("Deleted note exists")
 	}
@@ -174,7 +174,7 @@ func TestSave(t *testing.T) {
 	if len(data.Names) != 10 {
 		t.Error("Expected 10 entries, got", len(data.Names))
 	}
-	entry, exists := GetEntry("note #3")
+	entry, exists := GetEntryFromIndex("note #3")
 	if !exists {
 		t.Error("Expected note #3 to exist, it does not")
 	}
@@ -191,7 +191,7 @@ func TestRename(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	entry, exists := GetEntry(newName)
+	entry, exists := GetEntryFromIndex(newName)
 	if !exists {
 		t.Error("Renamed note doesn't exist")
 		return
@@ -206,13 +206,13 @@ func TestRename(t *testing.T) {
 
 func TestEdit(t *testing.T) {
 	setupCrud()
-	entry, exists := GetEntry("note #3")
+	entry, exists := GetEntryFromIndex("note #3")
 	if !exists {
 		t.Error("note #3 doesn't exist, but should")
 	}
 	entry.Description = "different"
 	PutEntry(entry)
-	entry2, exists := GetEntry("note #3")
+	entry2, exists := GetEntryFromIndex("note #3")
 	if !exists {
 		t.Error("note #3 doesn't exist (2nd), but should")
 	}

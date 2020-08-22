@@ -10,11 +10,15 @@ package util
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/term"
 )
+
+// MaxInt32 is the max value that can be assigned to int32
+var MaxInt32 = 2147483647
 
 // FormatErrorForDisplay takes an error message, which idiomatically should not be capitalized or
 // in sentence format, and returns a string with the first letter capitalized and a period at the
@@ -122,4 +126,24 @@ func Indent(s string, n int) string {
 		lines[ix] = "  " + line
 	}
 	return strings.Join(lines, "\n")
+}
+
+// DelTree deletes a folder and all of its contents
+func DelTree(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return os.Remove(dir)
 }

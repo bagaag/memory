@@ -80,7 +80,7 @@ func detailInteractiveLoop(entry app.Entry) bool {
 			}
 			// update entry in case things changed in the subloops
 			var exists bool
-			entry, exists = app.GetEntryByName(entry.Name)
+			entry, exists = app.GetEntryFromIndex(app.GetSlug(entry.Name))
 			if !exists {
 				return false
 			}
@@ -115,11 +115,11 @@ func linksInteractiveLoop(entry app.Entry) bool {
 				fmt.Printf("Error: %d is not a valid link number.\n", num)
 			} else {
 				linkName := links[ix]
-				nextDetail, exists := app.GetEntry(app.GetSlug(linkName))
+				nextDetail, exists := app.GetEntryFromIndex(app.GetSlug(linkName))
 				if exists {
 					detailInteractiveLoop(nextDetail)
 					var exists bool
-					entry, exists = app.GetEntry(entry.Slug())
+					entry, exists = app.GetEntryFromIndex(entry.Slug())
 					if !exists {
 						return false
 					}
@@ -137,6 +137,40 @@ func linksInteractiveLoop(entry app.Entry) bool {
 			fmt.Println("Error: Unrecognized command:", cmd)
 		}
 	}
+}
+
+// listInteractiveLoop handles the paging of ls results.
+func listInteractiveLoop(pager display.EntryPager) error {
+	for {
+		input := strings.ToLower(getSingleCharInput())
+		if input == "n" {
+			if !pager.Next() {
+				fmt.Println("Error: Already on the last page.")
+			}
+		} else if input == "p" {
+			if !pager.Prev() {
+				fmt.Println("Error: Already on the first page.")
+			}
+		} else if input == "" || input == "^c" || input == "q" || input == "b" {
+			break
+		} else if num, err := strconv.Atoi(input); err == nil {
+			if num == 0 {
+				num = 10
+			}
+			ix := num - 1
+			if ix < 0 || ix >= len(pager.Results.Entries) {
+				fmt.Printf("Error: %d is not a valid result number.\n", num)
+			} else {
+				if !detailInteractiveLoop(pager.Results.Entries[ix]) {
+					break
+				}
+			}
+		} else {
+			fmt.Println("Error: Unrecognized option:", input)
+		}
+		pager.PrintPage()
+	}
+	return nil
 }
 
 // editEntryValidationLoop loads the editor for an entry repeatedly

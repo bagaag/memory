@@ -16,8 +16,8 @@ import (
 	"memory/app/config"
 	"memory/app/persist"
 	"memory/cmd/display"
+	"memory/util"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -112,7 +112,7 @@ var cmdPut = func(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	_, existed := app.GetEntry(entry.Slug())
+	_, existed := app.GetEntryFromIndex(entry.Slug())
 	app.PutEntry(entry)
 	app.Save()
 	if existed {
@@ -127,7 +127,7 @@ var cmdPut = func(c *cli.Context) error {
 // cmdEdit edits an existing entry, identified by name.
 var cmdEdit = func(c *cli.Context) error {
 	name := c.String("name")
-	origEntry, exists := app.GetEntryByName(name)
+	origEntry, exists := app.GetEntryFromIndex(app.GetSlug(name))
 	if !exists {
 		return fmt.Errorf("there is no entry named '%s'", name)
 	}
@@ -137,7 +137,7 @@ var cmdEdit = func(c *cli.Context) error {
 	}
 	if origEntry.Name != entry.Name {
 		// entry being renamed
-		_, exists := app.GetEntryByName(entry.Name)
+		_, exists := app.GetEntryFromIndex(app.GetSlug(entry.Name))
 		if exists {
 			return errors.New("cannot rename entry; an entry with this name already exists")
 		}
@@ -175,46 +175,28 @@ var cmdList = func(c *cli.Context) error {
 	if c.String("order") == "name" {
 		order = app.SortName
 	}
-	limit := c.Int("limit")
 	types := strings.Split(c.String("types"), "")
 
-	results := app.GetEntries(parseTypes(types), search, onlyTags, anyTags, order, limit)
-
 	if interactive {
+		pageSize := display.ListPageSize()
+		results, err := app.SearchEntries(parseTypes(types), search, onlyTags, anyTags, order, 1, pageSize)
+		if err != nil {
+			return err
+		}
 		pager := display.NewEntryPager(results)
 		pager.PrintPage()
 		if len(results.Entries) == 0 {
 			return nil
 		}
-		for {
-			input := strings.ToLower(getSingleCharInput())
-			if input == "n" {
-				if !pager.Next() {
-					fmt.Println("Error: Already on the last page.")
-				}
-			} else if input == "p" {
-				if !pager.Prev() {
-					fmt.Println("Error: Already on the first page.")
-				}
-			} else if input == "" || input == "^c" || input == "q" || input == "b" {
-				break
-			} else if num, err := strconv.Atoi(input); err == nil {
-				ix := num - 1
-				if ix < 0 || ix >= len(results.Entries) {
-					fmt.Printf("Error: %d is not a valid result number.\n", num)
-				} else {
-					if !detailInteractiveLoop(results.Entries[ix]) {
-						break
-					}
-					results = app.RefreshResults(results)
-					pager = display.NewEntryPager(results)
-				}
-			} else {
-				fmt.Println("Error: Unrecognized option:", input)
-			}
-			pager.PrintPage()
+		if err := listInteractiveLoop(pager); err != nil {
+			return err
 		}
 	} else {
+		pageSize := util.MaxInt32
+		results, err := app.SearchEntries(parseTypes(types), search, onlyTags, anyTags, order, 1, pageSize)
+		if err != nil {
+			return err
+		}
 		display.EntryTables(results.Entries)
 	}
 	return nil
@@ -223,7 +205,7 @@ var cmdList = func(c *cli.Context) error {
 // cmdLinks lists the entries linked to and from an existing entry, identified by name.
 var cmdLinks = func(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists := app.GetEntryByName(name)
+	entry, exists := app.GetEntryFromIndex(app.GetSlug(name))
 	if !exists {
 		fmt.Println("Cannot find entry named", name)
 		return errors.New("entry not found")
@@ -251,7 +233,7 @@ var cmdSeeds = func(c *cli.Context) error {
 // cmdGet displays the editable content of an entry
 func cmdGet(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists := app.GetEntry(app.GetSlug(name))
+	entry, exists := app.GetEntryFromStorage(app.GetSlug(name))
 	if !exists {
 		return nil
 	}
@@ -266,7 +248,7 @@ func cmdGet(c *cli.Context) error {
 // cmdDetail displays details of an entry and, if interactive, provides a menu prompt.
 func cmdDetail(c *cli.Context) {
 	name := c.String("name")
-	entry, exists := app.GetEntry(app.GetSlug(name))
+	entry, exists := app.GetEntryFromIndex(app.GetSlug(name))
 	if !exists {
 		fmt.Printf("Entry named '%s' does not exist.\n", name)
 	} else if interactive {

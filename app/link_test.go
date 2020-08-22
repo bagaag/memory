@@ -66,9 +66,9 @@ func TestPopulateLinks(t *testing.T) {
 	PutEntry(nB)
 	PutEntry(nC)
 	populateLinks()
-	n1, _ := GetEntry(GetSlug("Note 1"))
-	n2, _ := GetEntry(GetSlug("Note 2"))
-	n3, _ := GetEntry(GetSlug("Note 3"))
+	n1, _ := GetEntryFromIndex(GetSlug("Note 1"))
+	n2, _ := GetEntryFromIndex(GetSlug("Note 2"))
+	n3, _ := GetEntryFromIndex(GetSlug("Note 3"))
 	// test linksTo
 	if !util.StringSlicesEqual(n1.LinksTo, []string{"Note 2"}) {
 		t.Error("Expected n1.LinksTo==['Note 2'], got", n1.LinksTo)

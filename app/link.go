@@ -63,8 +63,9 @@ func ParseLinks(s string) (string, []string) {
 			name = name[1:]
 			hadBang = true
 		}
+		slug := GetSlug(name)
 		// add to results if exists, otherwise add ! prefix
-		if _, exists := GetEntry(GetSlug(name)); exists {
+		if _, exists := GetEntryFromStorage(slug); exists {
 			// remove erroneous ! prefix if needed
 			if hadBang {
 				linkWithoutBang := "[" + link[2:]
@@ -76,7 +77,7 @@ func ParseLinks(s string) (string, []string) {
 			parsed = strings.Replace(parsed, link, link404, 1)
 		}
 		if !util.StringSliceContains(links, name) {
-			links = append(links, name)
+			links = append(links, slug)
 		}
 	}
 	return parsed, links
@@ -86,8 +87,8 @@ func ParseLinks(s string) (string, []string) {
 // a slice of Entries that exist with those names.
 func ResolveLinks(links []string) []Entry {
 	resolved := []Entry{}
-	for _, name := range links {
-		if entry, exists := GetEntry(GetSlug(name)); exists {
+	for _, slug := range links {
+		if entry, exists := GetEntryFromIndex(slug); exists {
 			resolved = append(resolved, entry)
 		}
 	}
@@ -115,21 +116,21 @@ func populateLinks() {
 		entry.LinksTo = links
 		entry.LinkedFrom = []string{}
 		data.Names[entry.Slug()] = entry
+		fromSlug := entry.Slug()
 		// add links in reverse direction
-		fromName := entry.Name
-		for _, toName := range links {
-			names, exists := fromLinks[toName]
+		for _, toSlug := range links {
+			slugs, exists := fromLinks[toSlug]
 			if !exists {
-				names = []string{fromName}
-			} else if !util.StringSliceContains(names, fromName) {
-				names = append(names, fromName)
+				slugs = []string{fromSlug}
+			} else if !util.StringSliceContains(slugs, fromSlug) {
+				slugs = append(slugs, fromSlug)
 			}
-			fromLinks[toName] = names
+			fromLinks[toSlug] = slugs
 		}
 	}
 	// save the fromLinks in corresponding entries
-	for name, linkedFrom := range fromLinks {
-		entry, exists := GetEntry(GetSlug(name))
+	for slug, linkedFrom := range fromLinks {
+		entry, exists := GetEntryFromStorage(slug)
 		if exists {
 			entry.LinkedFrom = linkedFrom
 			data.Names[entry.Slug()] = entry

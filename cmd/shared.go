@@ -74,7 +74,7 @@ func editEntry(origEntry app.Entry, tempFile string) (app.Entry, string, error) 
 	}
 	// handle name change
 	if origEntry.Name != editedEntry.Name {
-		if _, exists := app.GetEntry(editedEntry.Slug()); exists {
+		if _, exists := app.GetEntryFromIndex(editedEntry.Slug()); exists {
 			return editedEntry, tempFile, errors.New("entry named '" + editedEntry.Name + "' already exists")
 		}
 		app.DeleteEntry(origEntry.Slug())
@@ -102,7 +102,7 @@ func parseEntryText(entryText string) (app.Entry, error) {
 func deleteEntry(name string, ask bool) bool {
 	s := "y"
 	var err error
-	if _, exists := app.GetEntry(app.GetSlug(name)); !exists {
+	if _, exists := app.GetEntryFromIndex(app.GetSlug(name)); !exists {
 		fmt.Println("Entry '" + name + "' could not be found.")
 		return false
 	}
