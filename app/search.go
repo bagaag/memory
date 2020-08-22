@@ -132,15 +132,44 @@ func RebuildSearchIndex() error {
 	}
 	fmt.Println("Indexing entries for search...")
 	count := 0
-	for key, entry := range data.Names {
-		if err := searchIndex.Index(key, entry); err != nil {
+	slugs, err := persist.EntrySlugs()
+	if err != nil {
+		return err
+	}
+	for _, slug := range slugs {
+		entry, exists, err := GetEntryFromStorage(slug)
+		if !exists {
+			fmt.Println("Error:", slug, "listed from storage but not found")
+			continue
+		} else if err != nil {
+			fmt.Println("Error reading", slug, err)
+			continue
+		}
+		if err := searchIndex.Index(slug, entry); err != nil {
 			fmt.Println("Error indexing:", err)
 		} else {
 			count = count + 1
 		}
 	}
-	fmt.Printf("Indexed %d out of %d entries.\n", count, len(data.Names))
+	fmt.Println("Parsing links...")
+	populateLinks()
+	fmt.Printf("Indexed %d out of %d entries.\n", count, len(slugs))
 	return nil
+}
+
+// IndexedSlugs returns a slice of slugs representing entries indexed for search.
+func IndexedSlugs() ([]string, error) {
+	q := bleve.NewMatchAllQuery()
+	req := bleve.NewSearchRequest(q)
+	result, err := searchIndex.Search(req)
+	if err != nil {
+		return nil, err
+	}
+	slugs := []string{}
+	for _, hit := range result.Hits {
+		slugs = append(slugs, hit.ID)
+	}
+	return slugs, nil
 }
 
 // GetEntryFromIndex returns an entry from the search index suitable for display.
@@ -284,8 +313,14 @@ func buildSearchQuery(types EntryTypes, search string, onlyTags []string, anyTag
 	}
 	// add "get all" query if no other queries are being applied
 	if types.HasAll() && len(anyTags) == 0 && len(onlyTags) == 0 && search == "" {
-		// there's probably a better way to do this, but I haven't found it yet
-		boolQuery.AddMust(bleve.NewQueryStringQuery("Exclude:F*"))
+		all := bleve.NewMatchAllQuery()
+		boolQuery.AddMust(all)
 	}
 	return boolQuery
+}
+
+// EntryCount returns the total number of entries in the index.
+func EntryCount() uint64 {
+	c, _ := searchIndex.DocCount()
+	return c
 }

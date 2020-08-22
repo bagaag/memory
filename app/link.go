@@ -65,7 +65,7 @@ func ParseLinks(s string) (string, []string) {
 		}
 		slug := GetSlug(name)
 		// add to results if exists, otherwise add ! prefix
-		if _, exists := GetEntryFromStorage(slug); exists {
+		if _, exists := GetEntryFromIndex(slug); exists {
 			// remove erroneous ! prefix if needed
 			if hadBang {
 				linkWithoutBang := "[" + link[2:]
@@ -106,47 +106,64 @@ func UpdateLinks() {
 // populateLinks populates the LinksTo and LinkedFrom slices on all entries by
 // parsing the descriptions for links. Assumes the calling function already
 // has a lock on data.
-func populateLinks() {
+func populateLinks() error {
+	indexEntries := make(map[string]Entry)
 	fromLinks := make(map[string][]string)
-	for _, entry := range data.Names {
+	slugs, err := IndexedSlugs()
+	if err != nil {
+		return err
+	}
+	for _, slug := range slugs {
 		// parse and save outgoing links for this entry
-		searchText := entry.Description
-		newDesc, links := ParseLinks(searchText)
-		entry.Description = newDesc
-		entry.LinksTo = links
-		entry.LinkedFrom = []string{}
-		data.Names[entry.Slug()] = entry
-		fromSlug := entry.Slug()
-		// add links in reverse direction
-		for _, toSlug := range links {
-			slugs, exists := fromLinks[toSlug]
-			if !exists {
-				slugs = []string{fromSlug}
-			} else if !util.StringSliceContains(slugs, fromSlug) {
-				slugs = append(slugs, fromSlug)
+		entry, exists := GetEntryFromIndex(slug)
+		if exists {
+			searchText := entry.Description
+			newDesc, links := ParseLinks(searchText)
+			entry.Description = newDesc
+			entry.LinksTo = links
+			entry.LinkedFrom = []string{}
+			indexEntries[slug] = entry
+			fromSlug := entry.Slug()
+			// add links in reverse direction
+			for _, toSlug := range links {
+				slugs, exists := fromLinks[toSlug]
+				if !exists {
+					slugs = []string{fromSlug}
+				} else if !util.StringSliceContains(slugs, fromSlug) {
+					slugs = append(slugs, fromSlug)
+				}
+				fromLinks[toSlug] = slugs
 			}
-			fromLinks[toSlug] = slugs
 		}
 	}
 	// save the fromLinks in corresponding entries
 	for slug, linkedFrom := range fromLinks {
-		entry, exists := GetEntryFromStorage(slug)
+		entry, exists := GetEntryFromIndex(slug)
 		if exists {
 			entry.LinkedFrom = linkedFrom
-			data.Names[entry.Slug()] = entry
+			indexEntries[slug] = entry
 		}
 	}
+	for _, entry := range indexEntries {
+		IndexEntry(entry)
+	}
+	return nil
 }
 
 // BrokenLinks returns a map of string slices containing names of linked-to pages that don't
 // exist; the name of the page containing the link is the key.
-func BrokenLinks() map[string][]string {
+func BrokenLinks() (map[string][]string, error) {
 	ret := make(map[string][]string)
 	data.lock()
 	defer data.unlock()
-	for _, fromEntry := range data.Names {
+	slugs, err := IndexedSlugs()
+	if err != nil {
+		return ret, err
+	}
+	for _, slug := range slugs {
+		fromEntry, _ := GetEntryFromIndex(slug)
 		for _, toName := range fromEntry.LinksTo {
-			if _, entryExists := data.Names[GetSlug(toName)]; !entryExists {
+			if !util.StringSliceContains(slugs, toName) {
 				var brokenLinks []string
 				var existingList bool
 				if brokenLinks, existingList = ret[fromEntry.Name]; existingList {
@@ -159,5 +176,5 @@ func BrokenLinks() map[string][]string {
 			}
 		}
 	}
-	return ret
+	return ret, nil
 }

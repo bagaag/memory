@@ -16,7 +16,10 @@ import (
 
 func TestGetTags(t *testing.T) {
 	generateTestData()
-	tags := GetTags()
+	tags, err := GetTags()
+	if err != nil {
+		t.Error(err)
+	}
 	if len(tags) != 4 {
 		t.Errorf("Expected 4 tags, got %d", len(tags))
 	}
@@ -34,7 +37,10 @@ func TestGetTags(t *testing.T) {
 
 func TestGetSortedTags(t *testing.T) {
 	generateTestData()
-	tags := GetTags()
+	tags, err := GetTags()
+	if err != nil {
+		t.Error(err)
+	}
 	sorted := GetSortedTags(tags)
 	expect := []string{"all", "bythree", "even", "odd"}
 	if !util.StringSlicesEqual(sorted, expect) {

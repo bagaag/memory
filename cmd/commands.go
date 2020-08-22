@@ -221,7 +221,11 @@ var cmdLinks = func(c *cli.Context) error {
 
 // cmdSeeds lists links to entries that don't exist yet
 var cmdSeeds = func(c *cli.Context) error {
-	for from, tos := range app.BrokenLinks() {
+	brokenLinks, err := app.BrokenLinks()
+	if err != nil {
+		return err
+	}
+	for from, tos := range brokenLinks {
 		fmt.Println("From:", from)
 		for _, to := range tos {
 			fmt.Println("  ", to)
@@ -233,7 +237,10 @@ var cmdSeeds = func(c *cli.Context) error {
 // cmdGet displays the editable content of an entry
 func cmdGet(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists := app.GetEntryFromStorage(app.GetSlug(name))
+	entry, exists, err := app.GetEntryFromStorage(app.GetSlug(name))
+	if err != nil {
+		return err
+	}
 	if !exists {
 		return nil
 	}
@@ -246,21 +253,25 @@ func cmdGet(c *cli.Context) error {
 }
 
 // cmdDetail displays details of an entry and, if interactive, provides a menu prompt.
-func cmdDetail(c *cli.Context) {
+func cmdDetail(c *cli.Context) error {
 	name := c.String("name")
 	entry, exists := app.GetEntryFromIndex(app.GetSlug(name))
 	if !exists {
-		fmt.Printf("Entry named '%s' does not exist.\n", name)
+		return fmt.Errorf("entry named '%s' does not exist", name)
 	} else if interactive {
 		detailInteractiveLoop(entry)
 	} else {
 		display.EntryTable(entry)
 	}
+	return nil
 }
 
 // cmdTags displays a list of tags in use and how many entries each has
-func cmdTags(c *cli.Context) {
-	tags := app.GetTags()
+func cmdTags(c *cli.Context) error {
+	tags, err := app.GetTags()
+	if err != nil {
+		return err
+	}
 	sorted := app.GetSortedTags(tags)
 	fmt.Println()
 	for _, tag := range sorted {
@@ -269,4 +280,5 @@ func cmdTags(c *cli.Context) {
 	}
 	fmt.Println()
 	fmt.Println()
+	return nil
 }

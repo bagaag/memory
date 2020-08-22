@@ -23,8 +23,6 @@ import (
 	"github.com/gosimple/slug"
 )
 
-const dataVersion = 1
-
 var inited = false // run Init() only once
 
 var deletes = []string{}
@@ -81,7 +79,6 @@ func GetSlug(s string) string {
 // PutEntry adds or replaces the given entry in the collection.
 func PutEntry(entry Entry) {
 	data.lock()
-	entry.Dirty = true
 	slug := entry.Slug()
 	data.Names[slug] = entry
 	data.unlock()
@@ -92,11 +89,13 @@ func PutEntry(entry Entry) {
 func DeleteEntry(slug string) bool {
 	data.lock()
 	defer data.unlock()
-	_, exists := data.Names[slug]
+	_, exists := GetEntryFromIndex(slug)
 	if !exists {
 		return false
 	}
-	delete(data.Names, slug)
+	if _, exists := data.Names[slug]; exists {
+		delete(data.Names, slug)
+	}
 	deletes = append(deletes, slug)
 	RemoveFromIndex(slug)
 	return true
@@ -137,13 +136,9 @@ func (t EntryTypes) String() string {
 	return s
 }
 
-// EntryCount returns the total number of entries under management.
-func EntryCount() int {
-	return len(data.Names)
-}
-
 // GetEntriesDeprecated returns an array of entries of the specified type(s) with
 // specified filters and sorting applied.
+//TODO: Remove GetEntriesDeprecated
 func GetEntriesDeprecated(types EntryTypes, search string, onlyTags []string,
 	anyTags []string, sort SortOrder, limit int) EntryResults {
 
@@ -160,7 +155,6 @@ func GetEntriesDeprecated(types EntryTypes, search string, onlyTags []string,
 	util.StringSliceToLower(anyTags)
 
 	// perform search
-	//TODO: use search as primary source rather than loading all entries into memory and stepping through them
 	var searchMatches []string
 	if search != "" {
 		var err error
@@ -190,7 +184,6 @@ func GetEntriesDeprecated(types EntryTypes, search string, onlyTags []string,
 		if len(onlyTags) > 0 && !tagMatches(entry, onlyTags, true) {
 			continue
 		}
-		//TODO: implement search
 		// if we made it this far, add to return slice
 		entries = append(entries, entry)
 	}
@@ -220,9 +213,30 @@ func GetEntriesDeprecated(types EntryTypes, search string, onlyTags []string,
 }
 
 // GetEntryFromStorage returns a single entry suitable for editing or throws an error.
-func GetEntryFromStorage(slug string) (Entry, bool) {
-	entry, exists := data.Names[slug]
-	return entry, exists
+func GetEntryFromStorage(slug string) (Entry, bool, error) {
+	// check for modified and unsaved entry first
+	pendingSave, exists := data.Names[slug]
+	if exists {
+		return pendingSave, true, nil
+	}
+	// make sure entry exists in storage
+	if !persist.EntryExists(slug) {
+		return Entry{}, false, nil
+	}
+	// read entry content from storage
+	content, modified, err := persist.ReadEntry(slug)
+	if err != nil {
+		return Entry{}, false, err
+	}
+	// parse entry content into Entry
+	entry, err := ParseYamlDown(content)
+	if err != nil {
+		return Entry{}, true, err
+	}
+	entry.Modified = modified
+	//TODO: remove this and implement caching if it seems to happen too often
+	fmt.Println("Read", slug, "from storage")
+	return entry, true, nil
 }
 
 // Init reads data stored on the file system and initializes application variables.
@@ -250,40 +264,6 @@ func Init(homeDir string) error {
 		return fmt.Errorf("failed to initialize settings: %w", err)
 	}
 	// load data
-	files, err := persist.EntryFiles()
-	if err != nil {
-		fmt.Println("Error: Cannot read entries from", config.EntriesPath())
-		panic(err)
-	}
-	data.lock()
-	defer data.unlock()
-	skipped := 0
-	for _, file := range files {
-		content, modified, err := persist.ReadFile(file)
-		if err != nil {
-			fmt.Println("Error: Cannot read entry at ", file)
-			skipped = skipped + 1
-			continue
-		}
-		entry, err := ParseYamlDown(content)
-		if err != nil {
-			fmt.Printf("Error: Entry file at %s is invalid: %s\n", file, err.Error())
-			skipped = skipped + 1
-			continue
-		}
-		slug := GetSlug(entry.Name)
-		if _, exists := data.Names[slug]; exists {
-			fmt.Printf("Error: Attempt to import duplicate entry slug '%s' from %s\n", slug, file)
-			skipped = skipped + 1
-			continue
-		}
-		entry.Modified = modified
-		data.Names[slug] = entry
-	}
-	if skipped > 0 {
-		fmt.Printf("Warning: Ignoring %d entry files due to errors reported above.\n", skipped)
-	}
-	populateLinks()
 	if err := initSearch(); err != nil {
 		return err
 	}
@@ -306,9 +286,12 @@ func RenameEntry(name string, newName string) error {
 	if exists {
 		return fmt.Errorf("an entry named %s (or very similar) already exists", newName)
 	}
-	entry, exists := GetEntryFromStorage(slug)
+	entry, exists, err := GetEntryFromStorage(slug)
 	if !exists {
 		return fmt.Errorf("an entry named %s does not exist", name)
+	}
+	if err != nil {
+		return err
 	}
 	DeleteEntry(slug)
 	entry.Name = newName
@@ -321,18 +304,16 @@ func Save() error {
 	data.lock()
 	defer data.unlock()
 	for slug, entry := range data.Names {
-		if entry.Dirty {
-			content, err := RenderYamlDown(entry)
-			if err != nil {
-				return fmt.Errorf("failed to render %s: %s", slug, err.Error())
-			}
-			err = persist.SaveEntry(slug, content)
-			if err != nil {
-				return fmt.Errorf("failed to save %s: %s", slug, err.Error())
-			}
-			entry.Dirty = false
+		content, err := RenderYamlDown(entry)
+		if err != nil {
+			return fmt.Errorf("failed to render %s: %s", slug, err.Error())
+		}
+		err = persist.SaveEntry(slug, content)
+		if err != nil {
+			return fmt.Errorf("failed to save %s: %s", slug, err.Error())
 		}
 	}
+	data.Names = make(map[string]Entry)
 	for _, slug := range deletes {
 		err := persist.DeleteEntry(slug)
 		if err != nil {
@@ -424,11 +405,11 @@ func sortEntries(arr []Entry, field string, ascending bool) {
 }
 
 // GetSortedNames returns a slice of all entry names sorted alphabetically.
-func GetSortedNames() []string {
-	keys := []string{}
-	for name := range data.Names {
-		keys = append(keys, name)
+func GetSortedNames() ([]string, error) {
+	keys, err := IndexedSlugs()
+	if err != nil {
+		return []string{}, err
 	}
 	sort.Strings(keys)
-	return keys
+	return keys, nil
 }

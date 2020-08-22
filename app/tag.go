@@ -16,9 +16,14 @@ import (
 
 // GetTags returns a map of all defined tags, each with a sorted slice of
 // associated entry names.
-func GetTags() map[string][]string {
+func GetTags() (map[string][]string, error) {
 	tags := make(map[string][]string)
-	for _, entry := range data.Names {
+	slugs, err := IndexedSlugs()
+	if err != nil {
+		return tags, err
+	}
+	for _, slug := range slugs {
+		entry, _ := GetEntryFromIndex(slug)
 		for _, tag := range entry.Tags {
 			names, exists := tags[tag]
 			if !exists {
@@ -32,7 +37,7 @@ func GetTags() map[string][]string {
 			tags[tag] = names
 		}
 	}
-	return tags
+	return tags, nil
 }
 
 // GetSortedTags takes the output of GetTags and returns a sorted

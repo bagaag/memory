@@ -99,7 +99,10 @@ func TestBrokenLinks(t *testing.T) {
 	PutEntry(nB)
 	PutEntry(nC)
 	populateLinks()
-	entriesWithBL := BrokenLinks()
+	entriesWithBL, err := BrokenLinks()
+	if err != nil {
+		t.Error(err)
+	}
 	if !util.StringSlicesEqual(entriesWithBL["Note 1"], []string{"Note A"}) {
 		t.Errorf("Expected %s, got %s", []string{"Note A"}, entriesWithBL["Note 1"])
 	}

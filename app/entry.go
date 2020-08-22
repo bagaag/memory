@@ -22,12 +22,11 @@ type Entry struct {
 	Created     time.Time
 	Modified    time.Time
 	Type        EntryType `json:"EntryType"`
-	Dirty       bool
-	Start       string // Events
-	End         string // Events
-	Latitude    string // Place
-	Longitude   string // Place
-	Address     string // Place
+	Start       string    // Events
+	End         string    // Events
+	Latitude    string    // Place
+	Longitude   string    // Place
+	Address     string    // Place
 	Custom      map[string]string
 	Exclude     bool // Supports ability to search for all entries
 }

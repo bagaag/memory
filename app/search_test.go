@@ -61,7 +61,10 @@ var setup2 = func(t *testing.T) func(t *testing.T) {
 func TestLinksToSearch(t *testing.T) {
 	teardown2 := setup2(t)
 	defer teardown2(t)
-	e4, exists := GetEntryFromStorage(GetSlug("Links to e1"))
+	e4, exists, err := GetEntryFromStorage(GetSlug("Links to e1"))
+	if err != nil {
+		t.Error(err)
+	}
 	if !exists {
 		t.Error("e4 doesn't exist")
 	}

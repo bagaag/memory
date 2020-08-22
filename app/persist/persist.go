@@ -20,6 +20,7 @@ import (
 	"memory/app/config"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -99,7 +100,26 @@ func CreateTempFile(slug string, content string) (string, error) {
 	return tempFile.Name(), err
 }
 
-// ReadFile returns the string contents of the text file
+// slugToStoragePath converts a slug into a storage path.
+func slugToStoragePath(slug string) string {
+	return config.EntriesPath() + config.Slash + slug + config.EntryExt
+}
+
+// EntryExists returns true if the given slug is backed by physical storage.
+func EntryExists(slug string) bool {
+	return PathExists(slugToStoragePath(slug))
+}
+
+// ReadEntry converts a slug into a storage path and returns the source data for the entry.
+func ReadEntry(slug string) (string, time.Time, error) {
+	path := slugToStoragePath(slug)
+	if !PathExists(path) {
+		return "", time.Now(), fmt.Errorf("source file for %s not found", path)
+	}
+	return ReadFile(path)
+}
+
+// ReadFile returns the string contents of the text file.
 func ReadFile(path string) (string, time.Time, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -109,7 +129,7 @@ func ReadFile(path string) (string, time.Time, error) {
 	return string(bytes), info.ModTime(), err
 }
 
-// RemoveFile deletes the temporary editing file
+// RemoveFile deletes the temporary editing file.
 func RemoveFile(path string) error {
 	return os.Remove(path)
 }
@@ -140,9 +160,19 @@ func InitHome() error {
 	return nil
 }
 
-// EntryFiles returns a string slice of entry file paths
-func EntryFiles() ([]string, error) {
-	return filepath.Glob(config.EntriesPath() + config.Slash + "*" + config.EntryExt)
+// EntrySlugs returns a string slice of entry file paths
+func EntrySlugs() ([]string, error) {
+	paths, err := filepath.Glob(config.EntriesPath() + config.Slash + "*" + config.EntryExt)
+	if err != nil {
+		return []string{}, err
+	}
+	for ix, path := range paths {
+		parts := strings.Split(path, config.Slash)
+		path = parts[len(parts)-1]
+		path = strings.TrimSuffix(path, config.EntryExt)
+		paths[ix] = path
+	}
+	return paths, nil
 }
 
 // EntryFileName returns the storage identifier for an entry given the slug

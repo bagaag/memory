@@ -1,7 +1,6 @@
-- remove initial read of every entry into ram
+- refactor tests relying on all data being in data.Names
 - slugify tags
-- fix link_test.go
-- boost Name in search
+- boost Name in keyword search
 - entering incorrect interactive cmd exits app
 - capture create & mod dates in file rather than relying on file date; remove from file when editing
 - file management (list, view, add, delete)
