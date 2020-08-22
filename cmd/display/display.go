@@ -190,7 +190,6 @@ func renderHeader(pager *EntryPager) []string {
 func renderFooter(pager *EntryPager) []string {
 	lines := []string{""}
 	cmd := "Enter # to view details"
-	fmt.Println("pageno:", pager.Results.PageNo, "pagecount:", pager.pageCount, "pagesize:", pager.Results.PageSize)
 	if pager.Results.PageNo < pager.pageCount {
 		cmd = cmd + ", [n]ext page"
 	}

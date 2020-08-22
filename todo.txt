@@ -1,3 +1,5 @@
+- rename giving an error but seems to still work
+- ls recent sort order is backwards
 - refactor tests relying on all data being in data.Names
 - slugify tags
 - boost Name in keyword search

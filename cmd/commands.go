@@ -137,7 +137,7 @@ var cmdEdit = func(c *cli.Context) error {
 	}
 	if origEntry.Name != entry.Name {
 		// entry being renamed
-		_, exists := app.GetEntryFromIndex(app.GetSlug(entry.Name))
+		_, exists := app.GetEntryFromIndex(app.GetSlug(origEntry.Name))
 		if exists {
 			return errors.New("cannot rename entry; an entry with this name already exists")
 		}
