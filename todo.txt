@@ -1,4 +1,3 @@
-- boost Name in keyword search
 - refactor tests relying on all data being in data.Names
 - slugify tags
 - entering incorrect interactive cmd exits app

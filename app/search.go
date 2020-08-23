@@ -232,7 +232,7 @@ func SearchEntries(types EntryTypes, search string, onlyTags []string,
 	} else if sort == SortRecent {
 		req.SortBy([]string{"-Modified"})
 	} else {
-		req.SortBy([]string{"_score"})
+		req.SortBy([]string{"-_score"})
 	}
 	searchResult, err := searchIndex.Search(req)
 	if err != nil {
@@ -315,8 +315,14 @@ func buildSearchQuery(types EntryTypes, search string, onlyTags []string, anyTag
 	}
 	// add keyword search
 	if search != "" {
-		q := bleve.NewQueryStringQuery(search)
-		boolQuery.AddMust(q)
+		qbool := bleve.NewBooleanQuery()
+		qname := bleve.NewMatchQuery(search)
+		qname.SetField("Name")
+		qname.SetBoost(3)
+		qother := bleve.NewMatchQuery(search)
+		qbool.AddShould(qname)
+		qbool.AddShould(qother)
+		boolQuery.AddMust(qbool)
 	}
 	// add "get all" query if no other queries are being applied
 	if types.HasAll() && len(anyTags) == 0 && len(onlyTags) == 0 && search == "" {

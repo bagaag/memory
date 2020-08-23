@@ -171,11 +171,22 @@ var cmdList = func(c *cli.Context) error {
 	if c.IsSet("tag") {
 		onlyTags = strings.Split(c.String("tag"), ",")
 	}
+	// defaults to most recent first
 	order := app.SortRecent
-	if c.String("order") == "name" {
-		order = app.SortName
-	} else if c.String("order") == "score" {
+	// unless -search is provided, then default to score
+	if !c.IsSet("order") && c.IsSet("search") {
 		order = app.SortScore
+	}
+	// or override defaults with -order
+	if c.IsSet("order") {
+		switch c.String("order") {
+		case "name":
+			order = app.SortName
+		case "score":
+			order = app.SortScore
+		case "recent":
+			order = app.SortRecent
+		}
 	}
 	types := strings.Split(c.String("types"), "")
 
