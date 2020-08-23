@@ -62,6 +62,7 @@ var completer = readline.NewPrefixCompleter(
 		readline.PcItem("-name"),
 	),
 	readline.PcItem("seeds"),
+	readline.PcItem("rebuild"),
 )
 
 var cliApp *cli.App
@@ -246,6 +247,11 @@ func CreateApp() *cli.App {
 				Name:   "tags",
 				Usage:  "displays summary of entry tags",
 				Action: cmdTags,
+			},
+			{
+				Name:   "rebuild",
+				Usage:  "rebuilds the search index and internal database from entry files",
+				Action: cmdRebuild,
 			},
 		},
 	}

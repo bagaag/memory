@@ -18,6 +18,7 @@ import (
 	"io"
 	"io/ioutil"
 	"memory/app/config"
+	"memory/util"
 	"os"
 	"path/filepath"
 	"strings"
@@ -196,4 +197,9 @@ func SaveEntry(slug string, content string) error {
 // DeleteEntry deletes the entry identified by the slug
 func DeleteEntry(slug string) error {
 	return os.Remove(EntryFileName(slug))
+}
+
+// DeleteSearchIndex deletes the folder containing the search index to allow for re-indexing.
+func DeleteSearchIndex() error {
+	return util.DelTree(config.SearchPath())
 }

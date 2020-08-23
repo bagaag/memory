@@ -120,6 +120,7 @@ func RemoveFromIndex(slug string) error {
 
 // RebuildSearchIndex creates a new search index of current entries.
 func RebuildSearchIndex() error {
+	persist.DeleteSearchIndex()
 	// create new search index
 	var err error
 	searchIndex, err = bleve.New(config.SearchPath(), getIndexMapping())

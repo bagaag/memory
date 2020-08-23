@@ -282,3 +282,8 @@ func cmdTags(c *cli.Context) error {
 	fmt.Println()
 	return nil
 }
+
+// cmdRebuild clears out the bleve index and rebuilds it from source entry files.
+func cmdRebuild(c *cli.Context) error {
+	return app.RebuildSearchIndex()
+}
