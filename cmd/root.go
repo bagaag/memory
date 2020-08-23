@@ -217,7 +217,7 @@ func CreateApp() *cli.App {
 					&cli.StringFlag{
 						Name:  "order",
 						Value: "recent",
-						Usage: "order entries by 'recent' or 'name'",
+						Usage: "order entries by 'recent', 'score' or 'name'",
 					},
 					&cli.IntFlag{
 						Name:  "limit",

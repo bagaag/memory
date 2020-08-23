@@ -174,6 +174,8 @@ var cmdList = func(c *cli.Context) error {
 	order := app.SortRecent
 	if c.String("order") == "name" {
 		order = app.SortName
+	} else if c.String("order") == "score" {
+		order = app.SortScore
 	}
 	types := strings.Split(c.String("types"), "")
 

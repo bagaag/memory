@@ -1,13 +1,13 @@
-- add 'score' as -order option for ls cmd
+- boost Name in keyword search
 - refactor tests relying on all data being in data.Names
 - slugify tags
-- boost Name in keyword search
 - entering incorrect interactive cmd exits app
 - capture create & mod dates in file rather than relying on file date; remove from file when editing
 - file management (list, view, add, delete)
 - Ctrl-C sometimes hangs (can't reproduce)
 - bleve contrib: add match and match_phrase query types to cmd/query
 - bleve contrib: keyword mapping test case & ask/report
+- bleve contrib: date mapping storage example in docs
 
 Files/Images
 - Trying to allow for linked docs and images without making it too fiddly
