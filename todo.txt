@@ -1,5 +1,5 @@
-- rename giving an error but seems to still work
-- ls recent sort order is backwards
+- re-index command
+- add 'score' as -order option for ls cmd
 - refactor tests relying on all data being in data.Names
 - slugify tags
 - boost Name in keyword search

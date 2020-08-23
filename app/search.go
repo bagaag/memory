@@ -23,6 +23,7 @@ import (
 
 	"github.com/blevesearch/bleve/analysis/analyzer/standard"
 	"github.com/blevesearch/bleve/analysis/lang/en"
+	"github.com/blevesearch/bleve/document"
 	"github.com/blevesearch/bleve/mapping"
 	"github.com/blevesearch/bleve/search/query"
 
@@ -42,19 +43,13 @@ func (entry *Entry) BleveType() string {
 func getIndexMapping() mapping.IndexMapping {
 	entryMapping := bleve.NewDocumentMapping()
 	englishTextFieldMapping := bleve.NewTextFieldMapping()
-	englishTextFieldMapping.Store = true
-	englishTextFieldMapping.Index = true
 	englishTextFieldMapping.Analyzer = en.AnalyzerName
 	storeOnlyFieldMapping := bleve.NewTextFieldMapping()
-	storeOnlyFieldMapping.Store = true
 	storeOnlyFieldMapping.Index = false
 	boolFieldMapping := bleve.NewBooleanFieldMapping()
 	boolFieldMapping.Store = false
-	boolFieldMapping.Index = true
-	//keywordAnalyzer :=
+	timeMapping := bleve.NewDateTimeFieldMapping()
 	keywordFieldMapping := bleve.NewTextFieldMapping()
-	keywordFieldMapping.Store = true
-	keywordFieldMapping.Index = true
 	keywordFieldMapping.Analyzer = standard.Name
 	entryMapping.AddFieldMappingsAt("Name", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Description", englishTextFieldMapping)
@@ -67,6 +62,7 @@ func getIndexMapping() mapping.IndexMapping {
 	entryMapping.AddFieldMappingsAt("End", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("Address", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Custom", englishTextFieldMapping)
+	entryMapping.AddFieldMappingsAt("Modified", timeMapping)
 	//TODO: Index lat/long; create/mod date
 	mapping := bleve.NewIndexMapping()
 	mapping.AddDocumentMapping("Entry", entryMapping)
@@ -199,6 +195,16 @@ func GetEntryFromIndex(slug string) (Entry, bool) {
 			entry.End = string(field.Value())
 		case "Address":
 			entry.Address = string(field.Value())
+		case "Modified":
+			//TODO: Suggest an example of this at https://blevesearch.com/docs/Index-Mapping/
+			df, ok := field.(*document.DateTimeField)
+			if ok {
+				dt, err := df.DateTime()
+				if err == nil {
+					entry.Modified = dt
+				}
+			}
+			//entry.Modified, _ = time.Parse("2017-08-31 00:00:00 +0000 UTC", string(field.Value()))
 		default:
 			if strings.HasPrefix(field.Name(), "Custom.") {
 				key := strings.Split(field.Name(), ".")[1]
@@ -223,7 +229,7 @@ func SearchEntries(types EntryTypes, search string, onlyTags []string,
 	if sort == SortName {
 		req.SortBy([]string{"Name"})
 	} else if sort == SortRecent {
-		req.SortBy([]string{"Modified"})
+		req.SortBy([]string{"-Modified"})
 	} else {
 		req.SortBy([]string{"_score"})
 	}
