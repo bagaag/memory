@@ -158,6 +158,13 @@ func InitHome() error {
 			panic(err)
 		}
 	}
+	if !PathExists(config.FilesPath()) {
+		err := os.MkdirAll(config.FilesPath(), 0740)
+		if err != nil {
+			fmt.Println("Failed to initialize files folder at", config.FilesPath())
+			panic(err)
+		}
+	}
 	return nil
 }
 

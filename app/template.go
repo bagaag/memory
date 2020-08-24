@@ -28,8 +28,8 @@ var Template = `---
 Name: {{.Name}}
 Type: {{.Type}}
 Tags: {{.TagsString}}
-{{if eq .Type "Event"}}Start: 
-End: 
+{{if eq .Type "Event"}}Start: {{.Start}}
+End: {{.End}}
 {{end}}{{if eq .Type "Place"}}Address: {{.Address}}
 Latitude: {{.Latitude}}
 Longitude: {{.Longitude}}
@@ -124,9 +124,12 @@ func ParseYamlDown(content string) (Entry, error) {
 			// trim of brackets and split on comma
 			entry.Tags = processTags(val)
 		case "Start", "End":
-			matched, err := regexp.Match(`[\d]{4})(-[\d]{2})?(-[\d]{2})?`, []byte(val))
+			matched, err := regexp.Match(`([\d]{4})?(-[\d]{2})?(-[\d]{2})?`, []byte(val))
 			if err != nil || !matched {
 				return Entry{}, errors.New("value for " + key + " is invalid: must be YYYY, YYYY-MM or YYYY-MM-DD")
+			}
+			if key == "Start" && val == "" {
+				return Entry{}, errors.New("value is required for " + key)
 			}
 			if key == "Start" {
 				entry.Start = val

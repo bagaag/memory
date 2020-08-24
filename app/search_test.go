@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"memory/app/config"
 	"memory/util"
 	"testing"
 
@@ -21,50 +20,52 @@ import (
 /* This file contains functions to support full text entry search. */
 
 var setup1 = func(t *testing.T) func(t *testing.T) {
-	e1 := NewEntry(EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
-	e2 := NewEntry(EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
-	e3 := NewEntry(EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
-	data.Names[e1.Slug()] = e1
-	data.Names[e2.Slug()] = e2
-	data.Names[e3.Slug()] = e3
-	var err error
-	config.MemoryHome, err = ioutil.TempDir("", "search_test_setup1")
+	home, err := ioutil.TempDir("", "search_test_setup1")
 	if err = initSearch(); err != nil {
 		t.Error(err)
 	}
+	Init(home)
+	e1 := NewEntry(EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
+	e2 := NewEntry(EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
+	e3 := NewEntry(EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
+	e3.Start = "2020"
+	PutEntry(e1)
+	PutEntry(e2)
+	PutEntry(e3)
+	Save()
 	return func(t *testing.T) {
-		log.Println("Deleting", config.MemoryHome)
-		util.DelTree(config.MemoryHome)
+		log.Println("Deleting", home)
+		util.DelTree(home)
 	}
 }
 var setup2 = func(t *testing.T) func(t *testing.T) {
-	e1 := NewEntry(EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
-	e2 := NewEntry(EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
-	e3 := NewEntry(EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
-	e4 := NewEntry(EntryTypeEvent, "Links To e1", "A peopled [Apple Heresay].", []string{"groove turtle"})
-	data.Names[e1.Slug()] = e1
-	data.Names[e2.Slug()] = e2
-	data.Names[e3.Slug()] = e3
-	data.Names[e4.Slug()] = e4
-	populateLinks()
-	var err error
-	config.MemoryHome, err = ioutil.TempDir("", "search_test_setup1")
+	home, err := ioutil.TempDir("", "search_test_setup1")
 	if err = initSearch(); err != nil {
 		t.Error(err)
 	}
+	Init(home)
+	e1 := NewEntry(EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
+	e2 := NewEntry(EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
+	e3 := NewEntry(EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
+	e3.Start = "2020"
+	e4 := NewEntry(EntryTypeEvent, "Links To e1", "A peopled [Apple Heresay].", []string{"groove turtle"})
+	e4.Start = "2020"
+	PutEntry(e1)
+	PutEntry(e2)
+	PutEntry(e3)
+	PutEntry(e4)
+	populateLinks()
+	Save()
 	return func(t *testing.T) {
-		log.Println("Deleting", config.MemoryHome)
-		util.DelTree(config.MemoryHome)
+		log.Println("Deleting", home)
+		util.DelTree(home)
 	}
 }
 
 func TestLinksToSearch(t *testing.T) {
 	teardown2 := setup2(t)
 	defer teardown2(t)
-	e4, exists, err := GetEntryFromStorage(GetSlug("Links to e1"))
-	if err != nil {
-		t.Error(err)
-	}
+	e4, exists := GetEntryFromIndex(GetSlug("Links to e1"))
 	if !exists {
 		t.Error("e4 doesn't exist")
 	}
@@ -107,22 +108,15 @@ func TestTagsSearch(t *testing.T) {
 	}
 }
 
-//TODO: refactor search tests to be more atomic and add code to clean up after temporary index storage
 func TestSearch(t *testing.T) {
 	teardown1 := setup1(t)
 	defer teardown1(t)
-	// name search
-	searchTest(t, 1, "apple", []string{"apple-heresay", "bungled-apple"})
-	// tag search
-	searchTest(t, 2, "tag1", []string{"apple-heresay", "bungled-apple"})
-	// description search
-	searchTest(t, 3, "groove +turtle", []string{"bungled-apple"})
 	// document test
-	searchDocumentTest(t, 4)
+	searchDocumentTest(t, 1)
 	// type test
-	searchTypeTest(t, 5, "EntryType:Event", []string{"frenetic-plum"})
+	searchTypeTest(t, 2, "EntryType:Event", []string{"frenetic-plum"})
 	// entry search
-	searchEntriesTest(t, 6)
+	searchEntriesTest(t, 3)
 	// entry paging
 	searchEntriesPagingTest(t, 20)
 }
@@ -225,16 +219,6 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	if len(results.Entries) != 3 {
 		t.Errorf("%d. Expected 3, got %d", num, len(results.Entries))
-	}
-}
-
-func searchTest(t *testing.T, num int, query string, expect []string) {
-	r, err := executeSearch(query)
-	if err != nil {
-		t.Error(num, err)
-	}
-	if !util.StringSlicesEqual(r, expect) {
-		t.Errorf("%d. Expected %v, got %v", num, expect, r)
 	}
 }
 

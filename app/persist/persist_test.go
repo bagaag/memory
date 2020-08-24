@@ -8,6 +8,9 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package persist
 
 import (
+	"io/ioutil"
+	"memory/app/config"
+	"memory/util"
 	"os"
 	"testing"
 	"time"
@@ -46,8 +49,16 @@ func TestRoundTrip(t *testing.T) {
 }
 
 func TestTempFile(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "test_temp_file")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	config.MemoryHome = tempDir
+	os.Mkdir(tempDir+string(os.PathSeparator)+"tmp", 0740)
+	defer util.DelTree(tempDir)
 	temp := "one\n\two\three"
-	if path, err := CreateTempFile("test", temp); err != nil {
+	if path, err := CreateTempFile("test-temp-file", temp); err != nil {
 		t.Errorf("%s", err)
 	} else {
 		if s, _, err2 := ReadFile(path); err2 != nil {
@@ -55,5 +66,6 @@ func TestTempFile(t *testing.T) {
 		} else if s != temp {
 			t.Errorf("%s != %s", temp, s)
 		}
+		RemoveFile(path)
 	}
 }

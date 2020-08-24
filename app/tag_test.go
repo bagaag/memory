@@ -15,7 +15,8 @@ import (
 /* This file contains tests for the functions in tag.go. */
 
 func TestGetTags(t *testing.T) {
-	generateTestData()
+	setupTeardown1(t, false)
+	defer setupTeardown1(t, true)
 	tags, err := GetTags()
 	if err != nil {
 		t.Error(err)
@@ -36,7 +37,8 @@ func TestGetTags(t *testing.T) {
 }
 
 func TestGetSortedTags(t *testing.T) {
-	generateTestData()
+	setupTeardown1(t, false)
+	defer setupTeardown1(t, true)
 	tags, err := GetTags()
 	if err != nil {
 		t.Error(err)

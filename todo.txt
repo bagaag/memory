@@ -1,4 +1,5 @@
 - refactor tests relying on all data being in data.Names
+- timeline command
 - slugify tags
 - entering incorrect interactive cmd exits app
 - capture create & mod dates in file rather than relying on file date; remove from file when editing

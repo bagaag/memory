@@ -104,10 +104,8 @@ func UpdateLinks() {
 }
 
 // populateLinks populates the LinksTo and LinkedFrom slices on all entries by
-// parsing the descriptions for links. Assumes the calling function already
-// has a lock on data.
+// parsing the descriptions for links.
 func populateLinks() error {
-	indexEntries := make(map[string]Entry)
 	fromLinks := make(map[string][]string)
 	slugs, err := IndexedSlugs()
 	if err != nil {
@@ -122,7 +120,7 @@ func populateLinks() error {
 			entry.Description = newDesc
 			entry.LinksTo = links
 			entry.LinkedFrom = []string{}
-			indexEntries[slug] = entry
+			IndexEntry(entry)
 			fromSlug := entry.Slug()
 			// add links in reverse direction
 			for _, toSlug := range links {
@@ -141,11 +139,8 @@ func populateLinks() error {
 		entry, exists := GetEntryFromIndex(slug)
 		if exists {
 			entry.LinkedFrom = linkedFrom
-			indexEntries[slug] = entry
+			IndexEntry(entry)
 		}
-	}
-	for _, entry := range indexEntries {
-		IndexEntry(entry)
 	}
 	return nil
 }

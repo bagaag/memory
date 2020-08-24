@@ -11,6 +11,7 @@ package app
 
 import (
 	"memory/util"
+	"regexp"
 	"testing"
 )
 
@@ -118,5 +119,60 @@ Hey now.
 	}
 	if s != expect {
 		t.Error("Unexpected result:", s)
+	}
+}
+
+func TestRenderYamlDownEvent(t *testing.T) {
+	entry := Entry{
+		Type:        EntryTypeEvent,
+		Name:        "Event #1",
+		Description: "Hey now.",
+		Start:       "2019",
+		End:         "2020",
+	}
+	expect := `---
+Name: Event #1
+Type: Event
+Tags: 
+Start: 2019
+End: 2020
+---
+
+Hey now.
+`
+	s, err := RenderYamlDown(entry)
+	if err != nil {
+		t.Error(err)
+	}
+	if s != expect {
+		t.Error("Unexpected result:", s)
+	}
+}
+
+func TestStartEndParse(t *testing.T) {
+	re := `([\d]{4})?(-[\d]{2})?(-[\d]{2})?`
+	matched, err := regexp.Match(re, []byte("2020"))
+	if err != nil {
+		t.Error(err)
+	} else if !matched {
+		t.Error("no match on 2020")
+	}
+	matched, err = regexp.Match(re, []byte("2020-10"))
+	if err != nil {
+		t.Error(err)
+	} else if !matched {
+		t.Error("no match on 2020-10")
+	}
+	matched, err = regexp.Match(re, []byte("2020-10-25"))
+	if err != nil {
+		t.Error(err)
+	} else if !matched {
+		t.Error("no match on 2020-10-25")
+	}
+	matched, err = regexp.Match(re, []byte(""))
+	if err != nil {
+		t.Error(err)
+	} else if !matched {
+		t.Error("no match on empty string")
 	}
 }

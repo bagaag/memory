@@ -47,9 +47,6 @@ var Prompt = "\033[1;32mmemory\033[0m> "
 // SubPrompt is used within an interactive command loop
 var SubPrompt = ": "
 
-// TruncateAt is the length that values are truncated to with an ... during display
-var TruncateAt = 300
-
 // EditorCommand is the command to launch an external editor for long text values
 //TODO: handle editor command cross-platform
 var EditorCommand = "/usr/bin/micro"
@@ -98,4 +95,9 @@ func UpdateSettingsFromStorage(settings StoredSettings) {
 // SearchPath returns the full path to the search index database
 func SearchPath() string {
 	return MemoryHome + Slash + "search.bleve"
+}
+
+// FilesPath returns the full path to the files folder where attachments are stored.
+func FilesPath() string {
+	return MemoryHome + Slash + "files"
 }

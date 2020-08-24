@@ -12,85 +12,78 @@ import (
 	"io/ioutil"
 	"log"
 	"memory/app/config"
+	"memory/util"
 	"os"
 	"testing"
 )
 
-func clearTestData() {
-	data.Names = make(map[string]Entry)
-}
+var tempDir1 string
+var tempDir2 string
 
-func generateTestData() {
-	clearTestData()
-	for i := 1; i <= 50; i++ {
-		tags := []string{"all"}
-		if i%2 == 0 {
-			tags = append(tags, "even")
-		} else {
-			tags = append(tags, "odd")
+func setupTeardown1(t *testing.T, teardown bool) {
+	if !teardown {
+		// setup
+		var err error
+		tempDir1, err = ioutil.TempDir("", "app_test")
+		if err != nil {
+			t.Error(err)
+			return
 		}
-		if i%3 == 0 {
-			tags = append(tags, "bythree")
+		Init(tempDir1)
+		for i := 1; i <= 50; i++ {
+			tags := []string{"all"}
+			if i%2 == 0 {
+				tags = append(tags, "even")
+			} else {
+				tags = append(tags, "odd")
+			}
+			if i%3 == 0 {
+				tags = append(tags, "bythree")
+			}
+			name := fmt.Sprintf("note #%d", i)
+			desc := fmt.Sprintf("note desc #%d", i)
+			note := NewEntry(EntryTypeNote, name, desc, tags)
+			PutEntry(note)
 		}
-		name := fmt.Sprintf("note #%d", i)
-		desc := fmt.Sprintf("note desc #%d", i)
-		note := NewEntry(EntryTypeNote, name, desc, tags)
-		data.Names[GetSlug(note.Name)] = note
+		Save()
+	} else {
+		// teardown
+		err := util.DelTree(tempDir1)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 
-func setupCrud() {
-	clearTestData()
-	for i := 0; i < 10; i++ {
-		num := i + 1
-		note := NewEntry(EntryTypeNote, fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
-		data.Names[GetSlug(note.Name)] = note
-	}
-}
-
-func TestGetEntries(t *testing.T) {
-	generateTestData()
-	// defaults
-	results := GetEntriesDeprecated(EntryTypes{Note: true}, "", []string{}, []string{}, 0, 0)
-	if len(results.Entries) != 50 {
-		t.Errorf("Expected 50 entries, got %d", len(results.Entries))
-		return
-	}
-	if results.Entries[9].Name != "note #41" {
-		t.Errorf("Expected 'note #41', got '%s'", results.Entries[9].Name)
-		return
-	}
-	// no types selected
-	results = GetEntriesDeprecated(EntryTypes{}, "", []string{}, []string{}, 0, 0)
-	if len(results.Entries) != 50 {
-		t.Errorf("Expected 50 entries, got %d", len(results.Entries))
-		return
-	}
-	// filter by 1 tag and sort by name
-	results = GetEntriesDeprecated(EntryTypes{Note: true}, "", []string{}, []string{"odd"}, SortName, 50)
-	if len(results.Entries) != 25 {
-		t.Errorf("Expected 25 entries, got %d", len(results.Entries))
-		return
-	}
-	if results.Entries[1].Name != "note #11" {
-		t.Errorf("Expected 'note #11', got '%s'", results.Entries[1].Name)
-		return
-	}
-	// filter by 2 tags, sort recent, limit 5
-	results = GetEntriesDeprecated(EntryTypes{Note: true}, "", []string{"odd", "bythree"}, []string{}, SortRecent, 5)
-	if len(results.Entries) != 5 {
-		t.Errorf("Expected 5 entries, got %d", len(results.Entries))
-		return
-	}
-	if results.Entries[1].Name != "note #39" {
-		t.Errorf("Expected 'note #39', got '%s' (%v)", results.Entries[1].Name, results.Entries)
-		return
+func setupTeardown2(t *testing.T, teardown bool) {
+	if !teardown {
+		// setup
+		var err error
+		tempDir2, err = ioutil.TempDir("", "app_test")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		Init(tempDir2)
+		for i := 0; i < 10; i++ {
+			num := i + 1
+			note := NewEntry(EntryTypeNote, fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
+			PutEntry(note)
+		}
+		Save()
+	} else {
+		// teardown
+		err := util.DelTree(tempDir2)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 
 func TestGetEntry(t *testing.T) {
-	generateTestData()
-	entry, exists := GetEntryFromIndex("note #42")
+	setupTeardown1(t, false)
+	defer setupTeardown1(t, true)
+	entry, exists := GetEntryFromIndex(GetSlug("note #42"))
 	if !exists {
 		t.Error("Unexpected entry not found")
 	}
@@ -105,11 +98,12 @@ func TestGetEntry(t *testing.T) {
 
 // GetNote retrieves and returns the specified note from the collection.
 func TestGetNote(t *testing.T) {
-	setupCrud()
+	setupTeardown2(t, false)
+	defer setupTeardown2(t, true)
 	var entry Entry
 	var note Entry
 	var exists bool
-	entry, exists = GetEntryFromIndex("note #3")
+	entry, exists = GetEntryFromIndex(GetSlug("note #3"))
 	note = entry
 	if !exists {
 		t.Error("Unexpected not exists")
@@ -124,18 +118,20 @@ func TestGetNote(t *testing.T) {
 
 // PutNote adds or replaces the given note in the collection.
 func TestPutNote(t *testing.T) {
-	setupCrud()
+	setupTeardown2(t, false)
+	defer setupTeardown2(t, true)
 	newNote := NewEntry(EntryTypeNote, "new note", "", []string{})
 	PutEntry(newNote)
-	if len(data.Names) != 11 {
-		t.Errorf("Expected 11 notes (1st pass), found %d", len(data.Names))
+	if len(data.Names) != 1 {
+		t.Errorf("Expected 1 notes (1st pass), found %d", len(data.Names))
 	}
 	existingNote := NewEntry(EntryTypeNote, "note #3", "different desc", []string{})
 	PutEntry(existingNote)
-	if len(data.Names) != 11 {
-		t.Errorf("Expected 11 notes (2nd pass), found %d", len(data.Names))
+	if len(data.Names) != 2 {
+		t.Errorf("Expected 2 notes (2nd pass), found %d", len(data.Names))
 	}
-	gotNote, exists := GetEntryFromIndex("note #3")
+	Save()
+	gotNote, exists := GetEntryFromIndex(GetSlug("note #3"))
 	if !exists {
 		t.Error("updated note does not exist")
 	} else if gotNote.Description != "different desc" {
@@ -145,22 +141,24 @@ func TestPutNote(t *testing.T) {
 
 // DeleteNote removes the specified note from the collection.
 func TestDeleteNote(t *testing.T) {
-	setupCrud()
-	existed := DeleteEntry("note #3")
+	setupTeardown2(t, false)
+	defer setupTeardown2(t, true)
+	existed := DeleteEntry(GetSlug("note #3"))
 	if !existed {
 		t.Error("Note did not exist")
 	}
-	if len(data.Names) != 9 {
+	if IndexedCount() != 9 {
 		t.Errorf("Expected 9 notes, got %d", len(data.Names))
 	}
-	_, exists := GetEntryFromIndex("note #3")
+	_, exists := GetEntryFromIndex(GetSlug("note #3"))
 	if exists {
 		t.Error("Deleted note exists")
 	}
 }
 
 func TestSave(t *testing.T) {
-	setupCrud()
+	setupTeardown2(t, false)
+	defer setupTeardown2(t, true)
 	file, err := ioutil.TempFile(".", "TestSave")
 	if err != nil {
 		log.Fatal(err)
@@ -184,7 +182,8 @@ func TestSave(t *testing.T) {
 }
 
 func TestRename(t *testing.T) {
-	setupCrud()
+	setupTeardown2(t, false)
+	defer setupTeardown2(t, true)
 	newName := "renamed note #3"
 	err := RenameEntry("note #3", newName)
 	if err != nil {
@@ -205,7 +204,8 @@ func TestRename(t *testing.T) {
 }
 
 func TestEdit(t *testing.T) {
-	setupCrud()
+	setupTeardown2(t, false)
+	defer setupTeardown2(t, true)
 	entry, exists := GetEntryFromIndex("note #3")
 	if !exists {
 		t.Error("note #3 doesn't exist, but should")

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"memory/app/config"
 	"memory/app/persist"
+	"memory/util"
 	"strings"
 
 	//"github.com/blevesearch/bleve/analysis/analyzer/keyword"
@@ -93,21 +94,6 @@ func closeSearch() error {
 	return searchIndex.Close()
 }
 
-// executeSearch returns a list of entry slugs matching the given keywords.
-func executeSearch(keywords string) ([]string, error) {
-	query := bleve.NewQueryStringQuery(keywords)
-	search := bleve.NewSearchRequest(query)
-	searchResult, err := searchIndex.Search(search)
-	if err != nil {
-		return nil, err
-	}
-	keys := []string{}
-	for _, hit := range searchResult.Hits {
-		keys = append(keys, hit.ID)
-	}
-	return keys, nil
-}
-
 // IndexEntry adds or updates an entry in the index
 func IndexEntry(entry Entry) error {
 	return searchIndex.Index(entry.Slug(), entry)
@@ -157,7 +143,7 @@ func RebuildSearchIndex() error {
 // IndexedSlugs returns a slice of slugs representing entries indexed for search.
 func IndexedSlugs() ([]string, error) {
 	q := bleve.NewMatchAllQuery()
-	req := bleve.NewSearchRequest(q)
+	req := bleve.NewSearchRequestOptions(q, util.MaxInt32, 0, false)
 	result, err := searchIndex.Search(req)
 	if err != nil {
 		return nil, err
