@@ -293,7 +293,21 @@ func EntryTables(entries []app.Entry) {
 		if len(entry.Tags) > 0 {
 			data = append(data, []string{"Tags", strings.Join(entry.Tags, ", ")})
 		}
-		//TODO: add additional fields (Start, End, Address, etc.)
+		if entry.Start != "" {
+			data = append(data, []string{"Start", entry.Start})
+		}
+		if entry.End != "" {
+			data = append(data, []string{"End", entry.End})
+		}
+		if entry.Address != "" {
+			data = append(data, []string{"Address", entry.Address})
+		}
+		if entry.Latitude != "" {
+			data = append(data, []string{"Latitude", entry.Latitude})
+		}
+		if entry.Longitude != "" {
+			data = append(data, []string{"Longitude", entry.Longitude})
+		}
 		// create and configure table
 		table := tablewriter.NewWriter(os.Stdout)
 		// add border to top unless this is the first
