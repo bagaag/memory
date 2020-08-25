@@ -1,5 +1,5 @@
-- add -type flag to ls cmd
-- timeline command
+- move models to package and create pluggable interfaces forpersistance and search
+- finish timeline command
 - slugify tags
 - entering incorrect interactive cmd exits app
 - capture create & mod dates in file rather than relying on file date; remove from file when editing

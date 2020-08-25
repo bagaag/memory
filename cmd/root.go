@@ -51,6 +51,10 @@ var completer = readline.NewPrefixCompleter(
 		readline.PcItem("-tag"),
 		readline.PcItem("-any-tag"),
 	),
+	readline.PcItem("tl",
+		readline.PcItem("-start"),
+		readline.PcItem("-end"),
+	),
 	readline.PcItem("delete",
 		readline.PcItem("-name"),
 		readline.PcItem("-yes"),
@@ -227,6 +231,21 @@ func CreateApp() *cli.App {
 						Name:  "limit",
 						Value: -1,
 						Usage: "how many entries to return, or -1 for all matching entries",
+					},
+				},
+			},
+			{
+				Name:   "tl",
+				Usage:  "displays a timeline",
+				Action: cmdTimeline,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "start",
+						Usage: "earliest start date to include, inclusive",
+					},
+					&cli.StringFlag{
+						Name:  "end",
+						Usage: "latest end date to include, exclusive",
 					},
 				},
 			},

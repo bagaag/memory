@@ -300,3 +300,16 @@ func cmdTags(c *cli.Context) error {
 func cmdRebuild(c *cli.Context) error {
 	return app.RebuildSearchIndex()
 }
+
+// cmdTimeline displays a timeline of entries based on start and end attributes.
+func cmdTimeline(c *cli.Context) error {
+	// tl -from -to -level year,month,day
+	entries, err := app.Timeline(c.String("start"), c.String("end"))
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		fmt.Println(entry.Start, entry.End, entry.Name)
+	}
+	return nil
+}

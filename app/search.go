@@ -15,18 +15,16 @@ package app
 import (
 	"errors"
 	"fmt"
-	"memory/app/config"
-	"memory/app/persist"
-	"memory/util"
-	"strings"
-
-	//"github.com/blevesearch/bleve/analysis/analyzer/keyword"
-
+	"github.com/blevesearch/bleve/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/analysis/analyzer/standard"
 	"github.com/blevesearch/bleve/analysis/lang/en"
 	"github.com/blevesearch/bleve/document"
 	"github.com/blevesearch/bleve/mapping"
 	"github.com/blevesearch/bleve/search/query"
+	"memory/app/config"
+	"memory/app/persist"
+	"memory/util"
+	"strings"
 
 	"github.com/blevesearch/bleve"
 )
@@ -51,7 +49,13 @@ func getIndexMapping() mapping.IndexMapping {
 	boolFieldMapping.Store = false
 	timeMapping := bleve.NewDateTimeFieldMapping()
 	keywordFieldMapping := bleve.NewTextFieldMapping()
+	keywordFieldMapping.Type = "text"
 	keywordFieldMapping.Analyzer = standard.Name
+	startFieldMapping := bleve.NewTextFieldMapping()
+	startFieldMapping.Type = "text"
+	startFieldMapping.Analyzer = keyword.Name
+	startFieldMapping.Name = "Start"
+	entryMapping.AddFieldMapping(startFieldMapping)
 	entryMapping.AddFieldMappingsAt("Name", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Description", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Tags", keywordFieldMapping)
@@ -59,7 +63,7 @@ func getIndexMapping() mapping.IndexMapping {
 	entryMapping.AddFieldMappingsAt("Exclude", boolFieldMapping)
 	entryMapping.AddFieldMappingsAt("LinksTo", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("LinkedFrom", keywordFieldMapping)
-	entryMapping.AddFieldMappingsAt("Start", keywordFieldMapping)
+	//entryMapping.AddFieldMappingsAt("Start", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("End", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("Address", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Custom", englishTextFieldMapping)
@@ -322,4 +326,31 @@ func buildSearchQuery(types EntryTypes, search string, onlyTags []string, anyTag
 func EntryCount() uint64 {
 	c, _ := searchIndex.DocCount()
 	return c
+}
+
+// Timeline performs a search based on start and end attributes
+func Timeline(start string, end string) ([]Entry, error) {
+	ret := []Entry{}
+	boolQuery := bleve.NewBooleanQuery()
+	if start != "" {
+		startQ := bleve.NewTermRangeQuery(start, "")
+		startQ.SetField("Start")
+		boolQuery.AddMust(startQ)
+	}
+	if end != "" {
+		endQ := bleve.NewTermRangeQuery("", end)
+		endQ.SetField("End")
+		boolQuery.AddMust(endQ)
+	}
+	req := bleve.NewSearchRequestOptions(boolQuery, util.MaxInt32, 0, false)
+	result, err := searchIndex.Search(req)
+	if err != nil {
+		return ret, err
+	}
+	hits := result.Hits
+	for _, hit := range hits {
+		entry, _ := GetEntryFromIndex(hit.ID)
+		ret = append(ret, entry)
+	}
+	return ret, nil
 }
