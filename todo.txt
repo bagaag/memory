@@ -1,4 +1,4 @@
-- refactor tests relying on all data being in data.Names
+- add -type flag to ls cmd
 - timeline command
 - slugify tags
 - entering incorrect interactive cmd exits app

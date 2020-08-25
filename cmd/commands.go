@@ -188,8 +188,8 @@ var cmdList = func(c *cli.Context) error {
 			order = app.SortRecent
 		}
 	}
-	types := strings.Split(c.String("types"), "")
 
+	types := c.String("types")
 	if interactive {
 		pageSize := display.ListPageSize()
 		results, err := app.SearchEntries(parseTypes(types), search, onlyTags, anyTags, order, 1, pageSize)

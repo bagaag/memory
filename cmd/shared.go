@@ -34,9 +34,10 @@ func filterInput(r rune) (rune, bool) {
 }
 
 // parseTypes populates an EntryType struct based on the --types flag
-func parseTypes(typesArg []string) app.EntryTypes {
+func parseTypes(typesArg string) app.EntryTypes {
+	typesSlice := strings.Split(typesArg, ",")
 	types := app.EntryTypes{}
-	for _, t := range typesArg {
+	for _, t := range typesSlice {
 		switch strings.TrimSpace(strings.ToLower(t)) {
 		case "note", "notes":
 			types.Note = true

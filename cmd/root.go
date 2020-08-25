@@ -215,6 +215,10 @@ func CreateApp() *cli.App {
 						Usage: "limit to entries to those with this tag or tags, comma-separated",
 					},
 					&cli.StringFlag{
+						Name:  "types",
+						Usage: "comma-separated list of types to list (event, person, place, thing, note)",
+					},
+					&cli.StringFlag{
 						Name:  "order",
 						Value: "recent",
 						Usage: "order entries by 'recent', 'score' or 'name'",

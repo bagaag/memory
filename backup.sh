@@ -8,3 +8,4 @@ then
 fi
 cd $MEMHOME
 zip -r "$BU/$FN" entries files
+cp "$BU/$FN" ~/Documents/memory.zip
