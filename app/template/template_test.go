@@ -7,11 +7,10 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 
 /* Tests for the template functions. */
 
-package app
+package template
 
 import (
 	"memory/app/model"
-	"memory/app/template"
 	"memory/util"
 	"regexp"
 	"testing"
@@ -26,7 +25,7 @@ Tags: one,two,three
 
 Hey now. This is the description.
 `
-	entry, err := template.ParseYamlDown(s)
+	entry, err := ParseYamlDown(s)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -57,7 +56,7 @@ Address: 24 Oakwood Rd, Acton, MA
 
 Hey now. This is the description.
 `
-	entry, err := template.ParseYamlDown(s)
+	entry, err := ParseYamlDown(s)
 	if err != nil {
 		t.Error(err)
 	} else {
@@ -85,7 +84,7 @@ Custom 1: Custom Value 1
 
 Hey now. This is the description.
 `
-	s, err := template.RenderYamlDown(entry)
+	s, err := RenderYamlDown(entry)
 	if err != nil {
 		t.Error(err)
 	}
@@ -115,7 +114,7 @@ Longitude: -71.436690
 
 Hey now.
 `
-	s, err := template.RenderYamlDown(entry)
+	s, err := RenderYamlDown(entry)
 	if err != nil {
 		t.Error(err)
 	}
@@ -142,7 +141,7 @@ End: 2020
 
 Hey now.
 `
-	s, err := template.RenderYamlDown(entry)
+	s, err := RenderYamlDown(entry)
 	if err != nil {
 		t.Error(err)
 	}
