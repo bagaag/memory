@@ -9,6 +9,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/gosimple/slug"
 	"os"
 	"path/filepath"
 	"strings"
@@ -146,4 +147,9 @@ func DelTree(dir string) error {
 		}
 	}
 	return os.Remove(dir)
+}
+
+// GetSlug converts a string into a slug
+func GetSlug(s string) string {
+	return slug.Make(s)
 }

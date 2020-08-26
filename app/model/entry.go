@@ -5,9 +5,10 @@ Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
-package app
+package model
 
 import (
+	"memory/util"
 	"strings"
 	"time"
 )
@@ -34,7 +35,7 @@ type Entry struct {
 // Slug returns the slug for this entry.
 //TODO: Replace instances of GetSlug(entry.Name)
 func (entry *Entry) Slug() string {
-	return GetSlug(entry.Name)
+	return util.GetSlug(entry.Name)
 }
 
 // NewEntry initializes and returns an Entry object.
@@ -68,34 +69,60 @@ type EntryType = string
 // EntryTypeNote indicates a note.
 const EntryTypeNote = "Note"
 
-// EntryTypeNotePlural indicates multiple notes.
-const EntryTypeNotePlural = "Notes"
-
 // EntryTypeEvent indicates an event.
 const EntryTypeEvent = "Event"
-
-// EntryTypeEventPlural indicates multiple events.
-const EntryTypeEventPlural = "Events"
 
 // EntryTypePerson indicates a person.
 const EntryTypePerson = "Person"
 
-// EntryTypePersonPlural indicates multiple persons
-const EntryTypePersonPlural = "People"
-
 // EntryTypePlace indicates a place.
 const EntryTypePlace = "Place"
-
-// EntryTypePlacePlural indicates multiple places.
-const EntryTypePlacePlural = "Places"
 
 // EntryTypeThing indicates a thing.
 const EntryTypeThing = "Thing"
 
-// EntryTypeThingPlural indicates multiple things.
-const EntryTypeThingPlural = "Things"
-
-// TagsString returns the entrys tags as a comma-separated string.
+// TagsString returns the entry's tags as a comma-separated string.
 func (entry Entry) TagsString() string {
 	return strings.Join(entry.Tags, ",")
+}
+
+// HasAll returns true if either all are true or all are false.
+func (t EntryTypes) HasAll() bool {
+	if (t.Note && t.Event && t.Person && t.Place && t.Thing) ||
+		(!t.Note && !t.Event && !t.Person && !t.Place && !t.Thing) {
+		return true
+	}
+	return false
+}
+
+// String returns a string representation of the selected types.
+func (t EntryTypes) String() string {
+	s := "All types"
+	if !t.HasAll() {
+		a := []string{}
+		if t.Note {
+			// TODO: Codify plural entry types in entry.go
+			a = append(a, "Notes")
+		}
+		if t.Event {
+			a = append(a, "Events")
+		}
+		if t.Person {
+			a = append(a, "People")
+		}
+		if t.Place {
+			a = append(a, "Places")
+		}
+		if t.Thing {
+			a = append(a, "Things")
+		}
+		s = strings.Join(a, ", ")
+	}
+	return s
+}
+
+// BleveType implements the alternate bleve.Classifier interface to avoid a
+// naming conflict with .Type.
+func (entry *Entry) BleveType() string {
+	return "Entry"
 }

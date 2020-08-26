@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"memory/app/config"
+	"memory/app/model"
 	"memory/util"
 	"os"
 	"testing"
@@ -42,7 +43,7 @@ func setupTeardown1(t *testing.T, teardown bool) {
 			}
 			name := fmt.Sprintf("note #%d", i)
 			desc := fmt.Sprintf("note desc #%d", i)
-			note := NewEntry(EntryTypeNote, name, desc, tags)
+			note := model.NewEntry(model.EntryTypeNote, name, desc, tags)
 			PutEntry(note)
 		}
 		Save()
@@ -67,7 +68,7 @@ func setupTeardown2(t *testing.T, teardown bool) {
 		Init(tempDir2)
 		for i := 0; i < 10; i++ {
 			num := i + 1
-			note := NewEntry(EntryTypeNote, fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
+			note := model.NewEntry(model.EntryTypeNote, fmt.Sprintf("note #%d", num), fmt.Sprintf("desc #%d", num), []string{})
 			PutEntry(note)
 		}
 		Save()
@@ -83,7 +84,7 @@ func setupTeardown2(t *testing.T, teardown bool) {
 func TestGetEntry(t *testing.T) {
 	setupTeardown1(t, false)
 	defer setupTeardown1(t, true)
-	entry, exists := GetEntryFromIndex(GetSlug("note #42"))
+	entry, exists := GetEntryFromIndex(util.GetSlug("note #42"))
 	if !exists {
 		t.Error("Unexpected entry not found")
 	}
@@ -100,10 +101,10 @@ func TestGetEntry(t *testing.T) {
 func TestGetNote(t *testing.T) {
 	setupTeardown2(t, false)
 	defer setupTeardown2(t, true)
-	var entry Entry
-	var note Entry
+	var entry model.Entry
+	var note model.Entry
 	var exists bool
-	entry, exists = GetEntryFromIndex(GetSlug("note #3"))
+	entry, exists = GetEntryFromIndex(util.GetSlug("note #3"))
 	note = entry
 	if !exists {
 		t.Error("Unexpected not exists")
@@ -120,18 +121,18 @@ func TestGetNote(t *testing.T) {
 func TestPutNote(t *testing.T) {
 	setupTeardown2(t, false)
 	defer setupTeardown2(t, true)
-	newNote := NewEntry(EntryTypeNote, "new note", "", []string{})
+	newNote := model.NewEntry(model.EntryTypeNote, "new note", "", []string{})
 	PutEntry(newNote)
 	if len(data.Names) != 1 {
 		t.Errorf("Expected 1 notes (1st pass), found %d", len(data.Names))
 	}
-	existingNote := NewEntry(EntryTypeNote, "note #3", "different desc", []string{})
+	existingNote := model.NewEntry(model.EntryTypeNote, "note #3", "different desc", []string{})
 	PutEntry(existingNote)
 	if len(data.Names) != 2 {
 		t.Errorf("Expected 2 notes (2nd pass), found %d", len(data.Names))
 	}
 	Save()
-	gotNote, exists := GetEntryFromIndex(GetSlug("note #3"))
+	gotNote, exists := GetEntryFromIndex(util.GetSlug("note #3"))
 	if !exists {
 		t.Error("updated note does not exist")
 	} else if gotNote.Description != "different desc" {
@@ -143,14 +144,14 @@ func TestPutNote(t *testing.T) {
 func TestDeleteNote(t *testing.T) {
 	setupTeardown2(t, false)
 	defer setupTeardown2(t, true)
-	existed := DeleteEntry(GetSlug("note #3"))
+	existed := DeleteEntry(util.GetSlug("note #3"))
 	if !existed {
 		t.Error("Note did not exist")
 	}
 	if IndexedCount() != 9 {
 		t.Errorf("Expected 9 notes, got %d", len(data.Names))
 	}
-	_, exists := GetEntryFromIndex(GetSlug("note #3"))
+	_, exists := GetEntryFromIndex(util.GetSlug("note #3"))
 	if exists {
 		t.Error("Deleted note exists")
 	}
@@ -167,7 +168,7 @@ func TestSave(t *testing.T) {
 	config.MemoryHome = "."
 	config.DataFile = file.Name()
 	Save()
-	data.Names = make(map[string]Entry)
+	data.Names = make(map[string]model.Entry)
 	Init("")
 	if len(data.Names) != 10 {
 		t.Error("Expected 10 entries, got", len(data.Names))

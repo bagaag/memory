@@ -18,6 +18,7 @@ package app
 
 import (
 	"fmt"
+	"memory/app/model"
 	"memory/util"
 	"regexp"
 	"sort"
@@ -63,7 +64,7 @@ func ParseLinks(s string) (string, []string) {
 			name = name[1:]
 			hadBang = true
 		}
-		slug := GetSlug(name)
+		slug := util.GetSlug(name)
 		// add to results if exists, otherwise add ! prefix
 		if _, exists := GetEntryFromIndex(slug); exists {
 			// remove erroneous ! prefix if needed
@@ -85,8 +86,8 @@ func ParseLinks(s string) (string, []string) {
 
 // ResolveLinks accepts a slice of Entry names and returns
 // a slice of Entries that exist with those names.
-func ResolveLinks(links []string) []Entry {
-	resolved := []Entry{}
+func ResolveLinks(links []string) []model.Entry {
+	resolved := []model.Entry{}
 	for _, slug := range links {
 		if entry, exists := GetEntryFromIndex(slug); exists {
 			resolved = append(resolved, entry)

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"memory/app/model"
 	"memory/util"
 	"testing"
 
@@ -25,9 +26,9 @@ var setup1 = func(t *testing.T) func(t *testing.T) {
 		t.Error(err)
 	}
 	Init(home)
-	e1 := NewEntry(EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
-	e2 := NewEntry(EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
-	e3 := NewEntry(EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
+	e1 := model.NewEntry(model.EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
+	e2 := model.NewEntry(model.EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
+	e3 := model.NewEntry(model.EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
 	e3.Start = "2020"
 	PutEntry(e1)
 	PutEntry(e2)
@@ -44,11 +45,11 @@ var setup2 = func(t *testing.T) func(t *testing.T) {
 		t.Error(err)
 	}
 	Init(home)
-	e1 := NewEntry(EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
-	e2 := NewEntry(EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
-	e3 := NewEntry(EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
+	e1 := model.NewEntry(model.EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
+	e2 := model.NewEntry(model.EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
+	e3 := model.NewEntry(model.EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
 	e3.Start = "2020"
-	e4 := NewEntry(EntryTypeEvent, "Links To e1", "A peopled [Apple Heresay].", []string{"groove turtle"})
+	e4 := model.NewEntry(model.EntryTypeEvent, "Links To e1", "A peopled [Apple Heresay].", []string{"groove turtle"})
 	e4.Start = "2020"
 	PutEntry(e1)
 	PutEntry(e2)
@@ -65,7 +66,7 @@ var setup2 = func(t *testing.T) func(t *testing.T) {
 func TestLinksToSearch(t *testing.T) {
 	teardown2 := setup2(t)
 	defer teardown2(t)
-	e4, exists := GetEntryFromIndex(GetSlug("Links to e1"))
+	e4, exists := GetEntryFromIndex(util.GetSlug("Links to e1"))
 	if !exists {
 		t.Error("e4 doesn't exist")
 	}
@@ -123,7 +124,7 @@ func TestSearch(t *testing.T) {
 
 func searchEntriesPagingTest(t *testing.T, num int) {
 	// page 1 of 2
-	results, err := SearchEntries(EntryTypes{}, "", []string{}, []string{}, SortName, 1, 2)
+	results, err := SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, SortName, 1, 2)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -135,7 +136,7 @@ func searchEntriesPagingTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// page 2 of 2
-	results, err = SearchEntries(EntryTypes{}, "", []string{}, []string{}, SortName, 2, 2)
+	results, err = SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, SortName, 2, 2)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -150,7 +151,7 @@ func searchEntriesPagingTest(t *testing.T, num int) {
 
 func searchEntriesTest(t *testing.T, num int) {
 	// all entries of type Note and Event
-	results, err := SearchEntries(EntryTypes{Note: true, Event: true}, "", []string{}, []string{}, SortScore, 1, 10)
+	results, err := SearchEntries(model.EntryTypes{Note: true, Event: true}, "", []string{}, []string{}, SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -159,7 +160,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// only Note entries
-	results, err = SearchEntries(EntryTypes{Note: true}, "", []string{}, []string{}, SortScore, 1, 10)
+	results, err = SearchEntries(model.EntryTypes{Note: true}, "", []string{}, []string{}, SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -168,7 +169,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Note entries containing apple
-	results, err = SearchEntries(EntryTypes{Note: true}, "apple", []string{}, []string{}, SortScore, 1, 10)
+	results, err = SearchEntries(model.EntryTypes{Note: true}, "apple", []string{}, []string{}, SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -177,7 +178,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Any type of entries containing apple
-	results, err = SearchEntries(EntryTypes{Note: true}, "apple", []string{}, []string{}, SortScore, 1, 10)
+	results, err = SearchEntries(model.EntryTypes{Note: true}, "apple", []string{}, []string{}, SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -186,7 +187,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Entries containing apple with tag2
-	results, err = SearchEntries(EntryTypes{Note: true}, "apple", []string{"tag2"}, []string{}, SortScore, 1, 10)
+	results, err = SearchEntries(model.EntryTypes{Note: true}, "apple", []string{"tag2"}, []string{}, SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -195,7 +196,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Entries with tag0 AND tag1
-	results, err = SearchEntries(EntryTypes{}, "", []string{"tag0", "tag1"}, []string{}, SortScore, 1, 10)
+	results, err = SearchEntries(model.EntryTypes{}, "", []string{"tag0", "tag1"}, []string{}, SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -204,7 +205,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Entries with tag0 or tag1
-	results, err = SearchEntries(EntryTypes{}, "", []string{}, []string{"tag0", "tag1"}, SortScore, 1, 10)
+	results, err = SearchEntries(model.EntryTypes{}, "", []string{}, []string{"tag0", "tag1"}, SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -213,7 +214,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Get All entries
-	results, err = SearchEntries(EntryTypes{}, "", []string{}, []string{}, SortScore, 1, 10)
+	results, err = SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}

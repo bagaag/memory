@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"memory/app/model"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,7 +41,7 @@ Longitude: {{.Longitude}}
 `
 
 // RenderYamlDown returns a string with attributes in yaml frontmatter followed by the description.
-func RenderYamlDown(entry Entry) (string, error) {
+func RenderYamlDown(entry model.Entry) (string, error) {
 	if tmpl == nil {
 		var err error
 		tmpl, err = template.New("Entry").Parse(Template)
@@ -57,12 +58,12 @@ func RenderYamlDown(entry Entry) (string, error) {
 }
 
 // ParseYamlDown converts a string of yaml frontmatter followed by description into an Entry.
-func ParseYamlDown(content string) (Entry, error) {
+func ParseYamlDown(content string) (model.Entry, error) {
 	// break the string into a slice of lines
 	lines := strings.Split(content, "\n")
 	// first line validation
 	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
-		return Entry{}, errors.New("the first line of an entry must be ---")
+		return model.Entry{}, errors.New("the first line of an entry must be ---")
 	}
 	// parse rest of file into temporary map
 	attrs := make(map[string]string)
@@ -82,36 +83,36 @@ func ParseYamlDown(content string) (Entry, error) {
 		}
 		// validate meta data line
 		if !strings.Contains(line, ":") {
-			return Entry{}, errors.New("invalid attribute format (missing :) on line " + fmt.Sprint(ix+1))
+			return model.Entry{}, errors.New("invalid attribute format (missing :) on line " + fmt.Sprint(ix+1))
 		}
 		// parse the attribute and add it to the map
 		attr := strings.SplitN(line, ":", 2)
 		attrs[strings.TrimSpace(attr[0])] = strings.TrimSpace(attr[1])
 	}
 	// initalize return value
-	entry := Entry{}
+	entry := model.Entry{}
 	// validate Description
 	if val, exists := attrs["_description"]; exists {
 		entry.Description = val
 	} else {
-		return Entry{}, errors.New("attributes must be separated from decsription with a --- line")
+		return model.Entry{}, errors.New("attributes must be separated from decsription with a --- line")
 	}
 	// validate Name
 	if name, exists := attrs["Name"]; exists {
 		if err := ValidateEntryName(name); err != nil {
-			return Entry{}, err
+			return model.Entry{}, err
 		}
 		entry.Name = name
 	} else {
-		return Entry{}, errors.New("missing required Name attribute")
+		return model.Entry{}, errors.New("missing required Name attribute")
 	}
 	// validate Type
 	if t, exists := attrs["Type"]; !exists {
-		return Entry{}, errors.New("missing required Type attribute")
-	} else if t != EntryTypeEvent && t != EntryTypePerson && t != EntryTypePlace &&
-		t != EntryTypeThing && t != EntryTypeNote {
-		return Entry{}, fmt.Errorf("Type is not one of the valid entry types (%s, %s, %s, %s, %s)",
-			EntryTypeEvent, EntryTypePerson, EntryTypePlace, EntryTypeThing, EntryTypeNote)
+		return model.Entry{}, errors.New("missing required Type attribute")
+	} else if t != model.EntryTypeEvent && t != model.EntryTypePerson && t != model.EntryTypePlace &&
+		t != model.EntryTypeThing && t != model.EntryTypeNote {
+		return model.Entry{}, fmt.Errorf("Type is not one of the valid entry types (%s, %s, %s, %s, %s)",
+			model.EntryTypeEvent, model.EntryTypePerson, model.EntryTypePlace, model.EntryTypeThing, model.EntryTypeNote)
 	} else {
 		entry.Type = t
 	}
@@ -126,10 +127,10 @@ func ParseYamlDown(content string) (Entry, error) {
 		case "Start", "End":
 			matched, err := regexp.Match(`([\d]{4})?(-[\d]{2})?(-[\d]{2})?`, []byte(val))
 			if err != nil || !matched {
-				return Entry{}, errors.New("value for " + key + " is invalid: must be YYYY, YYYY-MM or YYYY-MM-DD")
+				return model.Entry{}, errors.New("value for " + key + " is invalid: must be YYYY, YYYY-MM or YYYY-MM-DD")
 			}
 			if key == "Start" && val == "" {
-				return Entry{}, errors.New("value is required for " + key)
+				return model.Entry{}, errors.New("value is required for " + key)
 			}
 			if key == "Start" {
 				entry.Start = val
@@ -139,7 +140,7 @@ func ParseYamlDown(content string) (Entry, error) {
 		case "Latitude", "Longitude":
 			if val != "" {
 				if _, err := strconv.ParseFloat(val, 64); err != nil {
-					return Entry{}, errors.New("value for " + key + " is invalid")
+					return model.Entry{}, errors.New("value for " + key + " is invalid")
 				}
 				if key == "Latitude" {
 					entry.Latitude = val

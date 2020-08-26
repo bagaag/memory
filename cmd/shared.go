@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/config"
+	"memory/app/model"
 	"memory/app/persist"
 	"memory/util"
 	"os"
@@ -34,9 +35,9 @@ func filterInput(r rune) (rune, bool) {
 }
 
 // parseTypes populates an EntryType struct based on the --types flag
-func parseTypes(typesArg string) app.EntryTypes {
+func parseTypes(typesArg string) model.EntryTypes {
 	typesSlice := strings.Split(typesArg, ",")
-	types := app.EntryTypes{}
+	types := model.EntryTypes{}
 	for _, t := range typesSlice {
 		switch strings.TrimSpace(strings.ToLower(t)) {
 		case "note", "notes":
@@ -56,22 +57,22 @@ func parseTypes(typesArg string) app.EntryTypes {
 
 // editEntry converts an entry to YamlDown, launches an external editor, parses
 // the edited content back into an entry and returns the edited entry.
-func editEntry(origEntry app.Entry, tempFile string) (app.Entry, string, error) {
+func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, error) {
 	var err error
 	// launch editor and get path to edited temp file
 	tempFile, err = useEditor(origEntry, tempFile)
 	if err != nil {
-		return app.Entry{}, tempFile, err
+		return model.Entry{}, tempFile, err
 	}
 	// get contents of temp file
 	edited, _, err := persist.ReadFile(tempFile)
 	if err != nil {
-		return app.Entry{}, tempFile, err
+		return model.Entry{}, tempFile, err
 	}
 	// parse contents into entry
 	editedEntry, err := parseEntryText(edited)
 	if err != nil {
-		return app.Entry{}, tempFile, err
+		return model.Entry{}, tempFile, err
 	}
 	// handle name change
 	if origEntry.Name != editedEntry.Name {
@@ -88,10 +89,10 @@ func editEntry(origEntry app.Entry, tempFile string) (app.Entry, string, error) 
 }
 
 // parseEntryText converts text to an entry and validates the name.
-func parseEntryText(entryText string) (app.Entry, error) {
+func parseEntryText(entryText string) (model.Entry, error) {
 	editedEntry, err := app.ParseYamlDown(entryText)
 	if err != nil {
-		return app.Entry{}, err
+		return model.Entry{}, err
 	}
 	if msg := validateName(editedEntry.Name); msg != "" {
 		return editedEntry, errors.New(msg)
@@ -103,7 +104,7 @@ func parseEntryText(entryText string) (app.Entry, error) {
 func deleteEntry(name string, ask bool) bool {
 	s := "y"
 	var err error
-	if _, exists := app.GetEntryFromIndex(app.GetSlug(name)); !exists {
+	if _, exists := app.GetEntryFromIndex(util.GetSlug(name)); !exists {
 		fmt.Println("Entry '" + name + "' could not be found.")
 		return false
 	}
@@ -115,8 +116,11 @@ func deleteEntry(name string, ask bool) bool {
 		}
 	}
 	if s == "y" {
-		if !app.DeleteEntry(app.GetSlug(name)) {
+		if deleted, err := app.DeleteEntry(util.GetSlug(name)); !deleted {
 			fmt.Println("Entry '" + name + "' could not be found.")
+			return false
+		} else if err != nil {
+			fmt.Println("Error:", err)
 			return false
 		}
 		if err := app.Save(); err != nil {
@@ -132,7 +136,7 @@ func deleteEntry(name string, ask bool) bool {
 // useEditor launches config.editor with a temporary file containing a copy of the entry
 // identified by slug, waits for the editor to exit and returns the temp file path. If
 // existingTempFilePath is not empty, reuses that file rather than creating a new copy.
-func useEditor(entry app.Entry, existingTempFile string) (string, error) {
+func useEditor(entry model.Entry, existingTempFile string) (string, error) {
 	tmp := existingTempFile
 	var err error
 	slug := entry.Slug()

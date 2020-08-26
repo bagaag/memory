@@ -10,6 +10,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package app
 
 import (
+	"memory/app/model"
 	"memory/util"
 	"sort"
 )
@@ -53,7 +54,7 @@ func GetSortedTags(tags map[string][]string) []string {
 
 // tagMatches returns true if any of the tags in searchTags match the tags
 // on the provided Entry.
-func tagMatches(entry Entry, searchTags []string, matchesAll bool) bool {
+func tagMatches(entry model.Entry, searchTags []string, matchesAll bool) bool {
 	for _, searchTag := range searchTags {
 		matches := util.StringSliceContains(entry.Tags, searchTag)
 		if matches && !matchesAll {

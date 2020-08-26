@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"math"
 	"memory/app"
+	"memory/app/model"
 	"memory/util"
 	"os"
 	"strings"
@@ -220,7 +221,7 @@ func displayHeight() int {
 //       A seaside town on Cape Ann, North Shore of Massachusetts. We go there
 //       every year for 4th of July and usually several other random times...
 //       ----------------------------------------------------------------------
-func renderEntry(pager *EntryPager, ix int, entry app.Entry) []string {
+func renderEntry(pager *EntryPager, ix int, entry model.Entry) []string {
 	ix = ix + 1
 	if ix == 10 {
 		ix = 0
@@ -280,7 +281,7 @@ func ListPageSize() int {
 
 // EntryTables displays a table of entries, used when we're dumping all results after
 // a non-interactive ls request, or when displaying a single entry details.
-func EntryTables(entries []app.Entry) {
+func EntryTables(entries []model.Entry) {
 	width := goterm.Width() - 30
 	fmt.Println("") // prefix with blank line
 	for ix, entry := range entries {
@@ -331,20 +332,20 @@ func EntryTables(entries []app.Entry) {
 }
 
 // EntryTable displays a single entry with full detail
-func EntryTable(entry app.Entry) {
-	entries := []app.Entry{entry}
+func EntryTable(entry model.Entry) {
+	entries := []model.Entry{entry}
 	EntryTables(entries)
 }
 
 // LinksMenu displays a list of entry names in its LinksTo
 // and LinkedFrom slices along with numbers for selection.
-func LinksMenu(entry app.Entry) {
+func LinksMenu(entry model.Entry) {
 	fmt.Printf("\nLinks for %s [%s]\n\n", entry.Name, entry.Type)
 	ix := 1
 	if len(entry.LinksTo) > 0 {
 		fmt.Println("  Links to:")
 		for _, name := range entry.LinksTo {
-			entry, _ := app.GetEntryFromIndex(app.GetSlug(name))
+			entry, _ := app.GetEntryFromIndex(util.GetSlug(name))
 			if entry.Type == "" {
 				entry.Type = "?"
 			}

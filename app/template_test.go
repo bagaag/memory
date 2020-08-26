@@ -10,6 +10,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package app
 
 import (
+	"memory/app/model"
 	"memory/util"
 	"regexp"
 	"testing"
@@ -31,7 +32,7 @@ Hey now. This is the description.
 		if entry.Name != "Note #1" {
 			t.Error("Expected 'Note #1', got", entry.Name)
 		}
-		if entry.Type != EntryTypeNote {
+		if entry.Type != model.EntryTypeNote {
 			t.Error("Expected 'Note', got", entry.Type)
 		}
 		if !util.StringSlicesEqual(entry.Tags, []string{"one", "two", "three"}) {
@@ -72,7 +73,7 @@ Hey now. This is the description.
 }
 
 func TestRenderYamlDown(t *testing.T) {
-	entry := NewEntry(EntryTypeNote, "Note #1", "Hey now. This is the description.", []string{"one", "two", "three"})
+	entry := model.NewEntry(model.EntryTypeNote, "Note #1", "Hey now. This is the description.", []string{"one", "two", "three"})
 	entry.Custom["Custom 1"] = "Custom Value 1"
 	expect := `---
 Name: Note #1
@@ -93,8 +94,8 @@ Hey now. This is the description.
 }
 
 func TestRenderYamlDownPlace(t *testing.T) {
-	entry := Entry{
-		Type:        EntryTypePlace,
+	entry := model.Entry{
+		Type:        model.EntryTypePlace,
 		Name:        "Place #1",
 		Description: "Hey now.",
 		Address:     "Addr 1",
@@ -123,8 +124,8 @@ Hey now.
 }
 
 func TestRenderYamlDownEvent(t *testing.T) {
-	entry := Entry{
-		Type:        EntryTypeEvent,
+	entry := model.Entry{
+		Type:        model.EntryTypeEvent,
 		Name:        "Event #1",
 		Description: "Hey now.",
 		Start:       "2019",

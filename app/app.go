@@ -13,14 +13,13 @@ import (
 	"errors"
 	"fmt"
 	"memory/app/config"
+	"memory/app/model"
 	"memory/app/persist"
 	"memory/util"
 	"os"
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/gosimple/slug"
 )
 
 var inited = false // run Init() only once
@@ -29,15 +28,15 @@ var deletes = []string{}
 
 // root contains all the data to be saved
 type root struct {
-	Names map[string]Entry
+	Names map[string]model.Entry
 	mux   sync.Mutex
 }
 
 // EntryResults is used to contain the results of GetEntries and the settings used
 // to generate those results.
 type EntryResults struct {
-	Entries  []Entry
-	Types    EntryTypes
+	Entries  []model.Entry
+	Types    model.EntryTypes
 	Search   string
 	AnyTags  []string
 	OnlyTags []string
@@ -61,7 +60,7 @@ const SortName = SortOrder(2)
 
 // The data variable stores all the things that get saved.
 var data = root{
-	Names: make(map[string]Entry),
+	Names: make(map[string]model.Entry),
 }
 
 func (r *root) lock() {
@@ -71,73 +70,32 @@ func (r *root) unlock() {
 	r.mux.Unlock()
 }
 
-// GetSlug converts a string into a slug
-func GetSlug(s string) string {
-	return slug.Make(s)
-}
-
 // PutEntry adds or replaces the given entry in the collection.
-func PutEntry(entry Entry) {
+func PutEntry(entry model.Entry) error {
 	data.lock()
 	slug := entry.Slug()
 	data.Names[slug] = entry
 	data.unlock()
-	IndexEntry(entry)
+	return IndexEntry(entry)
 }
 
 // DeleteEntry removes the specified entry from the collection.
-func DeleteEntry(slug string) bool {
+func DeleteEntry(slug string) (bool, error) {
 	data.lock()
 	defer data.unlock()
 	_, exists := GetEntryFromIndex(slug)
 	if !exists {
-		return false
+		return false, nil
 	}
 	if _, exists := data.Names[slug]; exists {
 		delete(data.Names, slug)
 	}
 	deletes = append(deletes, slug)
-	RemoveFromIndex(slug)
-	return true
-}
-
-// HasAll returns true if either all are true or all are false.
-func (t EntryTypes) HasAll() bool {
-	if (t.Note && t.Event && t.Person && t.Place && t.Thing) ||
-		(!t.Note && !t.Event && !t.Person && !t.Place && !t.Thing) {
-		return true
-	}
-	return false
-}
-
-// String returns a string representation of the selected types.
-func (t EntryTypes) String() string {
-	s := "All types"
-	if !t.HasAll() {
-		a := []string{}
-		if t.Note {
-			// TODO: Codify plural entry types in entry.go
-			a = append(a, "Notes")
-		}
-		if t.Event {
-			a = append(a, "Events")
-		}
-		if t.Person {
-			a = append(a, "People")
-		}
-		if t.Place {
-			a = append(a, "Places")
-		}
-		if t.Thing {
-			a = append(a, "Things")
-		}
-		s = strings.Join(a, ", ")
-	}
-	return s
+	return true, RemoveFromIndex(slug)
 }
 
 // GetEntryFromStorage returns a single entry suitable for editing or throws an error.
-func GetEntryFromStorage(slug string) (Entry, bool, error) {
+func GetEntryFromStorage(slug string) (model.Entry, bool, error) {
 	// check for modified and unsaved entry first
 	pendingSave, exists := data.Names[slug]
 	if exists {
@@ -145,17 +103,17 @@ func GetEntryFromStorage(slug string) (Entry, bool, error) {
 	}
 	// make sure entry exists in storage
 	if !persist.EntryExists(slug) {
-		return Entry{}, false, nil
+		return model.Entry{}, false, nil
 	}
 	// read entry content from storage
 	content, modified, err := persist.ReadEntry(slug)
 	if err != nil {
-		return Entry{}, false, err
+		return model.Entry{}, false, err
 	}
 	// parse entry content into Entry
 	entry, err := ParseYamlDown(content)
 	if err != nil {
-		return Entry{}, true, err
+		return model.Entry{}, true, err
 	}
 	entry.Modified = modified
 	//TODO: remove this and implement caching if it seems to happen too often
@@ -175,7 +133,9 @@ func Init(homeDir string) error {
 		homeDir = util.GetHomeDir() + string(os.PathSeparator) + config.MemoryHome
 	}
 	config.MemoryHome = homeDir
-	persist.InitHome()
+	if err := persist.InitHome(); err != nil {
+		return err
+	}
 	// load config
 	if persist.PathExists(config.SettingsPath()) {
 		settings := config.StoredSettings{}
@@ -203,8 +163,8 @@ func Shutdown() error {
 // RenameEntry changes an entry name and updates associated data structures.
 func RenameEntry(name string, newName string) error {
 	data.lock()
-	slug := GetSlug(name)
-	newSlug := GetSlug(newName)
+	slug := util.GetSlug(name)
+	newSlug := util.GetSlug(newName)
 	defer data.unlock()
 	_, exists := GetEntryFromIndex(newSlug)
 	if exists {
@@ -217,9 +177,13 @@ func RenameEntry(name string, newName string) error {
 	if err != nil {
 		return err
 	}
-	DeleteEntry(slug)
+	if _, err = DeleteEntry(slug); err != nil {
+		return err
+	}
 	entry.Name = newName
-	PutEntry(entry)
+	if err = PutEntry(entry); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -237,7 +201,7 @@ func Save() error {
 			return fmt.Errorf("failed to save %s: %s", slug, err.Error())
 		}
 	}
-	data.Names = make(map[string]Entry)
+	data.Names = make(map[string]model.Entry)
 	for _, slug := range deletes {
 		err := persist.DeleteEntry(slug)
 		if err != nil {
@@ -281,33 +245,26 @@ func ValidateEntryName(name string) error {
 }
 
 // filterType returns true if the entry is one of the true EntryTypes
-func filterType(entry Entry, types EntryTypes) bool {
+func filterType(entry model.Entry, types model.EntryTypes) bool {
 	if types.HasAll() {
 		return true
 	}
 	switch entry.Type {
-	case EntryTypeEvent:
+	case model.EntryTypeEvent:
 		return types.Event
-	case EntryTypeNote:
+	case model.EntryTypeNote:
 		return types.Note
-	case EntryTypePerson:
+	case model.EntryTypePerson:
 		return types.Person
-	case EntryTypePlace:
+	case model.EntryTypePlace:
 		return types.Place
-	case EntryTypeThing:
+	case model.EntryTypeThing:
 		return types.Thing
 	}
 	return false
 }
 
-// searchMatches returns a score from 0 to 1 if the entry matches, where 0 is
-// a miss and 1 is a perfect match on entry name.
-func searchMatches(keywords string, entry Entry) {
-	keywords = strings.ToLower(keywords)
-	//if strings.ToLower(entry.Name) == keyw
-}
-
-func sortEntries(arr []Entry, field string, ascending bool) {
+func sortEntries(arr []model.Entry, field string, ascending bool) {
 	var less func(i, j int) bool
 	switch field {
 	case "Modified":

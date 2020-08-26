@@ -13,8 +13,8 @@ package cmd
 
 import (
 	"fmt"
-	"memory/app"
 	"memory/app/config"
+	"memory/app/model"
 	"strings"
 )
 
@@ -34,10 +34,10 @@ func validateName(name string) string {
 }
 
 func validateType(t string) string {
-	if t != app.EntryTypeEvent && t != app.EntryTypePerson && t != app.EntryTypePlace &&
-		t != app.EntryTypeThing && t != app.EntryTypeNote {
+	if t != model.EntryTypeEvent && t != model.EntryTypePerson && t != model.EntryTypePlace &&
+		t != model.EntryTypeThing && t != model.EntryTypeNote {
 		return fmt.Sprintf("Type is not one of the valid entry types (%s, %s, %s, %s, %s).",
-			app.EntryTypeEvent, app.EntryTypePerson, app.EntryTypePlace, app.EntryTypeThing, app.EntryTypeNote)
+			model.EntryTypeEvent, model.EntryTypePerson, model.EntryTypePlace, model.EntryTypeThing, model.EntryTypeNote)
 	}
 	return ""
 }

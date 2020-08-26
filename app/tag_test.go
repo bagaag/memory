@@ -8,6 +8,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package app
 
 import (
+	"memory/app/model"
 	"memory/util"
 	"testing"
 )
@@ -51,7 +52,7 @@ func TestGetSortedTags(t *testing.T) {
 }
 
 func TestTagMatches(t *testing.T) {
-	entry := NewEntry(EntryTypeNote, "Test", "Description", []string{"one", "two"})
+	entry := model.NewEntry(model.EntryTypeNote, "Test", "Description", []string{"one", "two"})
 	if !tagMatches(entry, []string{"one", "two"}, false) {
 		t.Errorf("Failed tagMatches test #1")
 	} else if !tagMatches(entry, []string{"one", "two"}, true) {

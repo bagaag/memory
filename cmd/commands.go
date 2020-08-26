@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/config"
+	"memory/app/model"
 	"memory/app/persist"
 	"memory/cmd/display"
 	"memory/util"
@@ -76,7 +77,7 @@ var cmdDefault = func(c *cli.Context) error {
 
 // cmdAdd adds a new entry. Requires a sub-command indicating type.
 var cmdAdd = func(c *cli.Context) error {
-	var entry app.Entry
+	var entry model.Entry
 	var success = false
 	// validate entry type
 	entryType := strings.Title(c.Command.Name)
@@ -88,7 +89,7 @@ var cmdAdd = func(c *cli.Context) error {
 	if c.IsSet("name") {
 		name = c.String("name")
 	}
-	newEntry := app.NewEntry(entryType, name, "", []string{})
+	newEntry := model.NewEntry(entryType, name, "", []string{})
 	entry, success = editEntryValidationLoop(newEntry)
 	if !success {
 		return errors.New("failed to add a valid entry")
@@ -127,7 +128,7 @@ var cmdPut = func(c *cli.Context) error {
 // cmdEdit edits an existing entry, identified by name.
 var cmdEdit = func(c *cli.Context) error {
 	name := c.String("name")
-	origEntry, exists := app.GetEntryFromIndex(app.GetSlug(name))
+	origEntry, exists := app.GetEntryFromIndex(util.GetSlug(name))
 	if !exists {
 		return fmt.Errorf("there is no entry named '%s'", name)
 	}
@@ -137,11 +138,11 @@ var cmdEdit = func(c *cli.Context) error {
 	}
 	if origEntry.Name != entry.Name {
 		// entry being renamed
-		_, exists := app.GetEntryFromIndex(app.GetSlug(origEntry.Name))
+		_, exists := app.GetEntryFromIndex(util.GetSlug(origEntry.Name))
 		if exists {
 			return errors.New("cannot rename entry; an entry with this name already exists")
 		}
-		app.DeleteEntry(app.GetSlug(origEntry.Name))
+		app.DeleteEntry(util.GetSlug(origEntry.Name))
 	}
 	app.PutEntry(entry)
 	app.Save()
@@ -218,7 +219,7 @@ var cmdList = func(c *cli.Context) error {
 // cmdLinks lists the entries linked to and from an existing entry, identified by name.
 var cmdLinks = func(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists := app.GetEntryFromIndex(app.GetSlug(name))
+	entry, exists := app.GetEntryFromIndex(util.GetSlug(name))
 	if !exists {
 		fmt.Println("Cannot find entry named", name)
 		return errors.New("entry not found")
@@ -250,7 +251,7 @@ var cmdSeeds = func(c *cli.Context) error {
 // cmdGet displays the editable content of an entry
 func cmdGet(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists, err := app.GetEntryFromStorage(app.GetSlug(name))
+	entry, exists, err := app.GetEntryFromStorage(util.GetSlug(name))
 	if err != nil {
 		return err
 	}
@@ -268,7 +269,7 @@ func cmdGet(c *cli.Context) error {
 // cmdDetail displays details of an entry and, if interactive, provides a menu prompt.
 func cmdDetail(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists := app.GetEntryFromIndex(app.GetSlug(name))
+	entry, exists := app.GetEntryFromIndex(util.GetSlug(name))
 	if !exists {
 		return fmt.Errorf("entry named '%s' does not exist", name)
 	} else if interactive {

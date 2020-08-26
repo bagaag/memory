@@ -22,6 +22,7 @@ import (
 	"github.com/blevesearch/bleve/mapping"
 	"github.com/blevesearch/bleve/search/query"
 	"memory/app/config"
+	"memory/app/model"
 	"memory/app/persist"
 	"memory/util"
 	"strings"
@@ -30,12 +31,6 @@ import (
 )
 
 var searchIndex bleve.Index
-
-// BleveType implements the alternate bleve.Classifier interface to avoid a
-// naming conflict with .Type.
-func (entry *Entry) BleveType() string {
-	return "Entry"
-}
 
 // getIndexMapping returns the default index settings for
 // new and existing search indexes.
@@ -99,7 +94,7 @@ func closeSearch() error {
 }
 
 // IndexEntry adds or updates an entry in the index
-func IndexEntry(entry Entry) error {
+func IndexEntry(entry model.Entry) error {
 	return searchIndex.Index(entry.Slug(), entry)
 }
 
@@ -160,12 +155,12 @@ func IndexedSlugs() ([]string, error) {
 }
 
 // GetEntryFromIndex returns an entry from the search index suitable for display.
-func GetEntryFromIndex(slug string) (Entry, bool) {
+func GetEntryFromIndex(slug string) (model.Entry, bool) {
 	doc, err := searchIndex.Document(slug)
 	if err != nil || doc == nil {
-		return Entry{}, false
+		return model.Entry{}, false
 	}
-	entry := NewEntry("", "", "", []string{})
+	entry := model.NewEntry("", "", "", []string{})
 	for _, field := range doc.Fields {
 		switch field.Name() {
 		case "Name":
@@ -213,7 +208,7 @@ func IndexedCount() uint64 {
 }
 
 // SearchEntries returns a page of results based on multiple filters and search query.
-func SearchEntries(types EntryTypes, search string, onlyTags []string,
+func SearchEntries(types model.EntryTypes, search string, onlyTags []string,
 	anyTags []string, sort SortOrder, pageNo int, pageSize int) (EntryResults, error) {
 	query := buildSearchQuery(types, search, onlyTags, anyTags)
 	req := bleve.NewSearchRequestOptions(query, pageSize, (pageNo-1)*pageSize, false)
@@ -233,7 +228,7 @@ func SearchEntries(types EntryTypes, search string, onlyTags []string,
 		ids = append(ids, hit.ID)
 	}
 	results := EntryResults{Types: types, Search: search, AnyTags: anyTags, OnlyTags: onlyTags,
-		Sort: sort, PageNo: pageNo, PageSize: pageSize, Total: searchResult.Total, Entries: []Entry{}}
+		Sort: sort, PageNo: pageNo, PageSize: pageSize, Total: searchResult.Total, Entries: []model.Entry{}}
 	for _, id := range ids {
 		entry, exists := GetEntryFromIndex(id)
 		if !exists {
@@ -249,7 +244,7 @@ func RefreshResults(stale EntryResults) (EntryResults, error) {
 	return SearchEntries(stale.Types, stale.Search, stale.OnlyTags, stale.AnyTags, stale.Sort, stale.PageNo, stale.PageSize)
 }
 
-func buildSearchQuery(types EntryTypes, search string, onlyTags []string, anyTags []string) *query.BooleanQuery {
+func buildSearchQuery(types model.EntryTypes, search string, onlyTags []string, anyTags []string) *query.BooleanQuery {
 	boolQuery := bleve.NewBooleanQuery()
 	// process types
 	if !types.HasAll() {
@@ -329,8 +324,8 @@ func EntryCount() uint64 {
 }
 
 // Timeline performs a search based on start and end attributes
-func Timeline(start string, end string) ([]Entry, error) {
-	ret := []Entry{}
+func Timeline(start string, end string) ([]model.Entry, error) {
+	ret := []model.Entry{}
 	boolQuery := bleve.NewBooleanQuery()
 	if start != "" {
 		startQ := bleve.NewTermRangeQuery(start, "")

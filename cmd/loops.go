@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"memory/app"
+	"memory/app/model"
 	"memory/cmd/display"
 	"memory/util"
 	"strconv"
@@ -55,7 +56,7 @@ func mainLoop() {
 // detailInteractiveLoop displays the given entry and prompts for actions
 // to take on that entry. Called from the ls interactive loop and from
 // detailInteractive. Returns the bool, true for [b]ack or false for [Q]uit)
-func detailInteractiveLoop(entry app.Entry) bool {
+func detailInteractiveLoop(entry model.Entry) bool {
 	// interactive loop
 	for {
 		// display detail and prompt for command
@@ -80,7 +81,7 @@ func detailInteractiveLoop(entry app.Entry) bool {
 			}
 			// update entry in case things changed in the subloops
 			var exists bool
-			entry, exists = app.GetEntryFromIndex(app.GetSlug(entry.Name))
+			entry, exists = app.GetEntryFromIndex(util.GetSlug(entry.Name))
 			if !exists {
 				return false
 			}
@@ -100,7 +101,7 @@ func detailInteractiveLoop(entry app.Entry) bool {
 
 // linksInteractiveLoop handles display of an entry's links and
 // commands related to them. Returns true if user selects [B]ack
-func linksInteractiveLoop(entry app.Entry) bool {
+func linksInteractiveLoop(entry model.Entry) bool {
 	// interactive loop
 	for {
 		links := append(entry.LinksTo, entry.LinkedFrom...)
@@ -115,7 +116,7 @@ func linksInteractiveLoop(entry app.Entry) bool {
 				fmt.Printf("Error: %d is not a valid link number.\n", num)
 			} else {
 				linkName := links[ix]
-				nextDetail, exists := app.GetEntryFromIndex(app.GetSlug(linkName))
+				nextDetail, exists := app.GetEntryFromIndex(util.GetSlug(linkName))
 				if exists {
 					detailInteractiveLoop(nextDetail)
 					var exists bool
@@ -175,12 +176,12 @@ func listInteractiveLoop(pager display.EntryPager) error {
 
 // editEntryValidationLoop loads the editor for an entry repeatedly
 // until validation passes or the user chooses to discard their edits.
-func editEntryValidationLoop(entry app.Entry) (app.Entry, bool) {
+func editEntryValidationLoop(entry model.Entry) (model.Entry, bool) {
 	valid := true
 	retry := ""
 	for {
 		var err error
-		var edited app.Entry
+		var edited model.Entry
 		edited, retry, err = editEntry(entry, retry)
 		_ = retry // eliminates 'retry is declared but not used'
 		if err != nil {
@@ -210,7 +211,7 @@ func continueEditingPrompt(err error) bool {
 // if [Q]uit
 func missingLinkInteractiveLoop(name string) bool {
 	display.MissingLinkMenu(name)
-	types := []string{app.EntryTypeEvent, app.EntryTypePerson, app.EntryTypePlace, app.EntryTypeThing, app.EntryTypeNote}
+	types := []string{model.EntryTypeEvent, model.EntryTypePerson, model.EntryTypePlace, model.EntryTypeThing, model.EntryTypeNote}
 	for {
 		c := getSingleCharInput()
 		switch strings.ToLower(c) {

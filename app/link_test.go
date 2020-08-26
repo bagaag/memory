@@ -9,6 +9,7 @@ package app
 
 import (
 	"io/ioutil"
+	"memory/app/model"
 	"memory/util"
 	"testing"
 )
@@ -21,9 +22,9 @@ func TestParseLinks(t *testing.T) {
 	}
 	Init(tempDir)
 	defer util.DelTree(tempDir)
-	n1 := NewEntry(EntryTypeNote, "Exists", "", []string{})
+	n1 := model.NewEntry(model.EntryTypeNote, "Exists", "", []string{})
 	PutEntry(n1)
-	n2 := NewEntry(EntryTypeNote, "Exists 2", "", []string{})
+	n2 := model.NewEntry(model.EntryTypeNote, "Exists 2", "", []string{})
 	PutEntry(n2)
 	Save()
 	testParseLinks(t, 1, "[Exists]", "[Exists]", []string{"exists"})
@@ -60,9 +61,9 @@ func TestResolveLinks(t *testing.T) {
 	}
 	Init(tempDir)
 	defer util.DelTree(tempDir)
-	n1 := NewEntry(EntryTypeNote, "Exists", "", []string{})
+	n1 := model.NewEntry(model.EntryTypeNote, "Exists", "", []string{})
 	PutEntry(n1)
-	n2 := NewEntry(EntryTypeNote, "Exists 2", "", []string{})
+	n2 := model.NewEntry(model.EntryTypeNote, "Exists 2", "", []string{})
 	PutEntry(n2)
 	Save()
 	links := []string{"exists", "not-exists", "exists-2"}
@@ -83,16 +84,16 @@ func TestPopulateLinks(t *testing.T) {
 	}
 	Init(tempDir)
 	defer util.DelTree(tempDir)
-	nA := NewEntry(EntryTypeNote, "Note 1", "This note has a link to [Note 2].", []string{})
-	nB := NewEntry(EntryTypeNote, "Note 2", "This note has a link to [Note 3] and [Note 2].", []string{})
-	nC := NewEntry(EntryTypeNote, "Note 3", "This note has no links.", []string{})
+	nA := model.NewEntry(model.EntryTypeNote, "Note 1", "This note has a link to [Note 2].", []string{})
+	nB := model.NewEntry(model.EntryTypeNote, "Note 2", "This note has a link to [Note 3] and [Note 2].", []string{})
+	nC := model.NewEntry(model.EntryTypeNote, "Note 3", "This note has no links.", []string{})
 	PutEntry(nA)
 	PutEntry(nB)
 	PutEntry(nC)
 	populateLinks()
-	n1, _ := GetEntryFromIndex(GetSlug("Note 1"))
-	n2, _ := GetEntryFromIndex(GetSlug("Note 2"))
-	n3, _ := GetEntryFromIndex(GetSlug("Note 3"))
+	n1, _ := GetEntryFromIndex(util.GetSlug("Note 1"))
+	n2, _ := GetEntryFromIndex(util.GetSlug("Note 2"))
+	n3, _ := GetEntryFromIndex(util.GetSlug("Note 3"))
 	// test linksTo
 	if !util.StringSlicesEqual(n1.LinksTo, []string{"note-2"}) {
 		t.Error("Expected n1.LinksTo==['note-2'], got", n1.LinksTo)
@@ -123,9 +124,9 @@ func TestBrokenLinks(t *testing.T) {
 	}
 	Init(tempDir)
 	defer util.DelTree(tempDir)
-	nA := NewEntry(EntryTypeNote, "Note 1", "This note has a link to [Note A].", []string{})
-	nB := NewEntry(EntryTypeNote, "Note 2", "This note [has a] link to [note 4] and [Note 1].", []string{})
-	nC := NewEntry(EntryTypeNote, "Note 3", "This note has no links.", []string{})
+	nA := model.NewEntry(model.EntryTypeNote, "Note 1", "This note has a link to [Note A].", []string{})
+	nB := model.NewEntry(model.EntryTypeNote, "Note 2", "This note [has a] link to [note 4] and [Note 1].", []string{})
+	nC := model.NewEntry(model.EntryTypeNote, "Note 3", "This note has no links.", []string{})
 	PutEntry(nA)
 	PutEntry(nB)
 	PutEntry(nC)
