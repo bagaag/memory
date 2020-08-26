@@ -14,8 +14,9 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/config"
+	"memory/app/localfs"
 	"memory/app/model"
-	"memory/app/persist"
+	"memory/app/template"
 	"memory/cmd/display"
 	"memory/util"
 	"os"
@@ -33,7 +34,7 @@ var cmdInit = func(c *cli.Context) error {
 	// init app data
 	home := c.String("home")
 	if home != "" {
-		if !persist.PathExists(home) {
+		if !util.PathExists(home) {
 			fmt.Printf("Error: Home directory does not exist: %s\n", home)
 			os.Exit(1)
 		}
@@ -105,7 +106,7 @@ var cmdAdd = func(c *cli.Context) error {
 // cmdPut adds or updates an entry from the given file.
 var cmdPut = func(c *cli.Context) error {
 	// read from file if -file is provided
-	content, _, err := persist.ReadFile(c.String("file"))
+	content, _, err := localfs.ReadFile(c.String("file"))
 	if err != nil {
 		return err
 	}
@@ -251,14 +252,11 @@ var cmdSeeds = func(c *cli.Context) error {
 // cmdGet displays the editable content of an entry
 func cmdGet(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists, err := app.GetEntryFromStorage(util.GetSlug(name))
+	entry, err := app.GetEntryFromStorage(util.GetSlug(name))
 	if err != nil {
 		return err
 	}
-	if !exists {
-		return nil
-	}
-	content, err := app.RenderYamlDown(entry)
+	content, err := template.RenderYamlDown(entry)
 	if err != nil {
 		return err
 	}

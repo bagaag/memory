@@ -10,15 +10,15 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package app
 
 import (
-	"errors"
 	"fmt"
 	"memory/app/config"
+	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/persist"
+	"memory/app/template"
 	"memory/util"
 	"os"
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -95,30 +95,18 @@ func DeleteEntry(slug string) (bool, error) {
 }
 
 // GetEntryFromStorage returns a single entry suitable for editing or throws an error.
-func GetEntryFromStorage(slug string) (model.Entry, bool, error) {
+func GetEntryFromStorage(slug string) (model.Entry, error) {
 	// check for modified and unsaved entry first
 	pendingSave, exists := data.Names[slug]
 	if exists {
-		return pendingSave, true, nil
-	}
-	// make sure entry exists in storage
-	if !persist.EntryExists(slug) {
-		return model.Entry{}, false, nil
+		return pendingSave, nil
 	}
 	// read entry content from storage
-	content, modified, err := persist.ReadEntry(slug)
+	entry, err := persist.ReadEntry(slug)
 	if err != nil {
-		return model.Entry{}, false, err
+		return model.Entry{}, err
 	}
-	// parse entry content into Entry
-	entry, err := ParseYamlDown(content)
-	if err != nil {
-		return model.Entry{}, true, err
-	}
-	entry.Modified = modified
-	//TODO: remove this and implement caching if it seems to happen too often
-	fmt.Println("Read", slug, "from storage")
-	return entry, true, nil
+	return entry, nil
 }
 
 // Init reads data stored on the file system and initializes application variables.
@@ -133,18 +121,18 @@ func Init(homeDir string) error {
 		homeDir = util.GetHomeDir() + string(os.PathSeparator) + config.MemoryHome
 	}
 	config.MemoryHome = homeDir
-	if err := persist.InitHome(); err != nil {
+	if err := localfs.InitHome(); err != nil {
 		return err
 	}
 	// load config
-	if persist.PathExists(config.SettingsPath()) {
+	if util.PathExists(config.SettingsPath()) {
 		settings := config.StoredSettings{}
-		if err := persist.Load(config.SettingsPath(), &settings); err != nil {
+		if err := localfs.Load(config.SettingsPath(), &settings); err != nil {
 			return fmt.Errorf("failed to load settings: %s", err.Error())
 		}
 		config.UpdateSettingsFromStorage(settings)
 		// initialize settings file
-	} else if err := persist.Save(config.SettingsPath(), config.GetSettingsForStorage()); err != nil {
+	} else if err := localfs.Save(config.SettingsPath(), config.GetSettingsForStorage()); err != nil {
 		return fmt.Errorf("failed to initialize settings: %w", err)
 	}
 	// load data
@@ -170,10 +158,7 @@ func RenameEntry(name string, newName string) error {
 	if exists {
 		return fmt.Errorf("an entry named %s (or very similar) already exists", newName)
 	}
-	entry, exists, err := GetEntryFromStorage(slug)
-	if !exists {
-		return fmt.Errorf("an entry named %s does not exist", name)
-	}
+	entry, err := GetEntryFromStorage(slug)
 	if err != nil {
 		return err
 	}
@@ -192,7 +177,7 @@ func Save() error {
 	data.lock()
 	defer data.unlock()
 	for slug, entry := range data.Names {
-		content, err := RenderYamlDown(entry)
+		content, err := template.RenderYamlDown(entry)
 		if err != nil {
 			return fmt.Errorf("failed to render %s: %s", slug, err.Error())
 		}
@@ -209,38 +194,6 @@ func Save() error {
 		}
 	}
 	deletes = []string{}
-	return nil
-}
-
-// ValidateEntryName returns an error if the given name is invalid.
-func ValidateEntryName(name string) error {
-	if len(name) == 0 {
-		return errors.New("name cannot be an empty string")
-	}
-	if strings.HasPrefix(name, " ") {
-		return errors.New("name cannot start with a space")
-	}
-	if strings.HasSuffix(name, " ") {
-		return errors.New("name cannot end with a space")
-	}
-	if strings.Contains(name, "\n") || strings.Contains(name, "\r") {
-		return errors.New("name cannot contain line breaks")
-	}
-	if strings.Contains(name, "\t") {
-		return errors.New("name cannot contain tab characters")
-	}
-	if strings.Contains(name, "  ") {
-		return errors.New("name cannot more than 1 consecutive space")
-	}
-	if strings.HasPrefix(name, "!") {
-		return errors.New("name cannot start with a ! character")
-	}
-	if strings.Contains(name, "[") || strings.Contains(name, "]") {
-		return errors.New("name cannot contain [ or ]")
-	}
-	if len(name) > config.MaxNameLen {
-		return fmt.Errorf("name length cannot exceed %d", config.MaxNameLen)
-	}
 	return nil
 }
 

@@ -69,11 +69,11 @@ func getIndexMapping() mapping.IndexMapping {
 	return mapping
 }
 
-// inistSearch should be called to setup search on application
+// initSearch should be called to setup search on application
 // startup after entries are loaded/available.
 func initSearch() error {
 	indexPath := config.SearchPath()
-	if persist.PathExists(indexPath) {
+	if util.PathExists(indexPath) {
 		// open existing search index
 		var err error
 		searchIndex, err = bleve.Open(indexPath)
@@ -105,7 +105,9 @@ func RemoveFromIndex(slug string) error {
 
 // RebuildSearchIndex creates a new search index of current entries.
 func RebuildSearchIndex() error {
-	persist.DeleteSearchIndex()
+	if err := util.DelTree(config.SearchPath()); err != nil {
+		return err
+	}
 	// create new search index
 	var err error
 	searchIndex, err = bleve.New(config.SearchPath(), getIndexMapping())
@@ -119,11 +121,8 @@ func RebuildSearchIndex() error {
 		return err
 	}
 	for _, slug := range slugs {
-		entry, exists, err := GetEntryFromStorage(slug)
-		if !exists {
-			fmt.Println("Error:", slug, "listed from storage but not found")
-			continue
-		} else if err != nil {
+		entry, err := GetEntryFromStorage(slug)
+		if err != nil {
 			fmt.Println("Error reading", slug, err)
 			continue
 		}
@@ -300,14 +299,14 @@ func buildSearchQuery(types model.EntryTypes, search string, onlyTags []string, 
 	}
 	// add keyword search
 	if search != "" {
-		qbool := bleve.NewBooleanQuery()
+		boolQ := bleve.NewBooleanQuery()
 		qname := bleve.NewMatchQuery(search)
 		qname.SetField("Name")
 		qname.SetBoost(3)
-		qother := bleve.NewMatchQuery(search)
-		qbool.AddShould(qname)
-		qbool.AddShould(qother)
-		boolQuery.AddMust(qbool)
+		otherQ := bleve.NewMatchQuery(search)
+		boolQ.AddShould(qname)
+		boolQ.AddShould(otherQ)
+		boolQuery.AddMust(boolQ)
 	}
 	// add "get all" query if no other queries are being applied
 	if types.HasAll() && len(anyTags) == 0 && len(onlyTags) == 0 && search == "" {

@@ -8,6 +8,9 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package model
 
 import (
+	"errors"
+	"fmt"
+	"memory/app/config"
 	"memory/util"
 	"strings"
 	"time"
@@ -125,4 +128,36 @@ func (t EntryTypes) String() string {
 // naming conflict with .Type.
 func (entry *Entry) BleveType() string {
 	return "Entry"
+}
+
+// ValidateEntryName returns an error if the given name is invalid.
+func ValidateEntryName(name string) error {
+	if len(name) == 0 {
+		return errors.New("name cannot be an empty string")
+	}
+	if strings.HasPrefix(name, " ") {
+		return errors.New("name cannot start with a space")
+	}
+	if strings.HasSuffix(name, " ") {
+		return errors.New("name cannot end with a space")
+	}
+	if strings.Contains(name, "\n") || strings.Contains(name, "\r") {
+		return errors.New("name cannot contain line breaks")
+	}
+	if strings.Contains(name, "\t") {
+		return errors.New("name cannot contain tab characters")
+	}
+	if strings.Contains(name, "  ") {
+		return errors.New("name cannot more than 1 consecutive space")
+	}
+	if strings.HasPrefix(name, "!") {
+		return errors.New("name cannot start with a ! character")
+	}
+	if strings.Contains(name, "[") || strings.Contains(name, "]") {
+		return errors.New("name cannot contain [ or ]")
+	}
+	if len(name) > config.MaxNameLen {
+		return fmt.Errorf("name length cannot exceed %d", config.MaxNameLen)
+	}
+	return nil
 }

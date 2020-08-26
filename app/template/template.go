@@ -9,7 +9,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
    string representations consisting of attributes in yaml frontmatter followed
    by the description. */
 
-package app
+package template
 
 import (
 	"bytes"
@@ -99,7 +99,7 @@ func ParseYamlDown(content string) (model.Entry, error) {
 	}
 	// validate Name
 	if name, exists := attrs["Name"]; exists {
-		if err := ValidateEntryName(name); err != nil {
+		if err := model.ValidateEntryName(name); err != nil {
 			return model.Entry{}, err
 		}
 		entry.Name = name

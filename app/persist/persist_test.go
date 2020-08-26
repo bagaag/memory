@@ -10,6 +10,7 @@ package persist
 import (
 	"io/ioutil"
 	"memory/app/config"
+	"memory/app/localfs"
 	"memory/util"
 	"os"
 	"testing"
@@ -31,12 +32,12 @@ func TestRoundTrip(t *testing.T) {
 	path := "test_file"
 	sub := subStruct{"child", time.Now()}
 	v := testStruct{"test", sub, time.Now()}
-	if err := Save(path, v); err != nil {
+	if err := localfs.Save(path, v); err != nil {
 		t.Errorf("Error saving file: %s", err)
 		return
 	}
 	var v2 testStruct
-	if err := Load(path, &v2); err != nil {
+	if err := localfs.Load(path, &v2); err != nil {
 		t.Errorf("Error saving file: %s", err)
 		return
 	}
@@ -58,14 +59,14 @@ func TestTempFile(t *testing.T) {
 	os.Mkdir(tempDir+string(os.PathSeparator)+"tmp", 0740)
 	defer util.DelTree(tempDir)
 	temp := "one\n\two\three"
-	if path, err := CreateTempFile("test-temp-file", temp); err != nil {
+	if path, err := localfs.CreateTempFile("test-temp-file", temp); err != nil {
 		t.Errorf("%s", err)
 	} else {
-		if s, _, err2 := ReadFile(path); err2 != nil {
+		if s, _, err2 := localfs.ReadFile(path); err2 != nil {
 			t.Errorf("%s", err)
 		} else if s != temp {
 			t.Errorf("%s != %s", temp, s)
 		}
-		RemoveFile(path)
+		localfs.RemoveFile(path)
 	}
 }

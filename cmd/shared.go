@@ -14,8 +14,10 @@ import (
 	"fmt"
 	"memory/app"
 	"memory/app/config"
+	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/persist"
+	"memory/app/template"
 	"memory/util"
 	"os"
 	"os/exec"
@@ -65,7 +67,7 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 		return model.Entry{}, tempFile, err
 	}
 	// get contents of temp file
-	edited, _, err := persist.ReadFile(tempFile)
+	edited, _, err := localfs.ReadFile(tempFile)
 	if err != nil {
 		return model.Entry{}, tempFile, err
 	}
@@ -79,18 +81,24 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 		if _, exists := app.GetEntryFromIndex(editedEntry.Slug()); exists {
 			return editedEntry, tempFile, errors.New("entry named '" + editedEntry.Name + "' already exists")
 		}
-		app.DeleteEntry(origEntry.Slug())
+		if _, err = app.DeleteEntry(origEntry.Slug()); err != nil {
+			return editedEntry, tempFile, err
+		}
 		//TODO: update links on rename
 	}
 	// save changes
-	app.PutEntry(editedEntry)
-	app.Save()
+	if err = app.PutEntry(editedEntry); err != nil {
+		return editedEntry, tempFile, err
+	}
+	if err = app.Save(); err != nil {
+		return editedEntry, tempFile, err
+	}
 	return editedEntry, "", nil
 }
 
 // parseEntryText converts text to an entry and validates the name.
 func parseEntryText(entryText string) (model.Entry, error) {
-	editedEntry, err := app.ParseYamlDown(entryText)
+	editedEntry, err := template.ParseYamlDown(entryText)
 	if err != nil {
 		return model.Entry{}, err
 	}
@@ -139,25 +147,27 @@ func deleteEntry(name string, ask bool) bool {
 func useEditor(entry model.Entry, existingTempFile string) (string, error) {
 	tmp := existingTempFile
 	var err error
+	var content string
 	slug := entry.Slug()
 	if tmp == "" {
-		fileName := persist.EntryFileName(slug)
-		if persist.PathExists(fileName) {
-			content, _, err := persist.ReadFile(persist.EntryFileName(slug))
-			if err != nil {
-				return "", fmt.Errorf("failed to read entry from storage: %s", err.Error())
+		editableEntry, err := persist.ReadEntry(slug)
+		if err != nil {
+			if _, notFound := err.(persist.EntryNotFound); !notFound {
+				return "", err
 			}
-			tmp, err = persist.CreateTempFile(slug, content)
+			// entry doesn't exist
+			content, err = template.RenderYamlDown(entry)
 		} else {
-			content, err := app.RenderYamlDown(entry)
-			if err != nil {
-				return "", fmt.Errorf("failed to render new entry: %s", err.Error())
-			}
-			tmp, err = persist.CreateTempFile(slug, content)
+			// entry exists
+			content, err = template.RenderYamlDown(editableEntry)
 		}
-	}
-	if err != nil {
-		return "", fmt.Errorf("failed to create temporary file: %s", err.Error())
+		if err != nil {
+			return "", fmt.Errorf("failed to render new entry: %s", err.Error())
+		}
+		tmp, err = localfs.CreateTempFile(slug, content)
+		if err != nil {
+			return "", fmt.Errorf("failed to create temporary file: %s", err.Error())
+		}
 	}
 	cmd := exec.Command(config.EditorCommand, tmp)
 	cmd.Stdin = os.Stdin

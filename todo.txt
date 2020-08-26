@@ -1,4 +1,4 @@
-- move models to package and create pluggable interfaces forpersistance and search
+- move models to package and create pluggable interfaces for persistance and search
 - finish timeline command
 - slugify tags
 - entering incorrect interactive cmd exits app
