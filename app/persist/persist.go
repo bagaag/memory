@@ -12,20 +12,34 @@ package persist
 import (
 	"bufio"
 	"fmt"
-	config "memory/app/config"
+	"memory/app/config"
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/template"
-	util "memory/util"
+	"memory/util"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
+// Persist is an interface used to support pluggable entry persistence implementations.
+type Persist interface {
+	// ReadEntry returns an Entry identified by slug populated from storage.
+	ReadEntry(slug string) (model.Entry, error)
+	// EntrySlugs returns a string slice containing the slug of every entry in storage.
+	EntrySlugs() ([]string, error)
+	// SaveEntry writes the entry to storage.
+	SaveEntry(entry model.Entry)
+	// DeleteEntry removes the entry idenfied by slug from storage.
+	DeleteEntry(slug string) error
+}
+
+// EntryNotFound is a custom error type to indicate that a requested entry is not found in storage.
 type EntryNotFound struct {
 	Slug string
 }
 
+// Error implements the error interface.
 func (e EntryNotFound) Error() string {
 	return fmt.Sprintf("entry %s not found", e.Slug)
 }
@@ -71,17 +85,18 @@ func entryFileName(slug string) string {
 }
 
 // SaveEntry saves the text content of an entry to storage
-func SaveEntry(slug string, content string) error {
-	f, err := os.Create(entryFileName(slug))
+func SaveEntry(entry model.Entry) error {
+	f, err := os.Create(entryFileName(entry.Slug()))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 	w := bufio.NewWriter(f)
-	if _, err = w.WriteString(content); err != nil {
+	if content, err := template.RenderYamlDown(entry); err != nil {
 		return err
-	}
-	if err = w.Flush(); err != nil {
+	} else if _, err = w.WriteString(content); err != nil {
+		return err
+	} else if err = w.Flush(); err != nil {
 		return err
 	}
 	return nil

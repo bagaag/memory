@@ -15,7 +15,6 @@ import (
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/persist"
-	"memory/app/template"
 	"memory/util"
 	"os"
 	"sort"
@@ -177,12 +176,7 @@ func Save() error {
 	data.lock()
 	defer data.unlock()
 	for slug, entry := range data.Names {
-		content, err := template.RenderYamlDown(entry)
-		if err != nil {
-			return fmt.Errorf("failed to render %s: %s", slug, err.Error())
-		}
-		err = persist.SaveEntry(slug, content)
-		if err != nil {
+		if err := persist.SaveEntry(entry); err != nil {
 			return fmt.Errorf("failed to save %s: %s", slug, err.Error())
 		}
 	}
