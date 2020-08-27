@@ -22,6 +22,7 @@ import (
 	"github.com/blevesearch/bleve/mapping"
 	"github.com/blevesearch/bleve/search/query"
 	"memory/app/config"
+	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/persist"
 	"memory/util"
@@ -29,6 +30,8 @@ import (
 
 	"github.com/blevesearch/bleve"
 )
+
+var persister persist.Persister
 
 var searchIndex bleve.Index
 
@@ -73,7 +76,7 @@ func getIndexMapping() mapping.IndexMapping {
 // startup after entries are loaded/available.
 func initSearch() error {
 	indexPath := config.SearchPath()
-	if util.PathExists(indexPath) {
+	if localfs.PathExists(indexPath) {
 		// open existing search index
 		var err error
 		searchIndex, err = bleve.Open(indexPath)
@@ -86,11 +89,6 @@ func initSearch() error {
 		}
 	}
 	return nil
-}
-
-// closeSearch should be called at app shutdown
-func closeSearch() error {
-	return searchIndex.Close()
 }
 
 // IndexEntry adds or updates an entry in the index
@@ -116,12 +114,12 @@ func RebuildSearchIndex() error {
 	}
 	fmt.Println("Indexing entries for search...")
 	count := 0
-	slugs, err := persist.EntrySlugs()
+	slugs, err := persister.EntrySlugs()
 	if err != nil {
 		return err
 	}
 	for _, slug := range slugs {
-		entry, err := GetEntryFromStorage(slug)
+		entry, err := persister.ReadEntry(slug)
 		if err != nil {
 			fmt.Println("Error reading", slug, err)
 			continue
@@ -133,7 +131,9 @@ func RebuildSearchIndex() error {
 		}
 	}
 	fmt.Println("Parsing links...")
-	populateLinks()
+	if err := UpdateLinks(); err != nil {
+		return err
+	}
 	fmt.Printf("Indexed %d out of %d entries.\n", count, len(slugs))
 	return nil
 }
@@ -175,6 +175,7 @@ func GetEntryFromIndex(slug string) (model.Entry, bool) {
 		case "LinkedFrom":
 			entry.LinkedFrom = append(entry.LinkedFrom, string(field.Value()))
 		case "Start":
+			//TODO: figure out why bleve stores and returns a date value from a text mapped field containing 'yyyy-mm-dd' value
 			entry.Start = string(field.Value())
 		case "End":
 			entry.End = string(field.Value())

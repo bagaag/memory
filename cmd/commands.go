@@ -34,13 +34,15 @@ var cmdInit = func(c *cli.Context) error {
 	// init app data
 	home := c.String("home")
 	if home != "" {
-		if !util.PathExists(home) {
+		if !localfs.PathExists(home) {
 			fmt.Printf("Error: Home directory does not exist: %s\n", home)
 			os.Exit(1)
 		}
 		fmt.Printf("Using '%s' as home directory.\n", home)
 	}
-	err := app.Init(home)
+	var err error
+	// initialize Memory app object
+	memApp, err = app.Init(home)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -95,8 +97,7 @@ var cmdAdd = func(c *cli.Context) error {
 	if !success {
 		return errors.New("failed to add a valid entry")
 	}
-	app.PutEntry(entry)
-	app.Save()
+	memApp.PutEntry(entry)
 	app.UpdateLinks()
 	fmt.Println("Added new entry:", entry.Name)
 	display.EntryTable(entry)
@@ -115,8 +116,9 @@ var cmdPut = func(c *cli.Context) error {
 		return err
 	}
 	_, existed := app.GetEntryFromIndex(entry.Slug())
-	app.PutEntry(entry)
-	app.Save()
+	if err := memApp.PutEntry(entry); err != nil {
+		return err
+	}
 	if existed {
 		fmt.Println("Updated entry:", entry.Name)
 	} else {
@@ -143,11 +145,16 @@ var cmdEdit = func(c *cli.Context) error {
 		if exists {
 			return errors.New("cannot rename entry; an entry with this name already exists")
 		}
-		app.DeleteEntry(util.GetSlug(origEntry.Name))
+		if err := memApp.DeleteEntry(util.GetSlug(origEntry.Name)); err != nil {
+			return err
+		}
 	}
-	app.PutEntry(entry)
-	app.Save()
-	app.UpdateLinks()
+	if err := memApp.PutEntry(entry); err != nil {
+		return err
+	}
+	if err := app.UpdateLinks(); err != nil {
+		return err
+	}
 	fmt.Println("Updated entry:", entry.Name)
 	display.EntryTable(entry)
 	return nil
@@ -252,7 +259,7 @@ var cmdSeeds = func(c *cli.Context) error {
 // cmdGet displays the editable content of an entry
 func cmdGet(c *cli.Context) error {
 	name := c.String("name")
-	entry, err := app.GetEntryFromStorage(util.GetSlug(name))
+	entry, err := memApp.GetEntry(util.GetSlug(name))
 	if err != nil {
 		return err
 	}

@@ -13,17 +13,16 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"memory/app/config"
-	"memory/util"
 	"os"
-	"sync"
 	"time"
 )
 
-var lock sync.Mutex
+var Slash = string(os.PathSeparator)
 
 // marshal the object into an io.Reader
 func marshal(v interface{}) (io.Reader, error) {
@@ -36,8 +35,6 @@ func marshal(v interface{}) (io.Reader, error) {
 
 // Save saves a representation of v to the file at path
 func Save(path string, v interface{}) error {
-	lock.Lock()
-	defer lock.Unlock()
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -58,8 +55,6 @@ func unmarshal(r io.Reader, v interface{}) error {
 
 // Load the json file at path into v
 func Load(path string, v interface{}) error {
-	lock.Lock()
-	defer lock.Unlock()
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -109,33 +104,29 @@ func RemoveFile(path string) error {
 
 // InitHome checks that the home, entries and temp folders exist and creates them if needed.
 func InitHome() error {
-	if !util.PathExists(config.MemoryHome) {
+	if !PathExists(config.MemoryHome) {
 		err := os.MkdirAll(config.EntriesPath(), 0740)
 		if err != nil {
 			fmt.Println("Failed to initialize settings folder at", config.MemoryHome)
 			panic(err)
 		}
 	}
-	if !util.PathExists(config.EntriesPath()) {
-		err := os.MkdirAll(config.EntriesPath(), 0740)
-		if err != nil {
-			fmt.Println("Failed to initialize entries folder at", config.EntriesPath())
-			panic(err)
-		}
-	}
-	if !util.PathExists(config.TempPath()) {
+	if !PathExists(config.TempPath()) {
 		err := os.MkdirAll(config.TempPath(), 0740)
 		if err != nil {
 			fmt.Println("Failed to initialize temp folder at", config.TempPath())
 			panic(err)
 		}
 	}
-	if !util.PathExists(config.FilesPath()) {
-		err := os.MkdirAll(config.FilesPath(), 0740)
-		if err != nil {
-			fmt.Println("Failed to initialize files folder at", config.FilesPath())
-			panic(err)
+	return nil
+}
+
+// PathExists returns true if the given path exists.
+func PathExists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false
 		}
 	}
-	return nil
+	return true
 }

@@ -27,6 +27,7 @@ import (
 
 var linkExp *regexp.Regexp
 
+// TODO: Move link stuff into Memory struct
 // ParseLinks looks for [Name] links within the given string and
 // returns a slice of index pairs found. Links that cannot be
 // resolved are replaced with a ! prefix in the parsed return
@@ -96,17 +97,9 @@ func ResolveLinks(links []string) []model.Entry {
 	return resolved
 }
 
-// UpdateLinks runs populateLinks with a lock, for use when an entry is updated
-// and we want to refresh the links.
-func UpdateLinks() {
-	data.lock()
-	populateLinks()
-	data.unlock()
-}
-
-// populateLinks populates the LinksTo and LinkedFrom slices on all entries by
+// UpdateLinks populates the LinksTo and LinkedFrom slices on all entries by
 // parsing the descriptions for links.
-func populateLinks() error {
+func UpdateLinks() error {
 	fromLinks := make(map[string][]string)
 	slugs, err := IndexedSlugs()
 	if err != nil {
@@ -121,7 +114,9 @@ func populateLinks() error {
 			entry.Description = newDesc
 			entry.LinksTo = links
 			entry.LinkedFrom = []string{}
-			IndexEntry(entry)
+			if err := IndexEntry(entry); err != nil {
+				return err
+			}
 			fromSlug := entry.Slug()
 			// add links in reverse direction
 			for _, toSlug := range links {
@@ -140,7 +135,9 @@ func populateLinks() error {
 		entry, exists := GetEntryFromIndex(slug)
 		if exists {
 			entry.LinkedFrom = linkedFrom
-			IndexEntry(entry)
+			if err := IndexEntry(entry); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -150,8 +147,6 @@ func populateLinks() error {
 // exist; the name of the page containing the link is the key.
 func BrokenLinks() (map[string][]string, error) {
 	ret := make(map[string][]string)
-	data.lock()
-	defer data.unlock()
 	slugs, err := IndexedSlugs()
 	if err != nil {
 		return ret, err

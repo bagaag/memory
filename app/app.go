@@ -16,19 +16,12 @@ import (
 	"memory/app/model"
 	"memory/app/persist"
 	"memory/util"
-	"os"
 	"sort"
-	"sync"
 )
 
-var inited = false // run Init() only once
-
-var deletes = []string{}
-
-// root contains all the data to be saved
-type root struct {
-	Names map[string]model.Entry
-	mux   sync.Mutex
+type Memory struct {
+	Persist persist.Persister // stores Entries
+	//Search *search.Search // provides Entry search
 }
 
 // EntryResults is used to contain the results of GetEntries and the settings used
@@ -57,140 +50,97 @@ const SortRecent = SortOrder(1)
 // SortName sorts entries alphabetically by name
 const SortName = SortOrder(2)
 
-// The data variable stores all the things that get saved.
-var data = root{
-	Names: make(map[string]model.Entry),
-}
-
-func (r *root) lock() {
-	r.mux.Lock()
-}
-func (r *root) unlock() {
-	r.mux.Unlock()
-}
-
-// PutEntry adds or replaces the given entry in the collection.
-func PutEntry(entry model.Entry) error {
-	data.lock()
-	slug := entry.Slug()
-	data.Names[slug] = entry
-	data.unlock()
-	return IndexEntry(entry)
-}
-
-// DeleteEntry removes the specified entry from the collection.
-func DeleteEntry(slug string) (bool, error) {
-	data.lock()
-	defer data.unlock()
-	_, exists := GetEntryFromIndex(slug)
-	if !exists {
-		return false, nil
-	}
-	if _, exists := data.Names[slug]; exists {
-		delete(data.Names, slug)
-	}
-	deletes = append(deletes, slug)
-	return true, RemoveFromIndex(slug)
-}
-
-// GetEntryFromStorage returns a single entry suitable for editing or throws an error.
-func GetEntryFromStorage(slug string) (model.Entry, error) {
-	// check for modified and unsaved entry first
-	pendingSave, exists := data.Names[slug]
-	if exists {
-		return pendingSave, nil
-	}
-	// read entry content from storage
-	entry, err := persist.ReadEntry(slug)
-	if err != nil {
-		return model.Entry{}, err
-	}
-	return entry, nil
-}
-
 // Init reads data stored on the file system and initializes application variables.
 // homeDir provides an optional override to the default location of ~/.memory where
-// settings and data are stored.
-func Init(homeDir string) error {
-	if inited {
-		return nil
+// settings and local data are stored. Pass "" for homeDir to use config value.
+func Init(homeDir string) (*Memory, error) {
+	// allow for optional override of default home location
+	if homeDir != "" {
+		config.MemoryHome = homeDir
+	} else {
+		config.MemoryHome = util.GetHomeDir() + localfs.Slash + config.MemoryHome
 	}
-	// set home dir
-	if homeDir == "" {
-		homeDir = util.GetHomeDir() + string(os.PathSeparator) + config.MemoryHome
-	}
-	config.MemoryHome = homeDir
 	if err := localfs.InitHome(); err != nil {
-		return err
+		return nil, err
 	}
 	// load config
-	if util.PathExists(config.SettingsPath()) {
+	// TODO: use DI for config & replace w/ https://github.com/uber-go/config
+	if localfs.PathExists(config.SettingsPath()) {
 		settings := config.StoredSettings{}
 		if err := localfs.Load(config.SettingsPath(), &settings); err != nil {
-			return fmt.Errorf("failed to load settings: %s", err.Error())
+			return nil, fmt.Errorf("failed to load settings: %s", err.Error())
 		}
 		config.UpdateSettingsFromStorage(settings)
 		// initialize settings file
 	} else if err := localfs.Save(config.SettingsPath(), config.GetSettingsForStorage()); err != nil {
-		return fmt.Errorf("failed to initialize settings: %w", err)
+		return nil, fmt.Errorf("failed to initialize settings: %w", err)
 	}
 	// load data
+	// TODO: use config to determine which DI implementations to use
+	m := Memory{}
+	simpleCfg := persist.SimplePersistConfig{
+		EntryPath: config.EntriesPath(),
+		FilePath:  config.FilesPath(),
+		EntryExt:  config.EntryExt,
+	}
+	if sp, err := persist.NewSimplePersist(simpleCfg); err != nil {
+		return nil, err
+	} else {
+		m.Persist = &sp
+	}
+	// TODO: use DI for search
 	if err := initSearch(); err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+// PutEntry adds or replaces the given entry in the collection.
+func (m *Memory) PutEntry(entry model.Entry) error {
+	if err := m.Persist.SaveEntry(entry); err != nil {
 		return err
 	}
-	inited = true
-	return nil
+	return IndexEntry(entry)
 }
 
-// Shutdown performs cleanup prior to exiting application
-func Shutdown() error {
-	return closeSearch()
+// DeleteEntry removes the specified entry from the collection.
+func (m *Memory) DeleteEntry(slug string) error {
+	_, exists := GetEntryFromIndex(slug)
+	if !exists {
+		return persist.EntryNotFound{Slug: slug}
+	}
+	if err := m.Persist.DeleteEntry(slug); err != nil {
+		return err
+	}
+	return RemoveFromIndex(slug)
 }
 
-// RenameEntry changes an entry name and updates associated data structures.
-func RenameEntry(name string, newName string) error {
-	data.lock()
-	slug := util.GetSlug(name)
+// GetEntryFromStorage returns a single entry suitable for editing or throws an error.
+func (m *Memory) GetEntry(slug string) (model.Entry, error) {
+	return m.Persist.ReadEntry(slug)
+}
+
+// RenameEntry changes an entry name and updates associated data structures, returning
+// the slug for the renamed entry.
+func (m *Memory) RenameEntry(oldName string, newName string) (model.Entry, error) {
+	oldSlug := util.GetSlug(oldName)
 	newSlug := util.GetSlug(newName)
-	defer data.unlock()
 	_, exists := GetEntryFromIndex(newSlug)
 	if exists {
-		return fmt.Errorf("an entry named %s (or very similar) already exists", newName)
+		return model.Entry{}, fmt.Errorf("an entry named %s (or very similar) already exists", newName)
 	}
-	entry, err := GetEntryFromStorage(slug)
-	if err != nil {
-		return err
+	if err := RemoveFromIndex(oldSlug); err != nil {
+		return model.Entry{}, err
 	}
-	if _, err = DeleteEntry(slug); err != nil {
-		return err
+	var err error
+	var entry model.Entry
+	if entry, err = m.Persist.RenameEntry(oldName, newName); err != nil {
+		return entry, err
 	}
-	entry.Name = newName
-	if err = PutEntry(entry); err != nil {
-		return err
-	}
-	return nil
+	return entry, nil
 }
 
-// Save writes application data to file storage.
-func Save() error {
-	data.lock()
-	defer data.unlock()
-	for slug, entry := range data.Names {
-		if err := persist.SaveEntry(entry); err != nil {
-			return fmt.Errorf("failed to save %s: %s", slug, err.Error())
-		}
-	}
-	data.Names = make(map[string]model.Entry)
-	for _, slug := range deletes {
-		err := persist.DeleteEntry(slug)
-		if err != nil {
-			return fmt.Errorf("failed to delete %s: %s", slug, err.Error())
-		}
-	}
-	deletes = []string{}
-	return nil
-}
-
+// TODO: move to simple search impl
 // filterType returns true if the entry is one of the true EntryTypes
 func filterType(entry model.Entry, types model.EntryTypes) bool {
 	if types.HasAll() {
@@ -211,6 +161,7 @@ func filterType(entry model.Entry, types model.EntryTypes) bool {
 	return false
 }
 
+// TODO: move to simple search impl
 func sortEntries(arr []model.Entry, field string, ascending bool) {
 	var less func(i, j int) bool
 	switch field {
@@ -232,6 +183,7 @@ func sortEntries(arr []model.Entry, field string, ascending bool) {
 	sort.Slice(arr, less)
 }
 
+// TODO: move to simple search impl
 // GetSortedNames returns a slice of all entry names sorted alphabetically.
 func GetSortedNames() ([]string, error) {
 	keys, err := IndexedSlugs()

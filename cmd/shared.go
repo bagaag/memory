@@ -81,16 +81,13 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 		if _, exists := app.GetEntryFromIndex(editedEntry.Slug()); exists {
 			return editedEntry, tempFile, errors.New("entry named '" + editedEntry.Name + "' already exists")
 		}
-		if _, err = app.DeleteEntry(origEntry.Slug()); err != nil {
+		if err = memApp.DeleteEntry(origEntry.Slug()); err != nil {
 			return editedEntry, tempFile, err
 		}
 		//TODO: update links on rename
 	}
 	// save changes
-	if err = app.PutEntry(editedEntry); err != nil {
-		return editedEntry, tempFile, err
-	}
-	if err = app.Save(); err != nil {
+	if err = memApp.PutEntry(editedEntry); err != nil {
 		return editedEntry, tempFile, err
 	}
 	return editedEntry, "", nil
@@ -124,14 +121,7 @@ func deleteEntry(name string, ask bool) bool {
 		}
 	}
 	if s == "y" {
-		if deleted, err := app.DeleteEntry(util.GetSlug(name)); !deleted {
-			fmt.Println("Entry '" + name + "' could not be found.")
-			return false
-		} else if err != nil {
-			fmt.Println("Error:", err)
-			return false
-		}
-		if err := app.Save(); err != nil {
+		if err := memApp.DeleteEntry(util.GetSlug(name)); err != nil {
 			fmt.Println("Error:", err)
 			return false
 		}
@@ -150,7 +140,7 @@ func useEditor(entry model.Entry, existingTempFile string) (string, error) {
 	var content string
 	slug := entry.Slug()
 	if tmp == "" {
-		editableEntry, err := persist.ReadEntry(slug)
+		editableEntry, err := memApp.GetEntry(slug)
 		if err != nil {
 			if _, notFound := err.(persist.EntryNotFound); !notFound {
 				return "", err

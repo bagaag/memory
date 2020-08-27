@@ -8,7 +8,6 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package util
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gosimple/slug"
 	"os"
@@ -153,14 +152,4 @@ func DelTree(dir string) error {
 // GetSlug converts a string into a slug
 func GetSlug(s string) string {
 	return slug.Make(s)
-}
-
-// PathExists returns true if the given path exists.
-func PathExists(path string) bool {
-	if _, err := os.Stat(path); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return false
-		}
-	}
-	return true
 }
