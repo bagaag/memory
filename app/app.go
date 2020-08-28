@@ -15,6 +15,7 @@ import (
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/persist"
+	"memory/impl"
 	"memory/util"
 	"sort"
 )
@@ -78,12 +79,12 @@ func Init(homeDir string) (*Memory, error) {
 	// load data
 	// TODO: use config to determine which DI implementations to use
 	m := Memory{}
-	simpleCfg := persist.SimplePersistConfig{
+	simpleCfg := impl.SimplePersistConfig{
 		EntryPath: config.EntriesPath(),
 		FilePath:  config.FilesPath(),
 		EntryExt:  config.EntryExt,
 	}
-	if sp, err := persist.NewSimplePersist(simpleCfg); err != nil {
+	if sp, err := impl.NewSimplePersist(simpleCfg); err != nil {
 		return nil, err
 	} else {
 		m.Persist = &sp

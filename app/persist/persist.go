@@ -11,7 +11,6 @@ package persist
 
 import (
 	"fmt"
-	"memory/app/config"
 	"memory/app/model"
 )
 
@@ -38,9 +37,4 @@ type EntryNotFound struct {
 // Error implements the error interface.
 func (e EntryNotFound) Error() string {
 	return fmt.Sprintf("entry %s not found", e.Slug)
-}
-
-// entryFileName returns the storage identifier for an entry given the slug
-func entryFileName(slug string) string {
-	return config.EntriesPath() + config.Slash + slug + config.EntryExt
 }

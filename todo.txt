@@ -1,4 +1,9 @@
 - move models to package and create pluggable interfaces for persistance and search
+    - move Persister to app pkg
+    - move SimplePersist to sibling pkg
+    - move links stuff into app struct
+    - move tags stuff into app struct
+    - refactor search into interface and impl
 - finish timeline command
 - slugify tags
 - entering incorrect interactive cmd exits app
