@@ -12,11 +12,9 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"memory/app"
 	"memory/app/config"
 	"memory/app/localfs"
 	"memory/app/model"
-	"memory/app/persist"
 	"memory/app/template"
 	"memory/util"
 	"os"
@@ -78,7 +76,7 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 	}
 	// handle name change
 	if origEntry.Name != editedEntry.Name {
-		if _, exists := app.GetEntryFromIndex(editedEntry.Slug()); exists {
+		if exists, _ := memApp.EntryExists(editedEntry.Slug()); exists {
 			return editedEntry, tempFile, errors.New("entry named '" + editedEntry.Name + "' already exists")
 		}
 		if err = memApp.DeleteEntry(origEntry.Slug()); err != nil {
@@ -109,7 +107,7 @@ func parseEntryText(entryText string) (model.Entry, error) {
 func deleteEntry(name string, ask bool) bool {
 	s := "y"
 	var err error
-	if _, exists := app.GetEntryFromIndex(util.GetSlug(name)); !exists {
+	if exists, _ := memApp.EntryExists(util.GetSlug(name)); !exists {
 		fmt.Println("Entry '" + name + "' could not be found.")
 		return false
 	}
@@ -142,7 +140,7 @@ func useEditor(entry model.Entry, existingTempFile string) (string, error) {
 	if tmp == "" {
 		editableEntry, err := memApp.GetEntry(slug)
 		if err != nil {
-			if _, notFound := err.(persist.EntryNotFound); !notFound {
+			if _, notFound := err.(model.EntryNotFound); !notFound {
 				return "", err
 			}
 			// entry doesn't exist

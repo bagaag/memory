@@ -12,9 +12,7 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"memory/app"
 	"memory/app/model"
-	"memory/cmd/display"
 	"memory/util"
 	"strconv"
 	"strings"
@@ -60,7 +58,7 @@ func detailInteractiveLoop(entry model.Entry) bool {
 	// interactive loop
 	for {
 		// display detail and prompt for command
-		display.EntryTable(entry)
+		EntryTable(entry)
 		hasLinks := len(entry.LinksTo)+len(entry.LinkedFrom) > 0
 		if hasLinks {
 			fmt.Println("Entry options: [e]dit, [d]elete, [l]inks, [b]ack, [Q]uit")
@@ -80,9 +78,9 @@ func detailInteractiveLoop(entry model.Entry) bool {
 				return false
 			}
 			// update entry in case things changed in the subloops
-			var exists bool
-			entry, exists = app.GetEntryFromIndex(util.GetSlug(entry.Name))
-			if !exists {
+			var err error
+			entry, err = memApp.GetEntry(util.GetSlug(entry.Name))
+			if err != nil {
 				return false
 			}
 		} else if strings.ToLower(cmd) == "d" {
@@ -107,7 +105,7 @@ func linksInteractiveLoop(entry model.Entry) bool {
 		links := append(entry.LinksTo, entry.LinkedFrom...)
 		linkCount := len(links)
 		// display links and prompt for command
-		display.LinksMenu(entry)
+		LinksMenu(entry)
 		fmt.Println("\nLinks options: # for details, [b]ack or [Q]uit")
 		cmd := getSingleCharInput()
 		if num, err := strconv.Atoi(cmd); err == nil {
@@ -116,11 +114,12 @@ func linksInteractiveLoop(entry model.Entry) bool {
 				fmt.Printf("Error: %d is not a valid link number.\n", num)
 			} else {
 				linkName := links[ix]
-				nextDetail, exists := app.GetEntryFromIndex(util.GetSlug(linkName))
-				if exists {
+				nextDetail, err := memApp.GetEntry(linkName)
+				if err != nil {
 					detailInteractiveLoop(nextDetail)
+					// refresh entry being inspected after detail loop
 					var exists bool
-					entry, exists = app.GetEntryFromIndex(entry.Slug())
+					entry, err = memApp.GetEntry(entry.Slug())
 					if !exists {
 						return false
 					}
@@ -141,7 +140,7 @@ func linksInteractiveLoop(entry model.Entry) bool {
 }
 
 // listInteractiveLoop handles the paging of ls results.
-func listInteractiveLoop(pager display.EntryPager) error {
+func listInteractiveLoop(pager EntryPager) error {
 	for {
 		input := strings.ToLower(getSingleCharInput())
 		if input == "n" {
@@ -210,7 +209,7 @@ func continueEditingPrompt(err error) bool {
 // for the given non-existant entry name. Returns true if [b]ack or false
 // if [Q]uit
 func missingLinkInteractiveLoop(name string) bool {
-	display.MissingLinkMenu(name)
+	MissingLinkMenu(name)
 	types := []string{model.EntryTypeEvent, model.EntryTypePerson, model.EntryTypePlace, model.EntryTypeThing, model.EntryTypeNote}
 	for {
 		c := getSingleCharInput()

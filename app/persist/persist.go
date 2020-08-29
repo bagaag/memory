@@ -10,7 +10,6 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package persist
 
 import (
-	"fmt"
 	"memory/app/model"
 )
 
@@ -27,14 +26,4 @@ type Persister interface {
 	DeleteEntry(slug string) error
 	// RenameEntry moves an entry from one slug to another, reflecting a new name
 	RenameEntry(oldName string, newName string) (model.Entry, error)
-}
-
-// EntryNotFound is a custom error type to indicate that a requested entry is not found in storage.
-type EntryNotFound struct {
-	Slug string
-}
-
-// Error implements the error interface.
-func (e EntryNotFound) Error() string {
-	return fmt.Sprintf("entry %s not found", e.Slug)
 }

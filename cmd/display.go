@@ -9,13 +9,13 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 This file supports display of the CLI application.
 */
 
-package display
+package cmd
 
 import (
 	"fmt"
 	"math"
-	"memory/app"
 	"memory/app/model"
+	"memory/app/search"
 	"memory/util"
 	"os"
 	"strings"
@@ -38,17 +38,17 @@ type Page struct {
 
 // EntryPager is a stateful object to handle paging and display of an entry list
 type EntryPager struct {
-	Results         app.EntryResults // entries to display and filter settings
-	pageCount       int              // total number of pages
-	renderedEntries [][]string       // rendered output for each entry on the current page
-	header          []string         // rendered page header
-	footer          []string         // rendered page footer
-	screenHeight    int              // screen height at last render
-	screenWidth     int              // screen width at last render
+	Results         search.EntryResults // entries to display and filter settings
+	pageCount       int                 // total number of pages
+	renderedEntries [][]string          // rendered output for each entry on the current page
+	header          []string            // rendered page header
+	footer          []string            // rendered page footer
+	screenHeight    int                 // screen height at last render
+	screenWidth     int                 // screen width at last render
 }
 
 // NewEntryPager prepares a list of entries for paged display.
-func NewEntryPager(results app.EntryResults) EntryPager {
+func NewEntryPager(results search.EntryResults) EntryPager {
 	pager := EntryPager{Results: results}
 	updateRenderings(&pager)
 	return pager
@@ -95,7 +95,7 @@ func (pager *EntryPager) Next() bool {
 func setPageNumber(pager *EntryPager, pageNo int) bool {
 	pager.Results.PageNo = pageNo
 	var err error
-	pager.Results, err = app.RefreshResults(pager.Results)
+	pager.Results, err = memApp.Search.RefreshResults(pager.Results)
 	if err != nil {
 		fmt.Printf("ERROR at setPageNumber(%d): %s", pageNo, err)
 		return false
@@ -159,9 +159,9 @@ func renderHeader(pager *EntryPager) []string {
 		pager.Results.Total, pager.Results.PageNo, pager.pageCount, types)
 	lines = append(lines, info)
 	// add sort
-	if pager.Results.Sort == app.SortName {
+	if pager.Results.Sort == search.SortName {
 		lines = addSettingToHeader(pager, lines, "Sort", "Name")
-	} else if pager.Results.Sort == app.SortRecent {
+	} else if pager.Results.Sort == search.SortRecent {
 		lines = addSettingToHeader(pager, lines, "Sort", "Most recent")
 	} else {
 		lines = addSettingToHeader(pager, lines, "Sort", "Score")
@@ -345,7 +345,7 @@ func LinksMenu(entry model.Entry) {
 	if len(entry.LinksTo) > 0 {
 		fmt.Println("  Links to:")
 		for _, name := range entry.LinksTo {
-			entry, _ := app.GetEntryFromIndex(util.GetSlug(name))
+			entry, _ := memApp.GetEntry(util.GetSlug(name))
 			if entry.Type == "" {
 				entry.Type = "?"
 			}
@@ -357,7 +357,7 @@ func LinksMenu(entry model.Entry) {
 	if len(entry.LinkedFrom) > 0 {
 		fmt.Println("  Linked from:")
 		for _, name := range entry.LinkedFrom {
-			entry, _ := app.GetEntryFromIndex(name)
+			entry, _ := memApp.GetEntry(name)
 			if entry.Type == "" {
 				entry.Type = "?"
 			}
@@ -385,5 +385,5 @@ func MissingLinkMenu(name string) {
 //TODO: Flesh out the welcome journey
 func WelcomeMessage() {
 	fmt.Printf("Welcome. You have %d entries under management. "+
-		"Type 'help' for assistance.\n", app.EntryCount())
+		"Type 'help' for assistance.\n", memApp.Search.IndexedCount())
 }

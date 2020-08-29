@@ -1,15 +1,15 @@
 - move models to package and create pluggable interfaces for persistance and search
-    - move Persister to app pkg
-    - move SimplePersist to sibling pkg
-    - move links stuff into app struct
-    - move tags stuff into app struct
-    - refactor search into interface and impl
+    - move links into separate struct that saves to json file and incrementally updates on put
+    - re-implement simple searcher
+    - implement https://github.com/uber-go/config
+    - load impls in app based on config
+    - clean up tests
+- fix: most recently edited entry showing up at the bottom of ls results
 - finish timeline command
 - slugify tags
-- entering incorrect interactive cmd exits app
+- fix: entering incorrect interactive cmd exits app
 - capture create & mod dates in file rather than relying on file date; remove from file when editing
 - file management (list, view, add, delete)
-- Ctrl-C sometimes hangs (can't reproduce)
 - bleve contrib: add match and match_phrase query types to cmd/query
 - bleve contrib: keyword mapping test case & ask/report
 - bleve contrib: date mapping storage example in docs

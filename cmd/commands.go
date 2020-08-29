@@ -16,8 +16,8 @@ import (
 	"memory/app/config"
 	"memory/app/localfs"
 	"memory/app/model"
+	"memory/app/search"
 	"memory/app/template"
-	"memory/cmd/display"
 	"memory/util"
 	"os"
 	"strings"
@@ -62,7 +62,7 @@ var cmdInit = func(c *cli.Context) error {
 	}
 	if len(c.Args()) == 0 {
 		// say hi if we're in interactive mode
-		display.WelcomeMessage()
+		WelcomeMessage()
 		inited = true
 	}
 	return nil
@@ -98,9 +98,9 @@ var cmdAdd = func(c *cli.Context) error {
 		return errors.New("failed to add a valid entry")
 	}
 	memApp.PutEntry(entry)
-	app.UpdateLinks()
+	memApp.UpdateLinks()
 	fmt.Println("Added new entry:", entry.Name)
-	display.EntryTable(entry)
+	EntryTable(entry)
 	return nil
 }
 
@@ -115,7 +115,7 @@ var cmdPut = func(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	_, existed := app.GetEntryFromIndex(entry.Slug())
+	existed, _ := memApp.EntryExists(entry.Slug())
 	if err := memApp.PutEntry(entry); err != nil {
 		return err
 	}
@@ -124,15 +124,15 @@ var cmdPut = func(c *cli.Context) error {
 	} else {
 		fmt.Println("Added new entry:", entry.Name)
 	}
-	display.EntryTable(entry)
+	EntryTable(entry)
 	return nil
 }
 
 // cmdEdit edits an existing entry, identified by name.
 var cmdEdit = func(c *cli.Context) error {
 	name := c.String("name")
-	origEntry, exists := app.GetEntryFromIndex(util.GetSlug(name))
-	if !exists {
+	origEntry, err := memApp.GetEntry(util.GetSlug(name))
+	if _, notFound := err.(model.EntryNotFound); !notFound {
 		return fmt.Errorf("there is no entry named '%s'", name)
 	}
 	entry, success := editEntryValidationLoop(origEntry)
@@ -140,23 +140,18 @@ var cmdEdit = func(c *cli.Context) error {
 		return errors.New("failed to add a valid entry")
 	}
 	if origEntry.Name != entry.Name {
-		// entry being renamed
-		_, exists := app.GetEntryFromIndex(util.GetSlug(origEntry.Name))
-		if exists {
-			return errors.New("cannot rename entry; an entry with this name already exists")
-		}
-		if err := memApp.DeleteEntry(util.GetSlug(origEntry.Name)); err != nil {
+		if entry, err = memApp.RenameEntry(origEntry.Name, entry.Name); err != nil {
 			return err
 		}
 	}
 	if err := memApp.PutEntry(entry); err != nil {
 		return err
 	}
-	if err := app.UpdateLinks(); err != nil {
+	if err := memApp.UpdateLinks(); err != nil {
 		return err
 	}
 	fmt.Println("Updated entry:", entry.Name)
-	display.EntryTable(entry)
+	EntryTable(entry)
 	return nil
 }
 
@@ -165,13 +160,13 @@ var cmdDelete = func(c *cli.Context) error {
 	name := c.String("name")
 	ask := !c.Bool("yes")
 	deleteEntry(name, ask)
-	app.UpdateLinks()
+	memApp.UpdateLinks()
 	return nil
 }
 
 // cmdList lists entries, optionally filtered and sorted.
 var cmdList = func(c *cli.Context) error {
-	search := c.String("search")
+	keywords := c.String("search")
 	anyTags := []string{}
 	if c.IsSet("tags") {
 		anyTags = strings.Split(c.String("any-tags"), ",")
@@ -181,31 +176,32 @@ var cmdList = func(c *cli.Context) error {
 		onlyTags = strings.Split(c.String("tag"), ",")
 	}
 	// defaults to most recent first
-	order := app.SortRecent
+	order := search.SortRecent
 	// unless -search is provided, then default to score
 	if !c.IsSet("order") && c.IsSet("search") {
-		order = app.SortScore
+		order = search.SortScore
 	}
 	// or override defaults with -order
 	if c.IsSet("order") {
 		switch c.String("order") {
 		case "name":
-			order = app.SortName
+			order = search.SortName
 		case "score":
-			order = app.SortScore
+			order = search.SortScore
 		case "recent":
-			order = app.SortRecent
+			order = search.SortRecent
 		}
 	}
 
 	types := c.String("types")
 	if interactive {
-		pageSize := display.ListPageSize()
-		results, err := app.SearchEntries(parseTypes(types), search, onlyTags, anyTags, order, 1, pageSize)
+		pageSize := ListPageSize()
+		results, err := memApp.Search.SearchEntries(parseTypes(types), keywords, onlyTags, anyTags,
+			order, 1, pageSize)
 		if err != nil {
 			return err
 		}
-		pager := display.NewEntryPager(results)
+		pager := NewEntryPager(results)
 		pager.PrintPage()
 		if len(results.Entries) == 0 {
 			return nil
@@ -215,11 +211,12 @@ var cmdList = func(c *cli.Context) error {
 		}
 	} else {
 		pageSize := util.MaxInt32
-		results, err := app.SearchEntries(parseTypes(types), search, onlyTags, anyTags, order, 1, pageSize)
+		results, err := memApp.Search.SearchEntries(parseTypes(types), keywords, onlyTags, anyTags,
+			order, 1, pageSize)
 		if err != nil {
 			return err
 		}
-		display.EntryTables(results.Entries)
+		EntryTables(results.Entries)
 	}
 	return nil
 }
@@ -227,15 +224,14 @@ var cmdList = func(c *cli.Context) error {
 // cmdLinks lists the entries linked to and from an existing entry, identified by name.
 var cmdLinks = func(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists := app.GetEntryFromIndex(util.GetSlug(name))
-	if !exists {
-		fmt.Println("Cannot find entry named", name)
-		return errors.New("entry not found")
+	entry, err := memApp.GetEntry(util.GetSlug(name))
+	if err != nil {
+		return err
 	}
 	if interactive {
 		linksInteractiveLoop(entry)
 	} else {
-		display.LinksMenu(entry)
+		LinksMenu(entry)
 		fmt.Println("")
 	}
 	return nil
@@ -243,7 +239,7 @@ var cmdLinks = func(c *cli.Context) error {
 
 // cmdSeeds lists links to entries that don't exist yet
 var cmdSeeds = func(c *cli.Context) error {
-	brokenLinks, err := app.BrokenLinks()
+	brokenLinks, err := memApp.BrokenLinks()
 	if err != nil {
 		return err
 	}
@@ -274,24 +270,24 @@ func cmdGet(c *cli.Context) error {
 // cmdDetail displays details of an entry and, if interactive, provides a menu prompt.
 func cmdDetail(c *cli.Context) error {
 	name := c.String("name")
-	entry, exists := app.GetEntryFromIndex(util.GetSlug(name))
-	if !exists {
+	entry, err := memApp.GetEntry(util.GetSlug(name))
+	if err != nil {
 		return fmt.Errorf("entry named '%s' does not exist", name)
 	} else if interactive {
 		detailInteractiveLoop(entry)
 	} else {
-		display.EntryTable(entry)
+		EntryTable(entry)
 	}
 	return nil
 }
 
 // cmdTags displays a list of tags in use and how many entries each has
 func cmdTags(c *cli.Context) error {
-	tags, err := app.GetTags()
+	tags, err := memApp.GetTags()
 	if err != nil {
 		return err
 	}
-	sorted := app.GetSortedTags(tags)
+	sorted := memApp.GetSortedTags(tags)
 	fmt.Println()
 	for _, tag := range sorted {
 		names := tags[tag]
@@ -304,13 +300,13 @@ func cmdTags(c *cli.Context) error {
 
 // cmdRebuild clears out the bleve index and rebuilds it from source entry files.
 func cmdRebuild(c *cli.Context) error {
-	return app.RebuildSearchIndex()
+	return memApp.Search.RebuildSearchIndex()
 }
 
 // cmdTimeline displays a timeline of entries based on start and end attributes.
 func cmdTimeline(c *cli.Context) error {
 	// tl -from -to -level year,month,day
-	entries, err := app.Timeline(c.String("start"), c.String("end"))
+	entries, err := memApp.Search.Timeline(c.String("start"), c.String("end"))
 	if err != nil {
 		return err
 	}

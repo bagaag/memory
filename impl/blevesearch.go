@@ -5,16 +5,14 @@ Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
-/*
-This file contains functions associated with the search feature, currently
-backed by https://blevesearch.com
-*/
+/* Searcher implementation using the go-native Bleve search engine. */
 
-package app
+package impl
 
 import (
 	"errors"
 	"fmt"
+	"github.com/blevesearch/bleve"
 	"github.com/blevesearch/bleve/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/analysis/analyzer/standard"
 	"github.com/blevesearch/bleve/analysis/lang/en"
@@ -25,19 +23,30 @@ import (
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/persist"
+	"memory/app/search"
 	"memory/util"
 	"strings"
-
-	"github.com/blevesearch/bleve"
 )
 
-var persister persist.Persister
+type BleveSearch struct {
+	persister   persist.Persister
+	indexDir    string
+	searchIndex bleve.Index
+}
 
-var searchIndex bleve.Index
+type BleveSearchConfig struct {
+	IndexDir  string
+	Persister persist.Persister
+}
 
-// getIndexMapping returns the default index settings for
+func NewBleveSearch(cfg BleveSearchConfig) (BleveSearch, error) {
+	b := BleveSearch{persister: cfg.Persister, indexDir: cfg.IndexDir}
+	return b, b.initSearch()
+}
+
+// indexMapping returns the default index settings for
 // new and existing search indexes.
-func getIndexMapping() mapping.IndexMapping {
+func (b *BleveSearch) indexMapping() mapping.IndexMapping {
 	entryMapping := bleve.NewDocumentMapping()
 	englishTextFieldMapping := bleve.NewTextFieldMapping()
 	englishTextFieldMapping.Analyzer = en.AnalyzerName
@@ -74,17 +83,17 @@ func getIndexMapping() mapping.IndexMapping {
 
 // initSearch should be called to setup search on application
 // startup after entries are loaded/available.
-func initSearch() error {
+func (b *BleveSearch) initSearch() error {
 	indexPath := config.SearchPath()
 	if localfs.PathExists(indexPath) {
 		// open existing search index
 		var err error
-		searchIndex, err = bleve.Open(indexPath)
+		b.searchIndex, err = bleve.Open(indexPath)
 		if err != nil {
 			return err
 		}
 	} else {
-		if err := RebuildSearchIndex(); err != nil {
+		if err := b.RebuildSearchIndex(); err != nil {
 			return err
 		}
 	}
@@ -92,57 +101,53 @@ func initSearch() error {
 }
 
 // IndexEntry adds or updates an entry in the index
-func IndexEntry(entry model.Entry) error {
-	return searchIndex.Index(entry.Slug(), entry)
+func (b *BleveSearch) IndexEntry(entry model.Entry) error {
+	return b.searchIndex.Index(entry.Slug(), entry)
 }
 
 // RemoveFromIndex removes an entry from the index
-func RemoveFromIndex(slug string) error {
-	return searchIndex.Delete(slug)
+func (b *BleveSearch) RemoveFromIndex(slug string) error {
+	return b.searchIndex.Delete(slug)
 }
 
 // RebuildSearchIndex creates a new search index of current entries.
-func RebuildSearchIndex() error {
+func (b *BleveSearch) RebuildSearchIndex() error {
 	if err := util.DelTree(config.SearchPath()); err != nil {
 		return err
 	}
 	// create new search index
 	var err error
-	searchIndex, err = bleve.New(config.SearchPath(), getIndexMapping())
+	b.searchIndex, err = bleve.New(config.SearchPath(), b.indexMapping())
 	if err != nil {
 		return err
 	}
 	fmt.Println("Indexing entries for search...")
 	count := 0
-	slugs, err := persister.EntrySlugs()
+	slugs, err := b.persister.EntrySlugs()
 	if err != nil {
 		return err
 	}
 	for _, slug := range slugs {
-		entry, err := persister.ReadEntry(slug)
+		entry, err := b.persister.ReadEntry(slug)
 		if err != nil {
 			fmt.Println("Error reading", slug, err)
 			continue
 		}
-		if err := searchIndex.Index(slug, entry); err != nil {
+		if err := b.searchIndex.Index(slug, entry); err != nil {
 			fmt.Println("Error indexing:", err)
 		} else {
 			count = count + 1
 		}
-	}
-	fmt.Println("Parsing links...")
-	if err := UpdateLinks(); err != nil {
-		return err
 	}
 	fmt.Printf("Indexed %d out of %d entries.\n", count, len(slugs))
 	return nil
 }
 
 // IndexedSlugs returns a slice of slugs representing entries indexed for search.
-func IndexedSlugs() ([]string, error) {
+func (b *BleveSearch) IndexedSlugs() ([]string, error) {
 	q := bleve.NewMatchAllQuery()
 	req := bleve.NewSearchRequestOptions(q, util.MaxInt32, 0, false)
-	result, err := searchIndex.Search(req)
+	result, err := b.searchIndex.Search(req)
 	if err != nil {
 		return nil, err
 	}
@@ -154,10 +159,10 @@ func IndexedSlugs() ([]string, error) {
 }
 
 // GetEntryFromIndex returns an entry from the search index suitable for display.
-func GetEntryFromIndex(slug string) (model.Entry, bool) {
-	doc, err := searchIndex.Document(slug)
+func (b *BleveSearch) GetEntry(slug string) (model.Entry, error) {
+	doc, err := b.searchIndex.Document(slug)
 	if err != nil || doc == nil {
-		return model.Entry{}, false
+		return model.Entry{}, err
 	}
 	entry := model.NewEntry("", "", "", []string{})
 	for _, field := range doc.Fields {
@@ -198,41 +203,45 @@ func GetEntryFromIndex(slug string) (model.Entry, bool) {
 			}
 		}
 	}
-	return entry, true
+	return entry, nil
 }
 
 // IndexedCount returns the total number of entries in the search index.
-func IndexedCount() uint64 {
-	i, _ := searchIndex.DocCount()
+func (b *BleveSearch) IndexedCount() uint64 {
+	i, _ := b.searchIndex.DocCount()
 	return i
 }
 
 // SearchEntries returns a page of results based on multiple filters and search query.
-func SearchEntries(types model.EntryTypes, search string, onlyTags []string,
-	anyTags []string, sort SortOrder, pageNo int, pageSize int) (EntryResults, error) {
-	query := buildSearchQuery(types, search, onlyTags, anyTags)
+func (b *BleveSearch) SearchEntries(types model.EntryTypes, keywords string, onlyTags []string,
+	anyTags []string, sort search.SortOrder, pageNo int, pageSize int) (search.EntryResults, error) {
+	query := b.buildSearchQuery(types, keywords, onlyTags, anyTags)
 	req := bleve.NewSearchRequestOptions(query, pageSize, (pageNo-1)*pageSize, false)
-	if sort == SortName {
+	if sort == search.SortName {
 		req.SortBy([]string{"Name"})
-	} else if sort == SortRecent {
+	} else if sort == search.SortRecent {
 		req.SortBy([]string{"-Modified"})
 	} else {
 		req.SortBy([]string{"-_score"})
 	}
-	searchResult, err := searchIndex.Search(req)
+	searchResult, err := b.searchIndex.Search(req)
 	if err != nil {
-		return EntryResults{}, err
+		return search.EntryResults{}, err
 	}
 	ids := []string{}
 	for _, hit := range searchResult.Hits {
 		ids = append(ids, hit.ID)
 	}
-	results := EntryResults{Types: types, Search: search, AnyTags: anyTags, OnlyTags: onlyTags,
+	results := search.EntryResults{Types: types, Search: keywords, AnyTags: anyTags, OnlyTags: onlyTags,
 		Sort: sort, PageNo: pageNo, PageSize: pageSize, Total: searchResult.Total, Entries: []model.Entry{}}
 	for _, id := range ids {
-		entry, exists := GetEntryFromIndex(id)
-		if !exists {
-			return EntryResults{}, errors.New("Document in search results not found in index: " + id)
+		entry, err := b.GetEntry(id)
+		if err != nil {
+			if _, notFound := err.(model.EntryNotFound); notFound {
+				return search.EntryResults{}, errors.New("Document in search results not found in index: " + id)
+			} else {
+				return search.EntryResults{}, err
+			}
 		}
 		results.Entries = append(results.Entries, entry)
 	}
@@ -240,11 +249,11 @@ func SearchEntries(types model.EntryTypes, search string, onlyTags []string,
 }
 
 // RefreshResults re-runs a search to freshen the results in case any entries have been modified.
-func RefreshResults(stale EntryResults) (EntryResults, error) {
-	return SearchEntries(stale.Types, stale.Search, stale.OnlyTags, stale.AnyTags, stale.Sort, stale.PageNo, stale.PageSize)
+func (b *BleveSearch) RefreshResults(stale search.EntryResults) (search.EntryResults, error) {
+	return b.SearchEntries(stale.Types, stale.Search, stale.OnlyTags, stale.AnyTags, stale.Sort, stale.PageNo, stale.PageSize)
 }
 
-func buildSearchQuery(types model.EntryTypes, search string, onlyTags []string, anyTags []string) *query.BooleanQuery {
+func (b *BleveSearch) buildSearchQuery(types model.EntryTypes, keywords string, onlyTags []string, anyTags []string) *query.BooleanQuery {
 	boolQuery := bleve.NewBooleanQuery()
 	// process types
 	if !types.HasAll() {
@@ -299,18 +308,18 @@ func buildSearchQuery(types model.EntryTypes, search string, onlyTags []string, 
 		boolQuery.AddMust(tagsQuery)
 	}
 	// add keyword search
-	if search != "" {
+	if keywords != "" {
 		boolQ := bleve.NewBooleanQuery()
-		qname := bleve.NewMatchQuery(search)
+		qname := bleve.NewMatchQuery(keywords)
 		qname.SetField("Name")
 		qname.SetBoost(3)
-		otherQ := bleve.NewMatchQuery(search)
+		otherQ := bleve.NewMatchQuery(keywords)
 		boolQ.AddShould(qname)
 		boolQ.AddShould(otherQ)
 		boolQuery.AddMust(boolQ)
 	}
 	// add "get all" query if no other queries are being applied
-	if types.HasAll() && len(anyTags) == 0 && len(onlyTags) == 0 && search == "" {
+	if types.HasAll() && len(anyTags) == 0 && len(onlyTags) == 0 && keywords == "" {
 		all := bleve.NewMatchAllQuery()
 		boolQuery.AddMust(all)
 	}
@@ -318,13 +327,13 @@ func buildSearchQuery(types model.EntryTypes, search string, onlyTags []string, 
 }
 
 // EntryCount returns the total number of entries in the index.
-func EntryCount() uint64 {
-	c, _ := searchIndex.DocCount()
+func (b *BleveSearch) EntryCount() uint64 {
+	c, _ := b.searchIndex.DocCount()
 	return c
 }
 
 // Timeline performs a search based on start and end attributes
-func Timeline(start string, end string) ([]model.Entry, error) {
+func (b *BleveSearch) Timeline(start string, end string) ([]model.Entry, error) {
 	ret := []model.Entry{}
 	boolQuery := bleve.NewBooleanQuery()
 	if start != "" {
@@ -338,13 +347,13 @@ func Timeline(start string, end string) ([]model.Entry, error) {
 		boolQuery.AddMust(endQ)
 	}
 	req := bleve.NewSearchRequestOptions(boolQuery, util.MaxInt32, 0, false)
-	result, err := searchIndex.Search(req)
+	result, err := b.searchIndex.Search(req)
 	if err != nil {
 		return ret, err
 	}
 	hits := result.Hits
 	for _, hit := range hits {
-		entry, _ := GetEntryFromIndex(hit.ID)
+		entry, _ := b.GetEntry(hit.ID)
 		ret = append(ret, entry)
 	}
 	return ret, nil

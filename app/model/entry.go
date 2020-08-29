@@ -161,3 +161,13 @@ func ValidateEntryName(name string) error {
 	}
 	return nil
 }
+
+// EntryNotFound is a custom error type to indicate that a requested entry is not found in storage.
+type EntryNotFound struct {
+	Slug string
+}
+
+// Error implements the error interface.
+func (e EntryNotFound) Error() string {
+	return fmt.Sprintf("entry %s not found", e.Slug)
+}
