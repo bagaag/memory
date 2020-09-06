@@ -1,5 +1,6 @@
 - move models to package and create pluggable interfaces for persistance and search
     - clean up tests
+    - RenderLinks never gets called
 - finish timeline command
 - slugify tags
 - fix: entering incorrect interactive cmd exits app
@@ -8,6 +9,7 @@
 - bleve contrib: add match and match_phrase query types to cmd/query
 - bleve contrib: keyword mapping test case & ask/report
 - bleve contrib: date mapping storage example in docs
+- refactor tests to simply call each pkg method - current tests are all over the place
 
 Files/Images
 - Trying to allow for linked docs and images without making it too fiddly
