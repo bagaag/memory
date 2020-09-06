@@ -14,9 +14,9 @@ import (
 	"fmt"
 	"github.com/chzyer/readline"
 	"github.com/urfave/cli"
-	"memory/app"
 	"memory/app/config"
 	"memory/app/localfs"
+	"memory/app/memory"
 	"memory/app/model"
 	"memory/app/search"
 	"memory/app/template"
@@ -42,7 +42,7 @@ var cmdInit = func(c *cli.Context) error {
 	}
 	var err error
 	// initialize Memory app object
-	memApp, err = app.Init(home)
+	memApp, err = memory.Init(home)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

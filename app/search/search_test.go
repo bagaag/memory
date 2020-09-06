@@ -5,12 +5,13 @@ Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
-package app
+package search
 
 import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"memory/app/memory"
 	"memory/app/model"
 	"memory/util"
 	"testing"
@@ -25,7 +26,7 @@ var setup1 = func(t *testing.T) func(t *testing.T) {
 	if err = initSearch(); err != nil {
 		t.Error(err)
 	}
-	Init(home)
+	memory.Init(home)
 	e1 := model.NewEntry(model.EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
 	e2 := model.NewEntry(model.EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
 	e3 := model.NewEntry(model.EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
@@ -44,7 +45,7 @@ var setup2 = func(t *testing.T) func(t *testing.T) {
 	if err = initSearch(); err != nil {
 		t.Error(err)
 	}
-	Init(home)
+	memory.Init(home)
 	e1 := model.NewEntry(model.EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
 	e2 := model.NewEntry(model.EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
 	e3 := model.NewEntry(model.EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})

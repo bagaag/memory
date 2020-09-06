@@ -10,7 +10,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package cmd
 
 import (
-	"memory/app"
+	"memory/app/memory"
 	"sort"
 
 	"github.com/chzyer/readline"
@@ -71,7 +71,7 @@ var completer = readline.NewPrefixCompleter(
 )
 
 var cliApp *cli.App
-var memApp *app.Memory
+var memApp *memory.Memory
 
 // interactive is true only if program is entered with no sub-command
 var interactive = false

@@ -9,7 +9,7 @@ package links
 
 import (
 	"io/ioutil"
-	"memory/app"
+	"memory/app/memory"
 	"memory/app/model"
 	"memory/util"
 	"testing"
@@ -22,7 +22,7 @@ func TestParseLinks(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	memApp, err := app.Init(tempDir)
+	memApp, err := memory.Init(tempDir)
 	if err != nil {
 		t.Error(err)
 	}
@@ -46,7 +46,7 @@ func TestParseLinks(t *testing.T) {
 	testParseLinks(t, memApp, 13, "[Exists](external)", "[Exists](external)", []string{})
 }
 
-func testParseLinks(t *testing.T, memApp *app.Memory, testNo int, input string, parsedExpected string, linksExpected []string) {
+func testParseLinks(t *testing.T, memApp *memory.Memory, testNo int, input string, parsedExpected string, linksExpected []string) {
 	links := ExtractLinks(input)
 	parsed := RenderLinks(input, memApp.EntryExists)
 	if parsed != parsedExpected {
@@ -86,7 +86,7 @@ func TestPopulateLinks(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	memApp, err := app.Init(tempDir)
+	memApp, err := memory.Init(tempDir)
 	if err != nil {
 		t.Error(err)
 	}
@@ -134,7 +134,7 @@ func TestBrokenLinks(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	memApp, err := app.Init(tempDir)
+	memApp, err := memory.Init(tempDir)
 	if err != nil {
 		t.Error(err)
 	}
