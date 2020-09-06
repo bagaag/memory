@@ -99,7 +99,7 @@ func TestGetEntry(t *testing.T) {
 		t.Error("Expected 'note #42', got", entry.Name)
 	}
 	entry, err = memApp.GetEntry("invalid")
-	if err != nil || !model.IsNotFound(err) {
+	if err == nil || !model.IsNotFound(err) {
 		t.Error("Expected nil entry, got", entry.Name, err)
 	}
 }
@@ -145,8 +145,8 @@ func TestPutNote(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if len(list) != 12 {
-		t.Errorf("Expected 12 notes (2nd pass), found %d", len(list))
+	if len(list) != 11 {
+		t.Errorf("Expected 11 notes (2nd pass), found %d", len(list))
 	}
 	gotNote, err := memApp.GetEntry(util.GetSlug("note #3"))
 	if err != nil {
@@ -208,13 +208,13 @@ func TestRename(t *testing.T) {
 func TestEdit(t *testing.T) {
 	memApp := setupTeardown2(t, false)
 	defer setupTeardown2(t, true)
-	entry, err := memApp.GetEntry("note #3")
+	entry, err := memApp.GetEntry(util.GetSlug("note #3"))
 	if err != nil {
 		t.Error("note #3 doesn't exist, but should", err)
 	}
 	entry.Description = "different"
 	memApp.PutEntry(entry)
-	entry2, err := memApp.GetEntry("note #3")
+	entry2, err := memApp.GetEntry(util.GetSlug("note #3"))
 	if err != nil {
 		t.Error("note #3 doesn't exist (2nd), but should")
 	}

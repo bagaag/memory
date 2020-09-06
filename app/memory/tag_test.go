@@ -16,9 +16,9 @@ import (
 /* This file contains tests for the functions in tag.go. */
 
 func TestGetTags(t *testing.T) {
-	setupTeardown1(t, false)
+	memApp := setupTeardown1(t, false)
 	defer setupTeardown1(t, true)
-	tags, err := GetTags()
+	tags, err := memApp.GetTags()
 	if err != nil {
 		t.Error(err)
 	}
@@ -38,13 +38,13 @@ func TestGetTags(t *testing.T) {
 }
 
 func TestGetSortedTags(t *testing.T) {
-	setupTeardown1(t, false)
+	memApp := setupTeardown1(t, false)
 	defer setupTeardown1(t, true)
-	tags, err := GetTags()
+	tags, err := memApp.GetTags()
 	if err != nil {
 		t.Error(err)
 	}
-	sorted := GetSortedTags(tags)
+	sorted := memApp.GetSortedTags(tags)
 	expect := []string{"all", "bythree", "even", "odd"}
 	if !util.StringSlicesEqual(sorted, expect) {
 		t.Errorf("Expected %s, got %s", expect, sorted)
@@ -52,18 +52,20 @@ func TestGetSortedTags(t *testing.T) {
 }
 
 func TestTagMatches(t *testing.T) {
+	memApp := setupTeardown2(t, false)
+	defer setupTeardown2(t, true)
 	entry := model.NewEntry(model.EntryTypeNote, "Test", "Description", []string{"one", "two"})
-	if !tagMatches(entry, []string{"one", "two"}, false) {
+	if !memApp.tagMatches(entry, []string{"one", "two"}, false) {
 		t.Errorf("Failed tagMatches test #1")
-	} else if !tagMatches(entry, []string{"one", "two"}, true) {
+	} else if !memApp.tagMatches(entry, []string{"one", "two"}, true) {
 		t.Errorf("Failed tagMatches test #2")
-	} else if tagMatches(entry, []string{"three", "four"}, false) {
+	} else if memApp.tagMatches(entry, []string{"three", "four"}, false) {
 		t.Errorf("Failed tagMatches test #3")
-	} else if tagMatches(entry, []string{"three", "four"}, true) {
+	} else if memApp.tagMatches(entry, []string{"three", "four"}, true) {
 		t.Errorf("Failed tagMatches test #4")
-	} else if tagMatches(entry, []string{"one", "three"}, true) {
+	} else if memApp.tagMatches(entry, []string{"one", "three"}, true) {
 		t.Errorf("Failed tagMatches test #5")
-	} else if !tagMatches(entry, []string{"one", "three"}, false) {
+	} else if !memApp.tagMatches(entry, []string{"one", "three"}, false) {
 		t.Errorf("Failed tagMatches test #6")
 	}
 }

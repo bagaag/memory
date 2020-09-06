@@ -165,7 +165,7 @@ type EntryNotFound struct {
 // IsNotFound returns true if err is an EntryNotFound error.
 func IsNotFound(err error) bool {
 	if err != nil {
-		if _, notFound := err.(EntryNotFound); !notFound {
+		if _, notFound := err.(EntryNotFound); notFound {
 			return true
 		}
 	}

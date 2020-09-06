@@ -118,6 +118,13 @@ func InitHome() error {
 			panic(err)
 		}
 	}
+	if !PathExists(config.SearchPath()) {
+		err := os.MkdirAll(config.SearchPath(), 0740)
+		if err != nil {
+			fmt.Println("Failed to initialize search folder at", config.SearchPath())
+			panic(err)
+		}
+	}
 	return nil
 }
 

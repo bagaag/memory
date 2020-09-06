@@ -5,10 +5,11 @@ Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
-package links
+package test
 
 import (
 	"io/ioutil"
+	links2 "memory/app/links"
 	"memory/app/memory"
 	"memory/app/model"
 	"memory/util"
@@ -25,6 +26,7 @@ func TestParseLinks(t *testing.T) {
 	memApp, err := memory.Init(tempDir)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	n1 := model.NewEntry(model.EntryTypeNote, "Exists", "", []string{})
 	memApp.PutEntry(n1)
@@ -47,8 +49,8 @@ func TestParseLinks(t *testing.T) {
 }
 
 func testParseLinks(t *testing.T, memApp *memory.Memory, testNo int, input string, parsedExpected string, linksExpected []string) {
-	links := ExtractLinks(input)
-	parsed := RenderLinks(input, memApp.EntryExists)
+	links := links2.ExtractLinks(input)
+	parsed := links2.RenderLinks(input, memApp.EntryExists)
 	if parsed != parsedExpected {
 		t.Errorf("#%d Expected parsed '%s', got '%s'", testNo, parsedExpected, parsed)
 	}
@@ -121,7 +123,7 @@ func TestPopulateLinks(t *testing.T) {
 	if !util.StringSlicesEqual(links, []string{"note-1", "note-2"}) {
 		t.Error("Expected n2.LinkedFrom==['note-1','note-2'], got", links)
 	}
-	links, _ = memApp.Search.ReverseLinks(n1.Slug())
+	links, _ = memApp.Search.ReverseLinks(n3.Slug())
 	if !util.StringSlicesEqual(links, []string{"note-2"}) {
 		t.Error("Expected n3.LinkedFrom==['note-2'], got", links)
 	}
@@ -148,13 +150,13 @@ func TestBrokenLinks(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if !util.StringSlicesEqual(entriesWithBL["Note 1"], []string{"note-a"}) {
-		t.Errorf("Expected %s, got %s", []string{"note-a"}, entriesWithBL["Note 1"])
+	if !util.StringSlicesEqual(entriesWithBL["note-1"], []string{"note-a"}) {
+		t.Errorf("Expected %s, got %s", []string{"note-a"}, entriesWithBL["note-1"])
 	}
-	if !util.StringSlicesEqual(entriesWithBL["Note 2"], []string{"has-a", "note-4"}) {
-		t.Errorf("Expected %s, got %s", []string{"has-a", "note-4"}, entriesWithBL["Note 2"])
+	if !util.StringSlicesEqual(entriesWithBL["note-2"], []string{"has-a", "note-4"}) {
+		t.Errorf("Expected %s, got %s", []string{"has-a", "note-4"}, entriesWithBL["note-2"])
 	}
-	if !util.StringSlicesEqual(entriesWithBL["Note 3"], []string{}) {
-		t.Errorf("Expected %s, got %s", []string{}, entriesWithBL["Note 1"])
+	if !util.StringSlicesEqual(entriesWithBL["note-3"], []string{}) {
+		t.Errorf("Expected %s, got %s", []string{}, entriesWithBL["note-3"])
 	}
 }
