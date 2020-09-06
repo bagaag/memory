@@ -16,7 +16,6 @@ import (
 	"memory/app/model"
 	"memory/app/persist"
 	"memory/app/search"
-	"memory/impl"
 	"memory/util"
 	"sort"
 )
@@ -52,25 +51,24 @@ func Init(homeDir string) (*Memory, error) {
 		return nil, fmt.Errorf("failed to initialize settings: %w", err)
 	}
 	// load data provider
-	// TODO: use config to determine which DI implementations to use
 	m := Memory{}
-	persistConfig := impl.SimplePersistConfig{
+	persistConfig := persist.SimplePersistConfig{
 		EntryPath: config.EntriesPath(),
 		FilePath:  config.FilesPath(),
 		EntryExt:  config.EntryExt,
 	}
-	persister, err := impl.NewSimplePersist(persistConfig)
+	persister, err := persist.NewSimplePersist(persistConfig)
 	if err != nil {
 		return nil, err
 	} else {
 		m.Persist = &persister
 	}
 	// load search provider
-	searchConfig := impl.BleveSearchConfig{
+	searchConfig := search.BleveSearchConfig{
 		IndexDir:  config.SearchPath(),
 		Persister: &persister,
 	}
-	searcher, err := impl.NewBleveSearch(searchConfig)
+	searcher, err := search.NewBleveSearch(searchConfig)
 	if err != nil {
 		return nil, err
 	} else {

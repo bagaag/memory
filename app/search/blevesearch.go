@@ -7,7 +7,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 
 /* Searcher implementation using the go-native Bleve search engine. */
 
-package impl
+package search
 
 import (
 	"errors"
@@ -23,7 +23,6 @@ import (
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/persist"
-	"memory/app/search"
 	"memory/util"
 	"strconv"
 	"strings"
@@ -383,33 +382,33 @@ func (b *BleveSearch) IndexedCount() uint64 {
 
 // SearchEntries returns a page of results based on multiple filters and search query.
 func (b *BleveSearch) SearchEntries(types model.EntryTypes, keywords string, onlyTags []string,
-	anyTags []string, sort search.SortOrder, pageNo int, pageSize int) (search.EntryResults, error) {
+	anyTags []string, sort SortOrder, pageNo int, pageSize int) (EntryResults, error) {
 	q := b.buildSearchQuery(types, keywords, onlyTags, anyTags)
 	req := bleve.NewSearchRequestOptions(q, pageSize, (pageNo-1)*pageSize, false)
-	if sort == search.SortName {
+	if sort == SortName {
 		req.SortBy([]string{"Name"})
-	} else if sort == search.SortRecent {
+	} else if sort == SortRecent {
 		req.SortBy([]string{"-Modified"})
 	} else {
 		req.SortBy([]string{"-_score"})
 	}
 	searchResult, err := b.searchIndex.Search(req)
 	if err != nil {
-		return search.EntryResults{}, err
+		return EntryResults{}, err
 	}
 	ids := []string{}
 	for _, hit := range searchResult.Hits {
 		ids = append(ids, hit.ID)
 	}
-	results := search.EntryResults{Types: types, Search: keywords, AnyTags: anyTags, OnlyTags: onlyTags,
+	results := EntryResults{Types: types, Search: keywords, AnyTags: anyTags, OnlyTags: onlyTags,
 		Sort: sort, PageNo: pageNo, PageSize: pageSize, Total: searchResult.Total, Entries: []model.Entry{}}
 	for _, id := range ids {
 		entry, err := b.Stub(id)
 		if err != nil {
 			if _, notFound := err.(model.EntryNotFound); notFound {
-				return search.EntryResults{}, errors.New("Document in search results not found in index: " + id)
+				return EntryResults{}, errors.New("Document in search results not found in index: " + id)
 			} else {
-				return search.EntryResults{}, err
+				return EntryResults{}, err
 			}
 		}
 		results.Entries = append(results.Entries, entry)
@@ -418,7 +417,7 @@ func (b *BleveSearch) SearchEntries(types model.EntryTypes, keywords string, onl
 }
 
 // RefreshResults re-runs a search to freshen the results in case any entries have been modified.
-func (b *BleveSearch) RefreshResults(stale search.EntryResults) (search.EntryResults, error) {
+func (b *BleveSearch) RefreshResults(stale EntryResults) (EntryResults, error) {
 	return b.SearchEntries(stale.Types, stale.Search, stale.OnlyTags, stale.AnyTags, stale.Sort, stale.PageNo, stale.PageSize)
 }
 

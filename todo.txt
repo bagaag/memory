@@ -1,5 +1,4 @@
 - move models to package and create pluggable interfaces for persistance and search
-    - load impls in app based on config
     - clean up tests
 - finish timeline command
 - slugify tags
