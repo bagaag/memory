@@ -80,10 +80,12 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 		if memApp.EntryExists(editedEntry.Slug()) {
 			return editedEntry, tempFile, errors.New("entry named '" + editedEntry.Name + "' already exists")
 		}
-		if err = memApp.DeleteEntry(origEntry.Slug()); err != nil {
-			return editedEntry, tempFile, err
+		if memApp.EntryExists(origEntry.Slug()) {
+			if err = memApp.DeleteEntry(origEntry.Slug()); err != nil {
+				return editedEntry, tempFile, err
+			}
+			//TODO: update links on rename
 		}
-		//TODO: update links on rename
 	}
 	// save changes
 	if !memApp.EntryExists(editedEntry.Slug()) {
