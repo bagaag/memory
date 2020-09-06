@@ -153,3 +153,28 @@ func DelTree(dir string) error {
 func GetSlug(s string) string {
 	return slug.Make(s)
 }
+
+// TruncateAtWhitespace returns a subset of the given string with a length equal to or less than
+// the given length at a whitespace breakpoint.
+func TruncateAtWhitespace(s string, maxLen int) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\t", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	for strings.Index(s, "  ") != -1 {
+		s = strings.ReplaceAll(s, "  ", " ")
+	}
+	if len(s) <= maxLen {
+		return s
+	}
+	words := strings.Split(s, " ")
+	ix := 0
+	length := 0
+	for {
+		length = length + len(words[ix]) + 1
+		if length > maxLen {
+			break
+		}
+		ix = ix + 1
+	}
+	return strings.Join(words[:ix], " ")
+}

@@ -17,15 +17,18 @@ import (
 )
 
 type Searcher interface {
+	BrokenLinks() (map[string][]string, error)
 	IndexEntry(entry model.Entry) error
-	RemoveFromIndex(slug string) error
-	RebuildSearchIndex() error
-	IndexedSlugs() ([]string, error)
-	GetEntry(slug string) (model.Entry, error)
 	IndexedCount() uint64
-	SearchEntries(types model.EntryTypes, search string, onlyTags []string, anyTags []string, sort SortOrder,
-		pageNo int, pageSize int) (EntryResults, error)
+	IndexedSlugs() ([]string, error)
+	Links(slug string) ([]string, error)
+	Rebuild() error
 	RefreshResults(stale EntryResults) (EntryResults, error)
+	RemoveFromIndex(slug string) error
+	ReverseLinks(string) ([]string, error)
+	SearchEntries(types model.EntryTypes, search string, onlyTags []string, anyTags []string,
+		sort SortOrder, pageNo int, pageSize int) (EntryResults, error)
+	Stub(slug string) (model.Entry, error)
 	Timeline(start string, end string) ([]model.Entry, error)
 }
 

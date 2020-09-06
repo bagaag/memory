@@ -339,12 +339,16 @@ func EntryTable(entry model.Entry) {
 
 // LinksMenu displays a list of entry names in its LinksTo
 // and LinkedFrom slices along with numbers for selection.
-func LinksMenu(entry model.Entry) {
+func LinksMenu(entry model.Entry) error {
 	fmt.Printf("\nLinks for %s [%s]\n\n", entry.Name, entry.Type)
 	ix := 1
-	if len(entry.LinksTo) > 0 {
+	entryLinks, err := memApp.Search.Links(entry.Slug())
+	if err != nil {
+		return err
+	}
+	if len(entryLinks) > 0 {
 		fmt.Println("  Links to:")
-		for _, name := range entry.LinksTo {
+		for _, name := range entryLinks {
 			entry, _ := memApp.GetEntry(util.GetSlug(name))
 			if entry.Type == "" {
 				entry.Type = "?"
@@ -354,9 +358,13 @@ func LinksMenu(entry model.Entry) {
 		}
 		fmt.Println("")
 	}
-	if len(entry.LinkedFrom) > 0 {
+	reverseLinks, err := memApp.Search.ReverseLinks(entry.Slug())
+	if err != nil {
+		return err
+	}
+	if len(reverseLinks) > 0 {
 		fmt.Println("  Linked from:")
-		for _, name := range entry.LinkedFrom {
+		for _, name := range reverseLinks {
 			entry, _ := memApp.GetEntry(name)
 			if entry.Type == "" {
 				entry.Type = "?"
@@ -366,6 +374,7 @@ func LinksMenu(entry model.Entry) {
 		}
 		fmt.Println("")
 	}
+	return nil
 }
 
 // MissingLinkMenu presents a list of entry types that can be created for

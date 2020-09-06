@@ -48,3 +48,28 @@ func TestStringSliceContains(t *testing.T) {
 		t.Errorf("%s should not contain %s", ss, "four")
 	}
 }
+
+func TestTruncateAtWhitespace(t *testing.T) {
+	sa := "One  two three\nFour five \t six seven."
+	sb := "One  two three\nFour five \t sixes seven."
+	s1 := TruncateAtWhitespace(sa, 28)
+	expect1 := "One two three Four five six"
+	if len(s1) > 28 {
+		t.Error("1. Expected len <= 28, got", len(s1))
+	}
+	if s1 != expect1 {
+		t.Error("1. Expected", expect1, "got", s1)
+	}
+	s2 := TruncateAtWhitespace(sb, 28)
+	expect2 := "One two three Four five"
+	if len(s2) > 28 {
+		t.Error("2. Expected len <= 28, got", len(s2))
+	}
+	if s2 != expect2 {
+		t.Error("2. Expected", expect2, "got", s2)
+	}
+	s3 := TruncateAtWhitespace("", 28)
+	if s3 != "" {
+		t.Error("3. Expected '', got ", s3)
+	}
+}

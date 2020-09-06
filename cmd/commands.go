@@ -12,6 +12,8 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"github.com/chzyer/readline"
+	"github.com/urfave/cli"
 	"memory/app"
 	"memory/app/config"
 	"memory/app/localfs"
@@ -21,9 +23,7 @@ import (
 	"memory/util"
 	"os"
 	"strings"
-
-	"github.com/chzyer/readline"
-	"github.com/urfave/cli"
+	"time"
 )
 
 // cmdInit runs before any of the cli-invoked cmd functions; exits program on error
@@ -97,8 +97,6 @@ var cmdAdd = func(c *cli.Context) error {
 	if !success {
 		return errors.New("failed to add a valid entry")
 	}
-	memApp.PutEntry(entry)
-	memApp.UpdateLinks()
 	fmt.Println("Added new entry:", entry.Name)
 	EntryTable(entry)
 	return nil
@@ -115,7 +113,11 @@ var cmdPut = func(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	existed, _ := memApp.EntryExists(entry.Slug())
+	existed := memApp.EntryExists(entry.Slug())
+	entry.Modified = time.Now()
+	if !existed {
+		entry.Created = entry.Modified
+	}
 	if err := memApp.PutEntry(entry); err != nil {
 		return err
 	}
@@ -147,9 +149,6 @@ var cmdEdit = func(c *cli.Context) error {
 	if err := memApp.PutEntry(entry); err != nil {
 		return err
 	}
-	if err := memApp.UpdateLinks(); err != nil {
-		return err
-	}
 	fmt.Println("Updated entry:", entry.Name)
 	EntryTable(entry)
 	return nil
@@ -160,7 +159,6 @@ var cmdDelete = func(c *cli.Context) error {
 	name := c.String("name")
 	ask := !c.Bool("yes")
 	deleteEntry(name, ask)
-	memApp.UpdateLinks()
 	return nil
 }
 
@@ -239,7 +237,7 @@ var cmdLinks = func(c *cli.Context) error {
 
 // cmdSeeds lists links to entries that don't exist yet
 var cmdSeeds = func(c *cli.Context) error {
-	brokenLinks, err := memApp.BrokenLinks()
+	brokenLinks, err := memApp.Search.BrokenLinks()
 	if err != nil {
 		return err
 	}
@@ -300,18 +298,15 @@ func cmdTags(c *cli.Context) error {
 
 // cmdRebuild clears out the bleve index and rebuilds it from source entry files.
 func cmdRebuild(c *cli.Context) error {
-	return memApp.Search.RebuildSearchIndex()
+	return memApp.Search.Rebuild()
 }
 
 // cmdTimeline displays a timeline of entries based on start and end attributes.
 func cmdTimeline(c *cli.Context) error {
 	// tl -from -to -level year,month,day
-	entries, err := memApp.Search.Timeline(c.String("start"), c.String("end"))
-	if err != nil {
-		return err
-	}
-	for _, entry := range entries {
-		fmt.Println(entry.Start, entry.End, entry.Name)
-	}
-	return nil
+	//entries, err := memApp.Search.Timeline(c.String("start"), c.String("end"))
+	//if err != nil {
+	//	return err
+	//}
+	return errors.New("not implemented")
 }

@@ -56,6 +56,12 @@ func (p *SimplePersist) slugToStoragePath(slug string) string {
 	return p.cfg.EntryPath + p.slash + slug + p.cfg.EntryExt
 }
 
+// EntryExists returns true if the given slug matches an indexed entry.
+func (p *SimplePersist) EntryExists(slug string) bool {
+	path := p.slugToStoragePath(slug)
+	return localfs.PathExists(path)
+}
+
 // ReadEntry returns an Entry identified by slug populated from storage.
 func (p *SimplePersist) ReadEntry(slug string) (model.Entry, error) {
 	path := p.slugToStoragePath(slug)

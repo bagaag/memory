@@ -1,7 +1,6 @@
+- edit -name Name isn't finding Name
+- error adding new note and changing the name during first edit
 - move models to package and create pluggable interfaces for persistance and search
-    - move links into separate struct that saves to json file and incrementally updates on put
-    - re-implement simple searcher
-    - implement https://github.com/uber-go/config
     - load impls in app based on config
     - clean up tests
 - fix: most recently edited entry showing up at the bottom of ls results

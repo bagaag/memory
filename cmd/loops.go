@@ -59,7 +59,9 @@ func detailInteractiveLoop(entry model.Entry) bool {
 	for {
 		// display detail and prompt for command
 		EntryTable(entry)
-		hasLinks := len(entry.LinksTo)+len(entry.LinkedFrom) > 0
+		entryLinks, _ := memApp.Search.Links(entry.Slug())
+		reverseLinks, _ := memApp.Search.ReverseLinks(entry.Slug())
+		hasLinks := len(entryLinks)+len(reverseLinks) > 0
 		if hasLinks {
 			fmt.Println("Entry options: [e]dit, [d]elete, [l]inks, [b]ack, [Q]uit")
 		} else {
@@ -102,8 +104,10 @@ func detailInteractiveLoop(entry model.Entry) bool {
 func linksInteractiveLoop(entry model.Entry) bool {
 	// interactive loop
 	for {
-		links := append(entry.LinksTo, entry.LinkedFrom...)
-		linkCount := len(links)
+		slug := entry.Slug()
+		entryLinks, _ := memApp.Search.Links(slug)
+		reverseLinks, _ := memApp.Search.ReverseLinks(slug)
+		linkCount := len(entryLinks) + len(reverseLinks)
 		// display links and prompt for command
 		LinksMenu(entry)
 		fmt.Println("\nLinks options: # for details, [b]ack or [Q]uit")
@@ -113,7 +117,7 @@ func linksInteractiveLoop(entry model.Entry) bool {
 			if ix < 0 || ix >= linkCount {
 				fmt.Printf("Error: %d is not a valid link number.\n", num)
 			} else {
-				linkName := links[ix]
+				linkName := entryLinks[ix]
 				nextDetail, err := memApp.GetEntry(linkName)
 				if err != nil {
 					detailInteractiveLoop(nextDetail)

@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 )
@@ -76,7 +77,7 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 	}
 	// handle name change
 	if origEntry.Name != editedEntry.Name {
-		if exists, _ := memApp.EntryExists(editedEntry.Slug()); exists {
+		if memApp.EntryExists(editedEntry.Slug()) {
 			return editedEntry, tempFile, errors.New("entry named '" + editedEntry.Name + "' already exists")
 		}
 		if err = memApp.DeleteEntry(origEntry.Slug()); err != nil {
@@ -85,6 +86,10 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 		//TODO: update links on rename
 	}
 	// save changes
+	if !memApp.EntryExists(editedEntry.Slug()) {
+		editedEntry.Created = time.Now()
+	}
+	editedEntry.Modified = time.Now()
 	if err = memApp.PutEntry(editedEntry); err != nil {
 		return editedEntry, tempFile, err
 	}
@@ -107,7 +112,7 @@ func parseEntryText(entryText string) (model.Entry, error) {
 func deleteEntry(name string, ask bool) bool {
 	s := "y"
 	var err error
-	if exists, _ := memApp.EntryExists(util.GetSlug(name)); !exists {
+	if !memApp.EntryExists(util.GetSlug(name)) {
 		fmt.Println("Entry '" + name + "' could not be found.")
 		return false
 	}

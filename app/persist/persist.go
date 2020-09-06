@@ -20,6 +20,8 @@ type Persister interface {
 	ReadEntry(slug string) (model.Entry, error)
 	// EntrySlugs returns a string slice containing the slug of every entry in storage.
 	EntrySlugs() ([]string, error)
+	// EntryExists returns true if the entry is found in storage
+	EntryExists(slug string) bool
 	// SaveEntry writes the entry to storage.
 	SaveEntry(entry model.Entry) error
 	// DeleteEntry removes the entry idenfied by slug from storage.

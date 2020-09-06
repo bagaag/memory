@@ -21,8 +21,6 @@ type Entry struct {
 	Name        string
 	Description string
 	Tags        []string
-	LinksTo     []string
-	LinkedFrom  []string
 	Created     time.Time
 	Modified    time.Time
 	Type        EntryType `json:"EntryType"`
@@ -32,7 +30,6 @@ type Entry struct {
 	Longitude   string    // Place
 	Address     string    // Place
 	Custom      map[string]string
-	Exclude     bool // Supports ability to search for all entries
 }
 
 // Slug returns the slug for this entry.
@@ -48,8 +45,6 @@ func NewEntry(entryType EntryType, name string, description string, tags []strin
 		Name:        name,
 		Description: description,
 		Tags:        tags,
-		LinksTo:     []string{},
-		LinkedFrom:  []string{},
 		Modified:    now,
 		Type:        entryType,
 		Custom:      make(map[string]string),

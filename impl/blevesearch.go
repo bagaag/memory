@@ -13,30 +13,58 @@ import (
 	"errors"
 	"fmt"
 	"github.com/blevesearch/bleve"
-	"github.com/blevesearch/bleve/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/analysis/analyzer/standard"
 	"github.com/blevesearch/bleve/analysis/lang/en"
 	"github.com/blevesearch/bleve/document"
 	"github.com/blevesearch/bleve/mapping"
 	"github.com/blevesearch/bleve/search/query"
 	"memory/app/config"
+	"memory/app/links"
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/persist"
 	"memory/app/search"
 	"memory/util"
+	"strconv"
 	"strings"
+	"time"
 )
 
+// BleveSearch is a search implementation based on the go-native Bleve search engine.
 type BleveSearch struct {
 	persister   persist.Persister
 	indexDir    string
 	searchIndex bleve.Index
 }
 
+// BleveSearchConfig defines the values required to create an instance of BleveSearch.
 type BleveSearchConfig struct {
 	IndexDir  string
 	Persister persist.Persister
+}
+
+// IndexedEntry is a representation of model.Entry suited for indexing by Bleve search.
+type IndexedEntry struct {
+	Name           string
+	Description    string
+	Tags           []string
+	Links          []string
+	Created        time.Time
+	Modified       time.Time
+	Type           string
+	Start          time.Time // Events
+	StartPrecision int       // 0=Year, 1=Month, 2=Day
+	End            time.Time // Events
+	EndPrecision   int       // 0=Year, 1=Month, 2=Day
+	Location       Location
+	Address        string // Place
+	Custom         map[string]string
+	Exclude        bool // Supports ability to search for all entries
+}
+
+type Location struct {
+	Lat float64
+	Lon float64
 }
 
 func NewBleveSearch(cfg BleveSearchConfig) (BleveSearch, error) {
@@ -44,41 +72,211 @@ func NewBleveSearch(cfg BleveSearchConfig) (BleveSearch, error) {
 	return b, b.initSearch()
 }
 
-// indexMapping returns the default index settings for
+// NewIndexedEntry converts a model.Entry to an IndexedEntry.
+func NewIndexedEntry(entry model.Entry) IndexedEntry {
+	indexed := IndexedEntry{
+		Name:        entry.Name,
+		Description: util.TruncateAtWhitespace(entry.Description, 200),
+		Tags:        entry.Tags,
+		Links:       links.ExtractLinks(entry.Description),
+		Created:     entry.Created,
+		Modified:    entry.Modified,
+		Type:        entry.Type,
+		Address:     entry.Address,
+		Custom:      entry.Custom,
+		Exclude:     false,
+	}
+	if entry.Start != "" {
+		date, precision := parseFlexDate(entry.Start)
+		indexed.Start = date
+		indexed.StartPrecision = precision
+	}
+	if entry.End != "" {
+		date, precision := parseFlexDate(entry.End)
+		indexed.End = date
+		indexed.EndPrecision = precision
+	}
+	if entry.Latitude != "" && entry.Longitude != "" {
+		lat, err1 := strconv.ParseFloat(entry.Latitude, 64)
+		lon, err2 := strconv.ParseFloat(entry.Longitude, 64)
+		if err1 != nil && err2 != nil {
+			indexed.Location = Location{lat, lon}
+		}
+	}
+	if indexed.Custom == nil {
+		indexed.Custom = make(map[string]string)
+	}
+	return indexed
+}
+
+func (ix *IndexedEntry) Entry() model.Entry {
+	entry := model.Entry{
+		Name:        ix.Name,
+		Description: ix.Description,
+		Tags:        ix.Tags,
+		Start:       flexDate(ix.Start, ix.StartPrecision),
+		End:         flexDate(ix.End, ix.EndPrecision),
+		Created:     ix.Created,
+		Modified:    ix.Modified,
+		Type:        ix.Type,
+		Address:     ix.Address,
+		Custom:      ix.Custom,
+	}
+	if ix.Location.Lat > 0 {
+		entry.Latitude = strconv.FormatFloat(ix.Location.Lat, 'f', 7, 64)
+	}
+	if ix.Location.Lon > 0 {
+		entry.Longitude = strconv.FormatFloat(ix.Location.Lon, 'f', 7, 64)
+	}
+	return entry
+}
+
+// flexDate creates an Entry Start/End value from a date object and precision indicator.
+func flexDate(d time.Time, precision int) string {
+	if d.Year() == 1 {
+		return ""
+	}
+	s := d.Format("2006-01-02")
+	if precision == 0 {
+		s = s[:4]
+	} else if precision == 1 {
+		s = s[:7]
+	}
+	return s
+}
+
+// parseFlexDate converts an entry Start/End value into a date value and precision indicator.
+func parseFlexDate(s string) (time.Time, int) {
+	if s == "" {
+		return time.Time{}, 0
+	}
+	precision := -1
+	switch len(s) {
+	case 4:
+		precision = 0
+	case 7:
+		precision = 1
+		s = s + "-01-01"
+	case 10:
+		precision = 2
+		s = s + "-01"
+	}
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		//TODO: Log error
+	}
+	return t, precision
+}
+
+// Links returns a string slice of slugs that the entry identified by slug links to.
+func (b *BleveSearch) Links(slug string) ([]string, error) {
+	ret := []string{}
+	doc, err := b.searchIndex.Document(slug)
+	if err != nil || doc == nil {
+		return ret, err
+	}
+	for _, field := range doc.Fields {
+		switch field.Name() {
+		case "Links":
+			ret = append(ret, string(field.Value()))
+		}
+	}
+	return ret, nil
+}
+
+// Stub returns indexed entry data for the given slug with truncated Description value and Links populated.
+// GetEntryFromIndex returns an entry from the search index suitable for display.
+func (b *BleveSearch) Stub(slug string) (model.Entry, error) {
+	doc, err := b.searchIndex.Document(slug)
+	if err != nil || doc == nil {
+		return model.Entry{}, err
+	}
+	indexed := IndexedEntry{Custom: make(map[string]string)}
+	for _, field := range doc.Fields {
+		switch field.Name() {
+		case "Name":
+			indexed.Name = string(field.Value())
+		case "Description":
+			indexed.Description = string(field.Value())
+		case "EntryType":
+			indexed.Type = string(field.Value())
+		case "Tags": // there's a separate Tags field for each tag value in a document
+			indexed.Tags = append(indexed.Tags, string(field.Value()))
+		case "LinksTo":
+			indexed.Links = append(indexed.Links, string(field.Value()))
+		case "Start":
+			//TODO: Suggest an example of this at https://blevesearch.com/docs/Index-Mapping/
+			df, ok := field.(*document.DateTimeField)
+			if ok {
+				dt, err := df.DateTime()
+				if err == nil {
+					indexed.Start = dt
+				}
+			}
+		case "End":
+			df, ok := field.(*document.DateTimeField)
+			if ok {
+				dt, err := df.DateTime()
+				if err == nil {
+					indexed.End = dt
+				}
+			}
+		case "StartPrecision":
+			indexed.StartPrecision, _ = strconv.Atoi(string(field.Value()))
+		case "EndPrecision":
+			indexed.EndPrecision, _ = strconv.Atoi(string(field.Value()))
+		case "Address":
+			indexed.Address = string(field.Value())
+		case "Modified":
+			df, ok := field.(*document.DateTimeField)
+			if ok {
+				dt, err := df.DateTime()
+				if err == nil {
+					indexed.Modified = dt
+				}
+			}
+		default:
+			if strings.HasPrefix(field.Name(), "Custom.") {
+				key := strings.Split(field.Name(), ".")[1]
+				indexed.Custom[key] = string(field.Value())
+			}
+		}
+	}
+	return indexed.Entry(), nil
+}
+
+// entryIndexMapping returns the default index settings for
 // new and existing search indexes.
-func (b *BleveSearch) indexMapping() mapping.IndexMapping {
+func (b *BleveSearch) entryIndexMapping() mapping.IndexMapping {
 	entryMapping := bleve.NewDocumentMapping()
 	englishTextFieldMapping := bleve.NewTextFieldMapping()
 	englishTextFieldMapping.Analyzer = en.AnalyzerName
-	storeOnlyFieldMapping := bleve.NewTextFieldMapping()
-	storeOnlyFieldMapping.Index = false
 	boolFieldMapping := bleve.NewBooleanFieldMapping()
-	boolFieldMapping.Store = false
 	timeMapping := bleve.NewDateTimeFieldMapping()
 	keywordFieldMapping := bleve.NewTextFieldMapping()
 	keywordFieldMapping.Type = "text"
 	keywordFieldMapping.Analyzer = standard.Name
-	startFieldMapping := bleve.NewTextFieldMapping()
-	startFieldMapping.Type = "text"
-	startFieldMapping.Analyzer = keyword.Name
-	startFieldMapping.Name = "Start"
-	entryMapping.AddFieldMapping(startFieldMapping)
+	precisionMapping := bleve.NewTextFieldMapping()
+	precisionMapping.Type = "number"
+	geoMapping := bleve.NewGeoPointFieldMapping()
 	entryMapping.AddFieldMappingsAt("Name", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Description", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Tags", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("EntryType", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Exclude", boolFieldMapping)
-	entryMapping.AddFieldMappingsAt("LinksTo", keywordFieldMapping)
-	entryMapping.AddFieldMappingsAt("LinkedFrom", keywordFieldMapping)
-	//entryMapping.AddFieldMappingsAt("Start", keywordFieldMapping)
-	entryMapping.AddFieldMappingsAt("End", keywordFieldMapping)
+	entryMapping.AddFieldMappingsAt("Links", keywordFieldMapping)
+	entryMapping.AddFieldMappingsAt("Start", timeMapping)
+	entryMapping.AddFieldMappingsAt("End", timeMapping)
+	entryMapping.AddFieldMappingsAt("StartPrecision", precisionMapping)
+	entryMapping.AddFieldMappingsAt("EndPrecision", precisionMapping)
 	entryMapping.AddFieldMappingsAt("Address", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Custom", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Modified", timeMapping)
+	entryMapping.AddFieldMappingsAt("Location", geoMapping)
 	//TODO: Index lat/long; create/mod date
-	mapping := bleve.NewIndexMapping()
-	mapping.AddDocumentMapping("Entry", entryMapping)
-	return mapping
+	im := bleve.NewIndexMapping()
+	im.AddDocumentMapping("Entry", entryMapping)
+	return im
 }
 
 // initSearch should be called to setup search on application
@@ -93,7 +291,7 @@ func (b *BleveSearch) initSearch() error {
 			return err
 		}
 	} else {
-		if err := b.RebuildSearchIndex(); err != nil {
+		if err := b.Rebuild(); err != nil {
 			return err
 		}
 	}
@@ -102,7 +300,8 @@ func (b *BleveSearch) initSearch() error {
 
 // IndexEntry adds or updates an entry in the index
 func (b *BleveSearch) IndexEntry(entry model.Entry) error {
-	return b.searchIndex.Index(entry.Slug(), entry)
+	indexed := NewIndexedEntry(entry)
+	return b.searchIndex.Index(entry.Slug(), indexed)
 }
 
 // RemoveFromIndex removes an entry from the index
@@ -110,14 +309,14 @@ func (b *BleveSearch) RemoveFromIndex(slug string) error {
 	return b.searchIndex.Delete(slug)
 }
 
-// RebuildSearchIndex creates a new search index of current entries.
-func (b *BleveSearch) RebuildSearchIndex() error {
+// Rebuild creates a new search index of current entries.
+func (b *BleveSearch) Rebuild() error {
 	if err := util.DelTree(config.SearchPath()); err != nil {
 		return err
 	}
 	// create new search index
 	var err error
-	b.searchIndex, err = bleve.New(config.SearchPath(), b.indexMapping())
+	b.searchIndex, err = bleve.New(config.SearchPath(), b.entryIndexMapping())
 	if err != nil {
 		return err
 	}
@@ -133,7 +332,8 @@ func (b *BleveSearch) RebuildSearchIndex() error {
 			fmt.Println("Error reading", slug, err)
 			continue
 		}
-		if err := b.searchIndex.Index(slug, entry); err != nil {
+		indexedEntry := NewIndexedEntry(entry)
+		if err := b.searchIndex.Index(slug, indexedEntry); err != nil {
 			fmt.Println("Error indexing:", err)
 		} else {
 			count = count + 1
@@ -158,52 +358,21 @@ func (b *BleveSearch) IndexedSlugs() ([]string, error) {
 	return slugs, nil
 }
 
-// GetEntryFromIndex returns an entry from the search index suitable for display.
-func (b *BleveSearch) GetEntry(slug string) (model.Entry, error) {
-	doc, err := b.searchIndex.Document(slug)
-	if err != nil || doc == nil {
-		return model.Entry{}, err
+// ReverseLinks returns a list of slugs that link to the entry identified by `slug`.
+func (b *BleveSearch) ReverseLinks(slug string) ([]string, error) {
+	ret := []string{}
+	matchQuery := bleve.NewMatchPhraseQuery(slug)
+	matchQuery.SetField("Links")
+	req := bleve.NewSearchRequestOptions(matchQuery, util.MaxInt32, 0, false)
+	result, err := b.searchIndex.Search(req)
+	if err != nil {
+		return ret, err
 	}
-	entry := model.NewEntry("", "", "", []string{})
-	for _, field := range doc.Fields {
-		switch field.Name() {
-		case "Name":
-			entry.Name = string(field.Value())
-		case "Description":
-			entry.Description = string(field.Value())
-		case "EntryType":
-			entry.Type = string(field.Value())
-		case "Tags": // there's a separate Tags field for each tag value in a document
-			entry.Tags = append(entry.Tags, string(field.Value()))
-		case "LinksTo":
-			entry.LinksTo = append(entry.LinksTo, string(field.Value()))
-		case "LinkedFrom":
-			entry.LinkedFrom = append(entry.LinkedFrom, string(field.Value()))
-		case "Start":
-			//TODO: figure out why bleve stores and returns a date value from a text mapped field containing 'yyyy-mm-dd' value
-			entry.Start = string(field.Value())
-		case "End":
-			entry.End = string(field.Value())
-		case "Address":
-			entry.Address = string(field.Value())
-		case "Modified":
-			//TODO: Suggest an example of this at https://blevesearch.com/docs/Index-Mapping/
-			df, ok := field.(*document.DateTimeField)
-			if ok {
-				dt, err := df.DateTime()
-				if err == nil {
-					entry.Modified = dt
-				}
-			}
-			//entry.Modified, _ = time.Parse("2017-08-31 00:00:00 +0000 UTC", string(field.Value()))
-		default:
-			if strings.HasPrefix(field.Name(), "Custom.") {
-				key := strings.Split(field.Name(), ".")[1]
-				entry.Custom[key] = string(field.Value())
-			}
-		}
+	hits := result.Hits
+	for _, hit := range hits {
+		ret = append(ret, hit.ID)
 	}
-	return entry, nil
+	return ret, nil
 }
 
 // IndexedCount returns the total number of entries in the search index.
@@ -215,8 +384,8 @@ func (b *BleveSearch) IndexedCount() uint64 {
 // SearchEntries returns a page of results based on multiple filters and search query.
 func (b *BleveSearch) SearchEntries(types model.EntryTypes, keywords string, onlyTags []string,
 	anyTags []string, sort search.SortOrder, pageNo int, pageSize int) (search.EntryResults, error) {
-	query := b.buildSearchQuery(types, keywords, onlyTags, anyTags)
-	req := bleve.NewSearchRequestOptions(query, pageSize, (pageNo-1)*pageSize, false)
+	q := b.buildSearchQuery(types, keywords, onlyTags, anyTags)
+	req := bleve.NewSearchRequestOptions(q, pageSize, (pageNo-1)*pageSize, false)
 	if sort == search.SortName {
 		req.SortBy([]string{"Name"})
 	} else if sort == search.SortRecent {
@@ -235,7 +404,7 @@ func (b *BleveSearch) SearchEntries(types model.EntryTypes, keywords string, onl
 	results := search.EntryResults{Types: types, Search: keywords, AnyTags: anyTags, OnlyTags: onlyTags,
 		Sort: sort, PageNo: pageNo, PageSize: pageSize, Total: searchResult.Total, Entries: []model.Entry{}}
 	for _, id := range ids {
-		entry, err := b.GetEntry(id)
+		entry, err := b.Stub(id)
 		if err != nil {
 			if _, notFound := err.(model.EntryNotFound); notFound {
 				return search.EntryResults{}, errors.New("Document in search results not found in index: " + id)
@@ -353,8 +522,35 @@ func (b *BleveSearch) Timeline(start string, end string) ([]model.Entry, error) 
 	}
 	hits := result.Hits
 	for _, hit := range hits {
-		entry, _ := b.GetEntry(hit.ID)
+		entry, _ := b.Stub(hit.ID)
 		ret = append(ret, entry)
+	}
+	return ret, nil
+}
+
+// BrokenLinks returns a map of all pages that link to non-existent pages. Each
+// page with broken links is a key in the map, value is a string slice of slugs
+// that don't match existing pages.
+func (b *BleveSearch) BrokenLinks() (map[string][]string, error) {
+	ret := make(map[string][]string)
+	slugs, err := b.IndexedSlugs()
+	if err != nil {
+		return ret, err
+	}
+	for _, slug := range slugs {
+		entryLinks, err := b.Links(slug)
+		if err != nil {
+			return ret, err
+		}
+		for _, link := range entryLinks {
+			if !util.StringSliceContains(slugs, link) {
+				if brokenLinks, exists := ret[slug]; exists {
+					ret[slug] = append(brokenLinks, link)
+				} else {
+					ret[slug] = []string{link}
+				}
+			}
+		}
 	}
 	return ret, nil
 }
