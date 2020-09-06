@@ -134,8 +134,10 @@ var cmdPut = func(c *cli.Context) error {
 var cmdEdit = func(c *cli.Context) error {
 	name := c.String("name")
 	origEntry, err := memApp.GetEntry(util.GetSlug(name))
-	if _, notFound := err.(model.EntryNotFound); !notFound {
+	if model.IsNotFound(err) {
 		return fmt.Errorf("there is no entry named '%s'", name)
+	} else if err != nil {
+		return err
 	}
 	entry, success := editEntryValidationLoop(origEntry)
 	if !success {

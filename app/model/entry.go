@@ -162,6 +162,16 @@ type EntryNotFound struct {
 	Slug string
 }
 
+// IsNotFound returns true if err is an EntryNotFound error.
+func IsNotFound(err error) bool {
+	if err != nil {
+		if _, notFound := err.(EntryNotFound); !notFound {
+			return true
+		}
+	}
+	return false
+}
+
 // Error implements the error interface.
 func (e EntryNotFound) Error() string {
 	return fmt.Sprintf("entry %s not found", e.Slug)
