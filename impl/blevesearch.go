@@ -51,7 +51,7 @@ type IndexedEntry struct {
 	Links          []string
 	Created        time.Time
 	Modified       time.Time
-	Type           string
+	EntryType      string
 	Start          time.Time // Events
 	StartPrecision int       // 0=Year, 1=Month, 2=Day
 	End            time.Time // Events
@@ -81,7 +81,7 @@ func NewIndexedEntry(entry model.Entry) IndexedEntry {
 		Links:       links.ExtractLinks(entry.Description),
 		Created:     entry.Created,
 		Modified:    entry.Modified,
-		Type:        entry.Type,
+		EntryType:   entry.Type,
 		Address:     entry.Address,
 		Custom:      entry.Custom,
 		Exclude:     false,
@@ -118,7 +118,7 @@ func (ix *IndexedEntry) Entry() model.Entry {
 		End:         flexDate(ix.End, ix.EndPrecision),
 		Created:     ix.Created,
 		Modified:    ix.Modified,
-		Type:        ix.Type,
+		Type:        ix.EntryType,
 		Address:     ix.Address,
 		Custom:      ix.Custom,
 	}
@@ -199,7 +199,7 @@ func (b *BleveSearch) Stub(slug string) (model.Entry, error) {
 		case "Description":
 			indexed.Description = string(field.Value())
 		case "EntryType":
-			indexed.Type = string(field.Value())
+			indexed.EntryType = string(field.Value())
 		case "Tags": // there's a separate Tags field for each tag value in a document
 			indexed.Tags = append(indexed.Tags, string(field.Value()))
 		case "LinksTo":
@@ -262,7 +262,7 @@ func (b *BleveSearch) entryIndexMapping() mapping.IndexMapping {
 	entryMapping.AddFieldMappingsAt("Name", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Description", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Tags", keywordFieldMapping)
-	entryMapping.AddFieldMappingsAt("EntryType", englishTextFieldMapping)
+	entryMapping.AddFieldMappingsAt("EntryType", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("Exclude", boolFieldMapping)
 	entryMapping.AddFieldMappingsAt("Links", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("Start", timeMapping)

@@ -1,4 +1,3 @@
-- type missing from brackets in 'ls' output
 - error adding new note and changing the name during first edit
 - move models to package and create pluggable interfaces for persistance and search
     - load impls in app based on config
