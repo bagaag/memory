@@ -5,127 +5,137 @@ Copyright © 2020 Matt Wiseley
 License: https://www.gnu.org/licenses/gpl-3.0.txt
 */
 
-package search
+package test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"memory/app/memory"
 	"memory/app/model"
+	"memory/app/search"
 	"memory/util"
 	"testing"
-
-	"github.com/blevesearch/bleve"
 )
 
 /* This file contains functions to support full text entry search. */
 
-var setup1 = func(t *testing.T) func(t *testing.T) {
+var setup1 = func(t *testing.T) (*memory.Memory, func(t *testing.T)) {
 	home, err := ioutil.TempDir("", "search_test_setup1")
-	if err = initSearch(); err != nil {
+	if err != nil {
 		t.Error(err)
 	}
-	memory.Init(home)
+	memApp, err := memory.Init(home)
+	if err != nil {
+		t.Error(err)
+	}
 	e1 := model.NewEntry(model.EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
 	e2 := model.NewEntry(model.EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
 	e3 := model.NewEntry(model.EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
 	e3.Start = "2020"
-	PutEntry(e1)
-	PutEntry(e2)
-	PutEntry(e3)
-	Save()
-	return func(t *testing.T) {
+	consumeError(t, memApp.PutEntry(e1))
+	consumeError(t, memApp.PutEntry(e2))
+	consumeError(t, memApp.PutEntry(e3))
+	return memApp, func(t *testing.T) {
 		log.Println("Deleting", home)
-		util.DelTree(home)
+		consumeError(t, util.DelTree(home))
 	}
 }
-var setup2 = func(t *testing.T) func(t *testing.T) {
+var setup2 = func(t *testing.T) (*memory.Memory, func(t *testing.T)) {
 	home, err := ioutil.TempDir("", "search_test_setup1")
-	if err = initSearch(); err != nil {
+	if err != nil {
 		t.Error(err)
 	}
-	memory.Init(home)
+	memApp, err := memory.Init(home)
+	if err != nil {
+		t.Error(err)
+	}
 	e1 := model.NewEntry(model.EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
 	e2 := model.NewEntry(model.EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
 	e3 := model.NewEntry(model.EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
 	e3.Start = "2020"
 	e4 := model.NewEntry(model.EntryTypeEvent, "Links To e1", "A peopled [Apple Heresay].", []string{"groove turtle"})
 	e4.Start = "2020"
-	PutEntry(e1)
-	PutEntry(e2)
-	PutEntry(e3)
-	PutEntry(e4)
-	populateLinks()
-	Save()
-	return func(t *testing.T) {
+	consumeError(t, memApp.PutEntry(e1))
+	consumeError(t, memApp.PutEntry(e2))
+	consumeError(t, memApp.PutEntry(e3))
+	consumeError(t, memApp.PutEntry(e4))
+	return memApp, func(t *testing.T) {
 		log.Println("Deleting", home)
-		util.DelTree(home)
+		consumeError(t, util.DelTree(home))
+	}
+}
+
+func consumeError(t *testing.T, err error) {
+	if err != nil {
+		t.Error(err)
 	}
 }
 
 func TestLinksToSearch(t *testing.T) {
-	teardown2 := setup2(t)
+	memApp, teardown2 := setup2(t)
 	defer teardown2(t)
-	e4, exists := GetEntryFromIndex(util.GetSlug("Links to e1"))
-	if !exists {
-		t.Error("e4 doesn't exist")
-	}
-	if len(e4.LinksTo) < 1 {
-		t.Error("e4 has no linksto")
-	}
-	if e4.LinksTo[0] != "apple-heresay" {
-		t.Error("Expected 'apple-heresay', got", e4.LinksTo[0])
-	}
-	query := bleve.NewMatchPhraseQuery("apple-heresay")
-	query.SetField("LinksTo")
-	search := bleve.NewSearchRequest(query)
-	searchResult, err := searchIndex.Search(search)
+	slug := util.GetSlug("Links to e1")
+	links, err := memApp.Search.Links(slug)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(searchResult.Hits) != 1 {
-		t.Error("Expected 1 result, got", len(searchResult.Hits))
+	if len(links) < 1 {
+		t.Error("e4 has no linksto")
 	}
-	for _, hit := range searchResult.Hits {
-		fmt.Println(hit.ID)
+	if links[0] != "apple-heresay" {
+		t.Error("Expected 'apple-heresay', got", links[0])
 	}
+	// TODO: This should be implemented as `memApp.Search.LinksTo(slug) []Entry` if needed
+	//query := bleve.NewMatchPhraseQuery("apple-heresay")
+	//query.SetField("LinksTo")
+	//search := bleve.NewSearchRequest(query)
+	//searchResult, err := searchIndex.Search(search)
+	//if err != nil {
+	//	t.Error(err)
+	//}
+	//if len(searchResult.Hits) != 1 {
+	//	t.Error("Expected 1 result, got", len(searchResult.Hits))
+	//}
+	//for _, hit := range searchResult.Hits {
+	//	fmt.Println(hit.ID)
+	//}
 }
 
 func TestTagsSearch(t *testing.T) {
-	teardown2 := setup2(t)
-	defer teardown2(t)
-	query := bleve.NewMatchPhraseQuery("groove-turtle")
-	query.SetField("Tags")
-	search := bleve.NewSearchRequest(query)
-	searchResult, err := searchIndex.Search(search)
-	if err != nil {
-		t.Error(err)
-	}
-	if len(searchResult.Hits) != 1 {
-		t.Error("Expected 1 result, got", len(searchResult.Hits))
-	}
-	for _, hit := range searchResult.Hits {
-		fmt.Println(hit.ID)
-	}
+	//TODO: This should be implemented as `memApp.Search.HasTag(tag) []Entry` if needed
+	//memApp, teardown2 := setup2(t)
+	//defer teardown2(t)
+	//query := bleve.NewMatchPhraseQuery("groove-turtle")
+	//query.SetField("Tags")
+	//search := bleve.NewSearchRequest(query)
+	//searchResult, err := searchIndex.Search(search)
+	//if err != nil {
+	//	t.Error(err)
+	//}
+	//if len(searchResult.Hits) != 1 {
+	//	t.Error("Expected 1 result, got", len(searchResult.Hits))
+	//}
+	//for _, hit := range searchResult.Hits {
+	//	fmt.Println(hit.ID)
+	//}
 }
 
 func TestSearch(t *testing.T) {
-	teardown1 := setup1(t)
+	memApp, teardown1 := setup1(t)
 	defer teardown1(t)
 	// document test
-	searchDocumentTest(t, 1)
+	searchDocumentTest(t, memApp, 1)
 	// type test
-	searchTypeTest(t, 2, "EntryType:Event", []string{"frenetic-plum"})
+	//searchTypeTest(t, memApp, 2, "EntryType:Event", []string{"frenetic-plum"})
 	// entry search
-	searchEntriesTest(t, 3)
+	searchEntriesTest(t, memApp, 3)
 	// entry paging
-	searchEntriesPagingTest(t, 20)
+	searchEntriesPagingTest(t, memApp, 20)
 }
 
-func searchEntriesPagingTest(t *testing.T, num int) {
+func searchEntriesPagingTest(t *testing.T, memApp *memory.Memory, num int) {
 	// page 1 of 2
-	results, err := SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, SortName, 1, 2)
+	results, err := memApp.Search.SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, search.SortName, 1, 2)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -137,7 +147,7 @@ func searchEntriesPagingTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// page 2 of 2
-	results, err = SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, SortName, 2, 2)
+	results, err = memApp.Search.SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, search.SortName, 2, 2)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -150,9 +160,9 @@ func searchEntriesPagingTest(t *testing.T, num int) {
 	num = num + 1
 }
 
-func searchEntriesTest(t *testing.T, num int) {
+func searchEntriesTest(t *testing.T, memApp *memory.Memory, num int) {
 	// all entries of type Note and Event
-	results, err := SearchEntries(model.EntryTypes{Note: true, Event: true}, "", []string{}, []string{}, SortScore, 1, 10)
+	results, err := memApp.Search.SearchEntries(model.EntryTypes{Note: true, Event: true}, "", []string{}, []string{}, search.SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -161,7 +171,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// only Note entries
-	results, err = SearchEntries(model.EntryTypes{Note: true}, "", []string{}, []string{}, SortScore, 1, 10)
+	results, err = memApp.Search.SearchEntries(model.EntryTypes{Note: true}, "", []string{}, []string{}, search.SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -170,7 +180,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Note entries containing apple
-	results, err = SearchEntries(model.EntryTypes{Note: true}, "apple", []string{}, []string{}, SortScore, 1, 10)
+	results, err = memApp.Search.SearchEntries(model.EntryTypes{Note: true}, "apple", []string{}, []string{}, search.SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -179,7 +189,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Any type of entries containing apple
-	results, err = SearchEntries(model.EntryTypes{Note: true}, "apple", []string{}, []string{}, SortScore, 1, 10)
+	results, err = memApp.Search.SearchEntries(model.EntryTypes{Note: true}, "apple", []string{}, []string{}, search.SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -188,7 +198,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Entries containing apple with tag2
-	results, err = SearchEntries(model.EntryTypes{Note: true}, "apple", []string{"tag2"}, []string{}, SortScore, 1, 10)
+	results, err = memApp.Search.SearchEntries(model.EntryTypes{Note: true}, "apple", []string{"tag2"}, []string{}, search.SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -197,7 +207,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Entries with tag0 AND tag1
-	results, err = SearchEntries(model.EntryTypes{}, "", []string{"tag0", "tag1"}, []string{}, SortScore, 1, 10)
+	results, err = memApp.Search.SearchEntries(model.EntryTypes{}, "", []string{"tag0", "tag1"}, []string{}, search.SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -206,7 +216,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Entries with tag0 or tag1
-	results, err = SearchEntries(model.EntryTypes{}, "", []string{}, []string{"tag0", "tag1"}, SortScore, 1, 10)
+	results, err = memApp.Search.SearchEntries(model.EntryTypes{}, "", []string{}, []string{"tag0", "tag1"}, search.SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -215,7 +225,7 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 	num = num + 1
 	// Get All entries
-	results, err = SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, SortScore, 1, 10)
+	results, err = memApp.Search.SearchEntries(model.EntryTypes{}, "", []string{}, []string{}, search.SortScore, 1, 10)
 	if err != nil {
 		t.Error(num, err)
 	}
@@ -224,31 +234,11 @@ func searchEntriesTest(t *testing.T, num int) {
 	}
 }
 
-func searchTypeTest(t *testing.T, num int, keywords string, expect []string) {
-	query := bleve.NewQueryStringQuery(keywords)
-	//query.SetField("EntryType")
-	search := bleve.NewSearchRequest(query)
-	searchResult, err := searchIndex.Search(search)
-	if err != nil {
-		t.Error(num, err)
-	}
-	r := []string{}
-	for _, hit := range searchResult.Hits {
-		r = append(r, hit.ID)
-	}
-	if err != nil {
-		t.Error(num, err)
-	}
-	if !util.StringSlicesEqual(r, expect) {
-		t.Errorf("%d. Expected %v, got %v", num, expect, r)
-	}
-}
-
-func searchDocumentTest(t *testing.T, num int) {
+func searchDocumentTest(t *testing.T, memApp *memory.Memory, num int) {
 	// get doc from index
-	entry, exists := GetEntryFromIndex("apple-heresay")
-	if !exists {
-		t.Error(num, "apple-heresay doesn't exist in index, but should")
+	entry, err := memApp.Search.Stub("apple-heresay")
+	if err != nil {
+		t.Error(num, "apple-heresay doesn't exist in index, but should:", err)
 	}
 	if entry.Name != "Apple Heresay" {
 		t.Error(num, "Expected 'Apple heresay' but got", entry.Name)
