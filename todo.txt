@@ -1,5 +1,4 @@
 - move models to package and create pluggable interfaces for persistance and search
-    - clean up tests
     - RenderLinks never gets called
 - finish timeline command
 - slugify tags

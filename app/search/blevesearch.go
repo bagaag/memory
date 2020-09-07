@@ -281,8 +281,8 @@ func (b *BleveSearch) entryIndexMapping() mapping.IndexMapping {
 // initSearch should be called to setup search on application
 // startup after entries are loaded/available.
 func (b *BleveSearch) initSearch() error {
-	indexPath := config.SearchPath() + "/index_meta.json"
-	if localfs.PathExists(indexPath) {
+	indexPath := config.SearchPath()
+	if localfs.PathExists(indexPath + "/index_meta.json") {
 		// open existing search index
 		var err error
 		b.searchIndex, err = bleve.Open(indexPath)
