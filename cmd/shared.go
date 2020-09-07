@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"memory/app/config"
+	"memory/app/links"
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/app/template"
@@ -92,6 +93,7 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 		editedEntry.Created = time.Now()
 	}
 	editedEntry.Modified = time.Now()
+	editedEntry.Description = links.RenderLinks(editedEntry.Description, memApp.EntryExists)
 	if err = memApp.PutEntry(editedEntry); err != nil {
 		return editedEntry, tempFile, err
 	}

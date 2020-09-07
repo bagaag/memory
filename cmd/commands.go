@@ -15,6 +15,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/urfave/cli"
 	"memory/app/config"
+	"memory/app/links"
 	"memory/app/localfs"
 	"memory/app/memory"
 	"memory/app/model"
@@ -134,6 +135,7 @@ var cmdPut = func(c *cli.Context) error {
 var cmdEdit = func(c *cli.Context) error {
 	name := c.String("name")
 	origEntry, err := memApp.GetEntry(util.GetSlug(name))
+	origEntry.Description = links.RenderLinks(origEntry.Description, memApp.EntryExists)
 	if model.IsNotFound(err) {
 		return fmt.Errorf("there is no entry named '%s'", name)
 	} else if err != nil {
