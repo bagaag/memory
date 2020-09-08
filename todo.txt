@@ -1,6 +1,4 @@
-- move models to package and create pluggable interfaces for persistance and search
-    - RenderLinks never gets called
-- finish timeline command
+- timeline ui
 - slugify tags
 - fix: entering incorrect interactive cmd exits app
 - capture create & mod dates in file rather than relying on file date; remove from file when editing

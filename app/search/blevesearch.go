@@ -34,6 +34,8 @@ type BleveSearch struct {
 	persister   persist.Persister
 	indexDir    string
 	searchIndex bleve.Index
+	minDate     string
+	maxDate     string
 }
 
 // BleveSearchConfig defines the values required to create an instance of BleveSearch.
@@ -51,10 +53,10 @@ type IndexedEntry struct {
 	Created        time.Time
 	Modified       time.Time
 	EntryType      string
-	Start          time.Time // Events
-	StartPrecision int       // 0=Year, 1=Month, 2=Day
-	End            time.Time // Events
-	EndPrecision   int       // 0=Year, 1=Month, 2=Day
+	Start          time.Time       // Events
+	StartPrecision model.Precision // 0=Year, 1=Month, 2=Day
+	End            time.Time       // Events
+	EndPrecision   model.Precision // 0=Year, 1=Month, 2=Day
 	Location       Location
 	Address        string // Place
 	Custom         map[string]string
@@ -67,7 +69,13 @@ type Location struct {
 }
 
 func NewBleveSearch(cfg BleveSearchConfig) (BleveSearch, error) {
-	b := BleveSearch{persister: cfg.Persister, indexDir: cfg.IndexDir}
+	b := BleveSearch{
+		persister: cfg.Persister,
+		indexDir:  cfg.IndexDir,
+		// these are the oddly limited date min/max accepted by bleve in queries
+		minDate: "1677-12-01", // MinRFC3339CompatibleTime
+		maxDate: "2262-04-11", // MaxRFC3339CompatibleTime
+	}
 	return b, b.initSearch()
 }
 
@@ -85,16 +93,22 @@ func NewIndexedEntry(entry model.Entry) IndexedEntry {
 		Custom:      entry.Custom,
 		Exclude:     false,
 	}
-	if entry.Start != "" {
-		date, precision := parseFlexDate(entry.Start)
-		indexed.Start = date
-		indexed.StartPrecision = precision
+	// start date defaults to "beginning of time"
+	start := entry.Start
+	if start == "" {
+		start = "0001-01-01"
 	}
-	if entry.End != "" {
-		date, precision := parseFlexDate(entry.End)
-		indexed.End = date
-		indexed.EndPrecision = precision
+	date, precision := parseFlexDate(start)
+	indexed.Start = date
+	indexed.StartPrecision = precision
+	// end date defaults to "end of time"
+	end := entry.End
+	if end == "" {
+		end = "9999-12-31"
 	}
+	date, precision = parseFlexDate(end)
+	indexed.End = date
+	indexed.EndPrecision = precision
 	if entry.Latitude != "" && entry.Longitude != "" {
 		lat, err1 := strconv.ParseFloat(entry.Latitude, 64)
 		lon, err2 := strconv.ParseFloat(entry.Longitude, 64)
@@ -131,34 +145,34 @@ func (ix *IndexedEntry) Entry() model.Entry {
 }
 
 // flexDate creates an Entry Start/End value from a date object and precision indicator.
-func flexDate(d time.Time, precision int) string {
+func flexDate(d time.Time, precision model.Precision) model.FlexDate {
 	if d.Year() == 1 {
 		return ""
 	}
 	s := d.Format("2006-01-02")
-	if precision == 0 {
+	if precision == model.PrecisionYear {
 		s = s[:4]
-	} else if precision == 1 {
+	} else if precision == model.PrecisionMonth {
 		s = s[:7]
 	}
 	return s
 }
 
 // parseFlexDate converts an entry Start/End value into a date value and precision indicator.
-func parseFlexDate(s string) (time.Time, int) {
+func parseFlexDate(s model.FlexDate) (time.Time, model.Precision) {
 	if s == "" {
 		return time.Time{}, 0
 	}
-	precision := -1
+	precision := model.PrecisionNone
 	switch len(s) {
 	case 4:
-		precision = 0
-	case 7:
-		precision = 1
+		precision = model.PrecisionYear
 		s = s + "-01-01"
-	case 10:
-		precision = 2
+	case 7:
+		precision = model.PrecisionMonth
 		s = s + "-01"
+	case 10:
+		precision = model.PrecisionDay
 	}
 	t, err := time.Parse("2006-01-02", s)
 	if err != nil {
@@ -501,24 +515,40 @@ func (b *BleveSearch) EntryCount() uint64 {
 }
 
 // Timeline performs a search based on start and end attributes
-func (b *BleveSearch) Timeline(start string, end string) ([]model.Entry, error) {
+func (b *BleveSearch) Timeline(start model.FlexDate, end model.FlexDate) ([]model.Entry, error) {
 	ret := []model.Entry{}
 	boolQuery := bleve.NewBooleanQuery()
-	if start != "" {
-		startQ := bleve.NewTermRangeQuery(start, "")
-		startQ.SetField("Start")
-		boolQuery.AddMust(startQ)
+	// parse dates
+	var startDate time.Time
+	var endDate time.Time
+	if start != "" && end != "" {
+		startDate, _ = parseFlexDate(start)
+		endDate, _ = parseFlexDate(end)
+	} else if start != "" {
+		startDate, _ = parseFlexDate(start)
+		endDate, _ = parseFlexDate(b.maxDate)
+	} else if end != "" {
+		startDate, _ = parseFlexDate(b.minDate)
+		endDate, _ = parseFlexDate(end)
+	} else {
+		startDate, _ = parseFlexDate(b.minDate)
+		endDate, _ = parseFlexDate(b.maxDate)
 	}
-	if end != "" {
-		endQ := bleve.NewTermRangeQuery("", end)
-		endQ.SetField("End")
-		boolQuery.AddMust(endQ)
-	}
+	// build query
+	startQ := bleve.NewDateRangeQuery(startDate, endDate)
+	startQ.SetField("Start")
+	endQ := bleve.NewDateRangeQuery(startDate, endDate)
+	endQ.SetField("Start")
+	boolQuery.AddMust(startQ)
+	boolQuery.AddMust(endQ)
 	req := bleve.NewSearchRequestOptions(boolQuery, util.MaxInt32, 0, false)
+	req.SortBy([]string{"Start", "End"})
+	// execute query
 	result, err := b.searchIndex.Search(req)
 	if err != nil {
 		return ret, err
 	}
+	// gather and return results
 	hits := result.Hits
 	for _, hit := range hits {
 		entry, _ := b.Stub(hit.ID)

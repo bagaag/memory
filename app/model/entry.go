@@ -24,8 +24,8 @@ type Entry struct {
 	Created     time.Time
 	Modified    time.Time
 	Type        EntryType `json:"EntryType"`
-	Start       string    // Events
-	End         string    // Events
+	Start       FlexDate  // Events
+	End         FlexDate  // Events
 	Latitude    string    // Place
 	Longitude   string    // Place
 	Address     string    // Place
@@ -64,20 +64,22 @@ type EntryTypes struct {
 // EntryType is an 'enum' of entry types.
 type EntryType = string
 
-// EntryTypeNote indicates a note.
 const EntryTypeNote = "Note"
-
-// EntryTypeEvent indicates an event.
 const EntryTypeEvent = "Event"
-
-// EntryTypePerson indicates a person.
 const EntryTypePerson = "Person"
-
-// EntryTypePlace indicates a place.
 const EntryTypePlace = "Place"
-
-// EntryTypeThing indicates a thing.
 const EntryTypeThing = "Thing"
+
+// Precision is an 'enum' of int values
+type Precision = int
+
+const PrecisionNone = -1
+const PrecisionYear = 0
+const PrecisionMonth = 1
+const PrecisionDay = 2
+
+// FlexDate is a string in the form of 2006, 2006-01 or 2006-01-02
+type FlexDate = string
 
 // TagsString returns the entry's tags as a comma-separated string.
 func (entry Entry) TagsString() string {

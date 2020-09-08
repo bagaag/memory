@@ -8,18 +8,21 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"memory/app/memory"
 	"memory/app/model"
 	"memory/app/search"
 	"memory/util"
+	"os"
+	"strconv"
 	"testing"
 )
 
 /* This file contains functions to support full text entry search. */
 
-var setup1 = func(t *testing.T) (*memory.Memory, func(t *testing.T)) {
+func initMemApp(t *testing.T, path string) (*memory.Memory, string) {
 	home, err := ioutil.TempDir("", "search_test_setup1")
 	if err != nil {
 		t.Error(err)
@@ -27,7 +30,13 @@ var setup1 = func(t *testing.T) (*memory.Memory, func(t *testing.T)) {
 	memApp, err := memory.Init(home)
 	if err != nil {
 		t.Error(err)
+		os.Exit(1)
 	}
+	return memApp, home
+}
+
+var setup1 = func(t *testing.T) (*memory.Memory, func(t *testing.T)) {
+	memApp, home := initMemApp(t, "search_test_setup1")
 	e1 := model.NewEntry(model.EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
 	e2 := model.NewEntry(model.EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
 	e3 := model.NewEntry(model.EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
@@ -41,14 +50,7 @@ var setup1 = func(t *testing.T) (*memory.Memory, func(t *testing.T)) {
 	}
 }
 var setup2 = func(t *testing.T) (*memory.Memory, func(t *testing.T)) {
-	home, err := ioutil.TempDir("", "search_test_setup1")
-	if err != nil {
-		t.Error(err)
-	}
-	memApp, err := memory.Init(home)
-	if err != nil {
-		t.Error(err)
-	}
+	memApp, home := initMemApp(t, "search_test_setup2")
 	e1 := model.NewEntry(model.EntryTypeNote, "Apple Heresay", "Yours is no disgrace.", []string{"tag1", "tag0"})
 	e2 := model.NewEntry(model.EntryTypeNote, "Bungled Apple", "Shaky groove turtle.", []string{"tag2", "tag1"})
 	e3 := model.NewEntry(model.EntryTypeEvent, "Frenetic Plum", "Undersea groove turntable swing.", []string{"tag3"})
@@ -59,6 +61,28 @@ var setup2 = func(t *testing.T) (*memory.Memory, func(t *testing.T)) {
 	consumeError(t, memApp.PutEntry(e2))
 	consumeError(t, memApp.PutEntry(e3))
 	consumeError(t, memApp.PutEntry(e4))
+	return memApp, func(t *testing.T) {
+		log.Println("Deleting", home)
+		consumeError(t, util.DelTree(home))
+	}
+}
+
+var setup3 = func(t *testing.T, dates [][]string) (*memory.Memory, func(t *testing.T)) {
+	memApp, home := initMemApp(t, "search_test_setup3")
+	testEntries := []model.Entry{}
+	for i, set := range dates {
+		testEntries = append(testEntries, model.Entry{
+			Type:   model.EntryTypeEvent,
+			Name:   "E" + strconv.Itoa(i+1),
+			Tags:   []string{},
+			Custom: make(map[string]string),
+			Start:  set[0],
+			End:    set[1],
+		})
+	}
+	for _, entry := range testEntries {
+		consumeError(t, memApp.PutEntry(entry))
+	}
 	return memApp, func(t *testing.T) {
 		log.Println("Deleting", home)
 		consumeError(t, util.DelTree(home))
@@ -253,4 +277,63 @@ func searchDocumentTest(t *testing.T, memApp *memory.Memory, num int) {
 		t.Error(num, "Expected 'tag1,tag0', got", entry.Tags)
 	}
 
+}
+
+func TestTimeline(t *testing.T) {
+	// stores a test case definition
+	type test struct {
+		start    string
+		end      string
+		expected []string
+	}
+	// entry dates to test against
+	dates := [][]string{
+		//start date is required; end date missing should be treated
+		// as if it had the same value as start date
+		[]string{"2000", ""},
+		[]string{"2000-01", ""},
+		[]string{"2001-03-01", "2002-01-02"},
+		[]string{"2002-02-10", ""},
+		[]string{"2003-03-01", "2004-02-10"},
+		[]string{"2004-01-01", "2008-01-02"},
+	}
+	// define test cases
+	tests := []test{
+		{"", "", []string{"E1", "E2", "E3", "E4", "E5", "E6"}},
+		{"2001", "", []string{"E3", "E4", "E5", "E6"}},
+		{"2001", "2003", []string{"E3", "E4"}},
+		{"2002-02", "2003", []string{"E4"}},
+		{"2002-05-01", "2005", []string{"E5", "E6"}},
+	}
+	// prints a result in shorthand
+	printEntries := func(es []model.Entry) string {
+		s := ""
+		for _, e := range es {
+			s = s + fmt.Sprintf("%s:[%s-%s] ", e.Name, e.Start, e.End)
+		}
+		return s
+	}
+	// tests result against expected value
+	gotExpected := func(result []model.Entry, expected []string) bool {
+		for i, e := range result {
+			if expected[i] != e.Name {
+				return false
+			}
+		}
+		return len(result) == len(expected)
+	}
+	// init app and create entries
+	memApp, teardown3 := setup3(t, dates)
+	defer teardown3(t)
+	// run test cases
+	for i, testCase := range tests {
+		r, e := memApp.Search.Timeline(testCase.start, testCase.end)
+		if e != nil {
+			t.Error(strconv.Itoa(i+1)+".", e)
+		} else if !gotExpected(r, testCase.expected) {
+			t.Error(strconv.Itoa(i+1)+". Expected", testCase.expected, "got", printEntries(r))
+		} else {
+			fmt.Println(strconv.Itoa(i+1)+" OK: Expected", testCase.expected, "got", printEntries(r))
+		}
+	}
 }
