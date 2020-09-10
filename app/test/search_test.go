@@ -279,6 +279,29 @@ func searchDocumentTest(t *testing.T, memApp *memory.Memory, num int) {
 
 }
 
+func TestDateStorage(t *testing.T) {
+	dates := [][]string{
+		//start date is required; end date missing should be treated
+		// as if it had the same value as start date
+		{"2001-03-02", "2007-05-17"},
+		{"2000-01", "2010-04"},
+		{"2000", "2010"},
+	}
+	memApp, teardown3 := setup3(t, dates)
+	defer teardown3(t)
+	slugs := []string{"e1", "e2", "e3"}
+	for ix, slug := range slugs {
+		d := dates[ix]
+		e, _ := memApp.Search.Stub(slug)
+		if e.Start != d[0] {
+			t.Errorf("Expected Start '%s', got '%s'", d[0], e.Start)
+		}
+		if e.End != d[1] {
+			t.Errorf("Expected End '%s', got '%s'", d[1], e.End)
+		}
+	}
+}
+
 func TestTimeline(t *testing.T) {
 	// stores a test case definition
 	type test struct {
@@ -290,37 +313,40 @@ func TestTimeline(t *testing.T) {
 	dates := [][]string{
 		//start date is required; end date missing should be treated
 		// as if it had the same value as start date
-		[]string{"2000", ""},
-		[]string{"2000-01", ""},
-		[]string{"2001-03-01", "2002-01-02"},
-		[]string{"2002-02-10", ""},
-		[]string{"2003-03-01", "2004-02-10"},
-		[]string{"2004-01-01", "2008-01-02"},
+		{"2000", ""},
+		{"2000-02", ""},
+		{"2001-03-01", ""},
+		{"2002-03-10", "2003-01-02"},
+		{"2003-03-22", "2004-02-10"},
+		{"2004-01-01", "2008-01-02"},
 	}
 	// define test cases
 	tests := []test{
 		{"", "", []string{"E1", "E2", "E3", "E4", "E5", "E6"}},
 		{"2001", "", []string{"E3", "E4", "E5", "E6"}},
-		{"2001", "2003", []string{"E3", "E4"}},
-		{"2002-02", "2003", []string{"E4"}},
-		{"2002-05-01", "2005", []string{"E5", "E6"}},
+		{"2001", "2003-01-03", []string{"E3", "E4"}},
+		{"2002-02", "2004", []string{"E4", "E5"}},
+		{"2002-05-01", "2009", []string{"E5", "E6"}},
 	}
 	// prints a result in shorthand
 	printEntries := func(es []model.Entry) string {
 		s := ""
 		for _, e := range es {
-			s = s + fmt.Sprintf("%s:[%s-%s] ", e.Name, e.Start, e.End)
+			s = s + fmt.Sprintf("%s:[%s/%s] ", e.Name, e.Start, e.End)
 		}
 		return s
 	}
 	// tests result against expected value
 	gotExpected := func(result []model.Entry, expected []string) bool {
+		if len(result) != len(expected) {
+			return false
+		}
 		for i, e := range result {
 			if expected[i] != e.Name {
 				return false
 			}
 		}
-		return len(result) == len(expected)
+		return true
 	}
 	// init app and create entries
 	memApp, teardown3 := setup3(t, dates)
@@ -328,12 +354,13 @@ func TestTimeline(t *testing.T) {
 	// run test cases
 	for i, testCase := range tests {
 		r, e := memApp.Search.Timeline(testCase.start, testCase.end)
+		testNum := strconv.Itoa(i+1) + "."
 		if e != nil {
-			t.Error(strconv.Itoa(i+1)+".", e)
+			t.Error(testNum, e)
 		} else if !gotExpected(r, testCase.expected) {
-			t.Error(strconv.Itoa(i+1)+". Expected", testCase.expected, "got", printEntries(r))
+			t.Error(testNum, "Expected", testCase.expected, "got", printEntries(r))
 		} else {
-			fmt.Println(strconv.Itoa(i+1)+" OK: Expected", testCase.expected, "got", printEntries(r))
+			fmt.Println(testNum, "OK: Expected", testCase.expected, "got", printEntries(r))
 		}
 	}
 }

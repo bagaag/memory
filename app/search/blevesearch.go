@@ -10,6 +10,7 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package search
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/blevesearch/bleve"
@@ -18,6 +19,7 @@ import (
 	"github.com/blevesearch/bleve/document"
 	"github.com/blevesearch/bleve/mapping"
 	"github.com/blevesearch/bleve/search/query"
+	"math"
 	"memory/app/config"
 	"memory/app/links"
 	"memory/app/localfs"
@@ -29,13 +31,16 @@ import (
 	"time"
 )
 
+// absurdly limited min/max dates accepted by bleve index & queries
+const bleveMinDate = "1677-12-01"      // MinRFC3339CompatibleTime
+const bleveMaxDateIndex = "2262-04-10" // (MaxRFC3339CompatibleTime - 1) so that exclusive queries on max date match
+const bleveMaxDateQuery = "2262-04-11" // MaxRFC3339CompatibleTime
+
 // BleveSearch is a search implementation based on the go-native Bleve search engine.
 type BleveSearch struct {
 	persister   persist.Persister
 	indexDir    string
 	searchIndex bleve.Index
-	minDate     string
-	maxDate     string
 }
 
 // BleveSearchConfig defines the values required to create an instance of BleveSearch.
@@ -46,21 +51,21 @@ type BleveSearchConfig struct {
 
 // IndexedEntry is a representation of model.Entry suited for indexing by Bleve search.
 type IndexedEntry struct {
-	Name           string
-	Description    string
-	Tags           []string
-	Links          []string
-	Created        time.Time
-	Modified       time.Time
-	EntryType      string
-	Start          time.Time       // Events
-	StartPrecision model.Precision // 0=Year, 1=Month, 2=Day
-	End            time.Time       // Events
-	EndPrecision   model.Precision // 0=Year, 1=Month, 2=Day
-	Location       Location
-	Address        string // Place
-	Custom         map[string]string
-	Exclude        bool // Supports ability to search for all entries
+	Name        string
+	Description string
+	Tags        []string
+	Links       []string
+	Created     time.Time
+	Modified    time.Time
+	EntryType   string
+	Start       string
+	StartDate   time.Time // Events
+	End         string
+	EndDate     time.Time // Events
+	Location    Location
+	Address     string // Place
+	Custom      map[string]string
+	Exclude     bool // Supports ability to search for all entries
 }
 
 type Location struct {
@@ -72,11 +77,12 @@ func NewBleveSearch(cfg BleveSearchConfig) (BleveSearch, error) {
 	b := BleveSearch{
 		persister: cfg.Persister,
 		indexDir:  cfg.IndexDir,
-		// these are the oddly limited date min/max accepted by bleve in queries
-		minDate: "1677-12-01", // MinRFC3339CompatibleTime
-		maxDate: "2262-04-11", // MaxRFC3339CompatibleTime
 	}
 	return b, b.initSearch()
+}
+
+func (ie IndexedEntry) BleveType() string {
+	return "Entry"
 }
 
 // NewIndexedEntry converts a model.Entry to an IndexedEntry.
@@ -88,6 +94,8 @@ func NewIndexedEntry(entry model.Entry) IndexedEntry {
 		Links:       links.ExtractLinks(entry.Description),
 		Created:     entry.Created,
 		Modified:    entry.Modified,
+		Start:       entry.Start,
+		End:         entry.End,
 		EntryType:   entry.Type,
 		Address:     entry.Address,
 		Custom:      entry.Custom,
@@ -95,20 +103,18 @@ func NewIndexedEntry(entry model.Entry) IndexedEntry {
 	}
 	// start date defaults to "beginning of time"
 	start := entry.Start
-	if start == "" {
-		start = "0001-01-01"
+	if start == "" || start < bleveMinDate || start > bleveMaxDateIndex {
+		start = bleveMinDate
 	}
-	date, precision := parseFlexDate(start)
-	indexed.Start = date
-	indexed.StartPrecision = precision
+	date, _ := parseFlexDate(start)
+	indexed.StartDate = date
 	// end date defaults to "end of time"
 	end := entry.End
-	if end == "" {
-		end = "9999-12-31"
+	if end == "" || end < bleveMinDate || end > bleveMaxDateIndex {
+		end = bleveMaxDateIndex
 	}
-	date, precision = parseFlexDate(end)
-	indexed.End = date
-	indexed.EndPrecision = precision
+	date, _ = parseFlexDate(end)
+	indexed.EndDate = date
 	if entry.Latitude != "" && entry.Longitude != "" {
 		lat, err1 := strconv.ParseFloat(entry.Latitude, 64)
 		lon, err2 := strconv.ParseFloat(entry.Longitude, 64)
@@ -127,8 +133,8 @@ func (ix *IndexedEntry) Entry() model.Entry {
 		Name:        ix.Name,
 		Description: ix.Description,
 		Tags:        ix.Tags,
-		Start:       flexDate(ix.Start, ix.StartPrecision),
-		End:         flexDate(ix.End, ix.EndPrecision),
+		Start:       ix.Start,
+		End:         ix.End,
 		Created:     ix.Created,
 		Modified:    ix.Modified,
 		Type:        ix.EntryType,
@@ -218,26 +224,9 @@ func (b *BleveSearch) Stub(slug string) (model.Entry, error) {
 		case "LinksTo":
 			indexed.Links = append(indexed.Links, string(field.Value()))
 		case "Start":
-			//TODO: Suggest an example of this at https://blevesearch.com/docs/Index-Mapping/
-			df, ok := field.(*document.DateTimeField)
-			if ok {
-				dt, err := df.DateTime()
-				if err == nil {
-					indexed.Start = dt
-				}
-			}
+			indexed.Start = string(field.Value())
 		case "End":
-			df, ok := field.(*document.DateTimeField)
-			if ok {
-				dt, err := df.DateTime()
-				if err == nil {
-					indexed.End = dt
-				}
-			}
-		case "StartPrecision":
-			indexed.StartPrecision, _ = strconv.Atoi(string(field.Value()))
-		case "EndPrecision":
-			indexed.EndPrecision, _ = strconv.Atoi(string(field.Value()))
+			indexed.End = string(field.Value())
 		case "Address":
 			indexed.Address = string(field.Value())
 		case "Modified":
@@ -258,6 +247,12 @@ func (b *BleveSearch) Stub(slug string) (model.Entry, error) {
 	return indexed.Entry(), nil
 }
 
+func Float64frombytes(bytes []byte) float64 {
+	bits := binary.LittleEndian.Uint64(bytes)
+	float := math.Float64frombits(bits)
+	return float
+}
+
 // entryIndexMapping returns the default index settings for
 // new and existing search indexes.
 func (b *BleveSearch) entryIndexMapping() mapping.IndexMapping {
@@ -269,8 +264,12 @@ func (b *BleveSearch) entryIndexMapping() mapping.IndexMapping {
 	keywordFieldMapping := bleve.NewTextFieldMapping()
 	keywordFieldMapping.Type = "text"
 	keywordFieldMapping.Analyzer = standard.Name
+	flexDateMapping := bleve.NewTextFieldMapping()
+	flexDateMapping.Type = "text"
+	flexDateMapping.Analyzer = standard.Name
+	flexDateMapping.Index = false
 	precisionMapping := bleve.NewTextFieldMapping()
-	precisionMapping.Type = "number"
+	precisionMapping.Type = "text"
 	geoMapping := bleve.NewGeoPointFieldMapping()
 	entryMapping.AddFieldMappingsAt("Name", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Description", englishTextFieldMapping)
@@ -278,10 +277,10 @@ func (b *BleveSearch) entryIndexMapping() mapping.IndexMapping {
 	entryMapping.AddFieldMappingsAt("EntryType", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("Exclude", boolFieldMapping)
 	entryMapping.AddFieldMappingsAt("Links", keywordFieldMapping)
-	entryMapping.AddFieldMappingsAt("Start", timeMapping)
-	entryMapping.AddFieldMappingsAt("End", timeMapping)
-	entryMapping.AddFieldMappingsAt("StartPrecision", precisionMapping)
-	entryMapping.AddFieldMappingsAt("EndPrecision", precisionMapping)
+	entryMapping.AddFieldMappingsAt("StartDate", timeMapping)
+	entryMapping.AddFieldMappingsAt("Start", flexDateMapping)
+	entryMapping.AddFieldMappingsAt("EndDate", timeMapping)
+	entryMapping.AddFieldMappingsAt("End", flexDateMapping)
 	entryMapping.AddFieldMappingsAt("Address", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Custom", englishTextFieldMapping)
 	entryMapping.AddFieldMappingsAt("Modified", timeMapping)
@@ -526,23 +525,23 @@ func (b *BleveSearch) Timeline(start model.FlexDate, end model.FlexDate) ([]mode
 		endDate, _ = parseFlexDate(end)
 	} else if start != "" {
 		startDate, _ = parseFlexDate(start)
-		endDate, _ = parseFlexDate(b.maxDate)
+		endDate, _ = parseFlexDate(bleveMaxDateQuery)
 	} else if end != "" {
-		startDate, _ = parseFlexDate(b.minDate)
+		startDate, _ = parseFlexDate(bleveMinDate)
 		endDate, _ = parseFlexDate(end)
 	} else {
-		startDate, _ = parseFlexDate(b.minDate)
-		endDate, _ = parseFlexDate(b.maxDate)
+		startDate, _ = parseFlexDate(bleveMinDate)
+		endDate, _ = parseFlexDate(bleveMaxDateQuery)
 	}
 	// build query
 	startQ := bleve.NewDateRangeQuery(startDate, endDate)
-	startQ.SetField("Start")
-	endQ := bleve.NewDateRangeQuery(startDate, endDate)
-	endQ.SetField("Start")
+	startQ.SetField("StartDate")
+	//endQ := bleve.NewDateRangeQuery(startDate, endDate)
+	//endQ.SetField("EndDate")
 	boolQuery.AddMust(startQ)
-	boolQuery.AddMust(endQ)
+	//boolQuery.AddMust(endQ)
 	req := bleve.NewSearchRequestOptions(boolQuery, util.MaxInt32, 0, false)
-	req.SortBy([]string{"Start", "End"})
+	req.SortBy([]string{"StartDate"})
 	// execute query
 	result, err := b.searchIndex.Search(req)
 	if err != nil {

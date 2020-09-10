@@ -191,3 +191,15 @@ func MinRFC3339Time() time.Time {
 	d, _ := time.Parse(time.RFC3339, "1677-12-01T00:00:00Z")
 	return d
 }
+
+// Pad adds the string to the end or beginning of the string until the specified length is reached
+func Pad(s string, length int, padding string, before bool) string {
+	for len(s) < length {
+		if before {
+			s = padding + s
+		} else {
+			s = s + padding
+		}
+	}
+	return s
+}

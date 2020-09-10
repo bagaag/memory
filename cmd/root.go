@@ -68,6 +68,10 @@ var completer = readline.NewPrefixCompleter(
 	),
 	readline.PcItem("seeds"),
 	readline.PcItem("rebuild"),
+	readline.PcItem("timeline",
+		readline.PcItem("-from"),
+		readline.PcItem("-to"),
+	),
 )
 
 var cliApp *cli.App
@@ -277,6 +281,21 @@ func CreateApp() *cli.App {
 				Name:   "rebuild",
 				Usage:  "rebuilds the search index and internal database from entry files",
 				Action: cmdRebuild,
+			},
+			{
+				Name:   "timeline",
+				Usage:  "displays a chronological list of dated entries",
+				Action: cmdTimeline,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "from",
+						Usage: "inclusive start date as YYYY, YYYY-MM or YYYY-MM-DD",
+					},
+					&cli.StringFlag{
+						Name:  "to",
+						Usage: "exclusive end date as YYYY, YYYY-MM or YYYY-MM-DD",
+					},
+				},
 			},
 		},
 	}

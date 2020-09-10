@@ -9,7 +9,10 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 
 package util
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestStringSlicesEqual(t *testing.T) {
 	ss1 := []string{"One", "TWO", "three"}
@@ -71,5 +74,17 @@ func TestTruncateAtWhitespace(t *testing.T) {
 	s3 := TruncateAtWhitespace("", 28)
 	if s3 != "" {
 		t.Error("3. Expected '', got ", s3)
+	}
+}
+
+func TestPad(t *testing.T) {
+	s := "x"
+	left := Pad(s, 3, " ", true)
+	right := Pad(s, 3, " ", false)
+	if left != "  x" {
+		fmt.Errorf("Expected '  x' got ''%s", left)
+	}
+	if right != "x  " {
+		fmt.Errorf("Expected 'x  ' got ''%s", right)
 	}
 }

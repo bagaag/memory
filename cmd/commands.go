@@ -307,10 +307,15 @@ func cmdRebuild(c *cli.Context) error {
 
 // cmdTimeline displays a timeline of entries based on start and end attributes.
 func cmdTimeline(c *cli.Context) error {
-	// tl -from -to -level year,month,day
-	//entries, err := memApp.Search.Timeline(c.String("start"), c.String("end"))
-	//if err != nil {
-	//	return err
-	//}
-	return errors.New("not implemented")
+	start := c.String("from")
+	end := c.String("to")
+	tl, err := memApp.Search.Timeline(start, end)
+	if err != nil {
+		return err
+	}
+	for _, entry := range tl {
+		fmt.Println(util.Pad(entry.Start, 10, " ", false), "-",
+			util.Pad(entry.End, 10, " ", false), "\t", entry.Name)
+	}
+	return nil
 }
