@@ -35,6 +35,7 @@ func mainLoop() {
 		} else if err == io.EOF || line == "q" || line == "quit" || line == "exit" {
 			break
 		}
+		mainLoopInput = line
 		// shellwords honors spaces within quotes as a single value, etc.
 		args, err := shellwords.Parse(line)
 		if err != nil {

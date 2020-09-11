@@ -71,8 +71,13 @@ var cmdInit = func(c *cli.Context) error {
 
 // cmdDefault command enters the interactive command loop.
 var cmdDefault = func(c *cli.Context) error {
-	if len(c.Args()) > 0 {
+	if len(c.Args()) > 0 && firstCommand {
 		cli.ShowAppHelpAndExit(c, 1)
+	} else {
+		firstCommand = false
+		if mainLoopInput != "" {
+			fmt.Println("Not sure what to do with that. Try 'help'.")
+		}
 	}
 	interactive = true
 	mainLoop()

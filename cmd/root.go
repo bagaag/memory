@@ -23,6 +23,12 @@ var rl *readline.Instance
 // inited makes sure we only run cmdInit once
 var inited = false
 
+// is this the initial command
+var firstCommand = true
+
+// what the user typed on the main loop cmd line
+var mainLoopInput = ""
+
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
 	readline.PcItem("add",
