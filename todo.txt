@@ -1,4 +1,3 @@
-- Ctrl+C on main loop hangs
 - capture create & mod dates in file rather than relying on file date; remove from file when editing
 - file management (list, view, add, delete)
 - bleve contrib: add match and match_phrase query types to cmd/query

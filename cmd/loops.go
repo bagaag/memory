@@ -14,6 +14,7 @@ import (
 	"io"
 	"memory/app/model"
 	"memory/util"
+	"os"
 	"strconv"
 	"strings"
 
@@ -28,7 +29,7 @@ func mainLoop() {
 		line, err := rl.Readline()
 		if err == readline.ErrInterrupt {
 			if len(line) == 0 {
-				break
+				os.Exit(0)
 			} else {
 				continue
 			}
