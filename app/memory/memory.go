@@ -55,7 +55,6 @@ func Init(homeDir string) (*Memory, error) {
 	persistConfig := persist.SimplePersistConfig{
 		EntryPath: config.EntriesPath(),
 		FilePath:  config.FilesPath(),
-		EntryExt:  config.EntryExt,
 	}
 	persister, err := persist.NewSimplePersist(persistConfig)
 	if err != nil {
@@ -79,6 +78,11 @@ func Init(homeDir string) (*Memory, error) {
 
 // PutEntry adds or replaces the given entry in the collection.
 func (m *Memory) PutEntry(entry model.Entry) error {
+	if m.EntryExists(entry.Slug()) {
+		if existing, err := m.GetEntry(entry.Slug()); err == nil {
+			entry.Created = existing.Created
+		}
+	}
 	if err := m.Persist.SaveEntry(entry); err != nil {
 		return err
 	}
