@@ -19,6 +19,7 @@ import (
 	"memory/util"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/buger/goterm"
 	"github.com/mitchellh/go-wordwrap"
@@ -285,12 +286,19 @@ func EntryTables(entries []model.Entry) {
 	width := goterm.Width() - 30
 	fmt.Println("") // prefix with blank line
 	for ix, entry := range entries {
+		// get full entry details if we don't have them
+		if !entry.Populated() {
+			entry, _ = memApp.GetEntry(entry.Slug())
+		}
 		// holds table contents
 		data := [][]string{}
 		// add note name and type rows
 		data = append(data, []string{"Name", entry.Name})
 		data = append(data, []string{"Type", entry.Type})
-		// tags row
+		localCreated := entry.Created.In(time.Local)
+		localModified := entry.Modified.In(time.Local)
+		data = append(data, []string{"Created", localCreated.Format("2006-01-02 15:04:05 MST")})
+		data = append(data, []string{"Modified", localModified.Format("2006-01-02 15:04:05 MST")})
 		if len(entry.Tags) > 0 {
 			data = append(data, []string{"Tags", strings.Join(entry.Tags, ", ")})
 		}
@@ -308,6 +316,9 @@ func EntryTables(entries []model.Entry) {
 		}
 		if entry.Longitude != "" {
 			data = append(data, []string{"Longitude", entry.Longitude})
+		}
+		for key, val := range entry.Custom {
+			data = append(data, []string{key, val})
 		}
 		// create and configure table
 		table := tablewriter.NewWriter(os.Stdout)

@@ -69,6 +69,7 @@ func (p *SimplePersist) ReadEntry(slug string) (model.Entry, error) {
 	if err != nil {
 		return entry, err
 	}
+	entry.SetPopulated(true)
 	return entry, nil
 }
 

@@ -30,12 +30,23 @@ type Entry struct {
 	Longitude   string    // Place
 	Address     string    // Place
 	Custom      map[string]string
+	populated   bool // Indicates that full details are populated
 }
 
 // Slug returns the slug for this entry.
 //TODO: Replace instances of GetSlug(entry.Name)
 func (entry *Entry) Slug() string {
 	return util.GetSlug(entry.Name)
+}
+
+// Populated indicates whether full details are populated.
+func (entry *Entry) Populated() bool {
+	return entry.populated
+}
+
+// SetPopulated indicates whether full details are populated.
+func (entry *Entry) SetPopulated(p bool) {
+	entry.populated = p
 }
 
 // NewEntry initializes and returns an Entry object.

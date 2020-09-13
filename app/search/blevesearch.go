@@ -10,7 +10,6 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package search
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/blevesearch/bleve"
@@ -19,7 +18,6 @@ import (
 	"github.com/blevesearch/bleve/document"
 	"github.com/blevesearch/bleve/mapping"
 	"github.com/blevesearch/bleve/search/query"
-	"math"
 	"memory/app/config"
 	"memory/app/links"
 	"memory/app/localfs"
@@ -229,6 +227,14 @@ func (b *BleveSearch) Stub(slug string) (model.Entry, error) {
 			indexed.End = string(field.Value())
 		case "Address":
 			indexed.Address = string(field.Value())
+		case "Created":
+			df, ok := field.(*document.DateTimeField)
+			if ok {
+				dt, err := df.DateTime()
+				if err == nil {
+					indexed.Created = dt
+				}
+			}
 		case "Modified":
 			df, ok := field.(*document.DateTimeField)
 			if ok {
@@ -245,12 +251,6 @@ func (b *BleveSearch) Stub(slug string) (model.Entry, error) {
 		}
 	}
 	return indexed.Entry(), nil
-}
-
-func Float64frombytes(bytes []byte) float64 {
-	bits := binary.LittleEndian.Uint64(bytes)
-	float := math.Float64frombits(bits)
-	return float
 }
 
 // entryIndexMapping returns the default index settings for
