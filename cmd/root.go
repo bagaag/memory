@@ -83,20 +83,20 @@ var completer = readline.NewPrefixCompleter(
 		readline.PcItem("add",
 			readline.PcItem("-entry"),
 			readline.PcItem("-path"),
-			readline.PcItem("-name"),
+			readline.PcItem("-title"),
 		),
 		readline.PcItem("view",
 			readline.PcItem("-entry"),
-			readline.PcItem("-name"),
+			readline.PcItem("-title"),
 		),
 		readline.PcItem("delete",
 			readline.PcItem("-entry"),
-			readline.PcItem("-name"),
+			readline.PcItem("-title"),
 		),
 		readline.PcItem("rename",
 			readline.PcItem("-entry"),
-			readline.PcItem("-from"),
-			readline.PcItem("-to"),
+			readline.PcItem("-title"),
+			readline.PcItem("-new-title"),
 		),
 	),
 	readline.PcItem("files",
@@ -122,9 +122,9 @@ func CreateApp() *cli.App {
 		Usage:    "name of the entry associated with the file",
 		Required: true,
 	}
-	fileNameFlag := &cli.StringFlag{
-		Name:     "name",
-		Usage:    "name of the file",
+	fileTitleFlag := &cli.StringFlag{
+		Name:     "title",
+		Usage:    "display name of the file",
 		Required: true,
 	}
 	cliApp = &cli.App{
@@ -281,21 +281,6 @@ func CreateApp() *cli.App {
 				},
 			},
 			{
-				Name:   "tl",
-				Usage:  "displays a timeline",
-				Action: cmdTimeline,
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "start",
-						Usage: "earliest start date to include, inclusive",
-					},
-					&cli.StringFlag{
-						Name:  "end",
-						Usage: "latest end date to include, exclusive",
-					},
-				},
-			},
-			{
 				Name:   "links",
 				Usage:  "displays links to and from an entry",
 				Action: cmdLinks,
@@ -351,7 +336,7 @@ func CreateApp() *cli.App {
 				Action: cmdFileDetail,
 				Flags: []cli.Flag{
 					fileEntryFlag,
-					fileNameFlag,
+					fileTitleFlag,
 				},
 				Subcommands: []cli.Command{
 					{
@@ -365,7 +350,7 @@ func CreateApp() *cli.App {
 								Usage:    "location of file to add",
 								Required: true,
 							},
-							fileNameFlag,
+							fileTitleFlag,
 						},
 					},
 					{
@@ -374,7 +359,7 @@ func CreateApp() *cli.App {
 						Action: cmdFileOpen,
 						Flags: []cli.Flag{
 							fileEntryFlag,
-							fileNameFlag,
+							fileTitleFlag,
 							&cli.StringFlag{
 								Name:  "command",
 								Usage: "optional command to execute where % is the file path",
@@ -387,7 +372,7 @@ func CreateApp() *cli.App {
 						Action: cmdFileDelete,
 						Flags: []cli.Flag{
 							fileEntryFlag,
-							fileNameFlag,
+							fileTitleFlag,
 						},
 					},
 					{
@@ -396,10 +381,10 @@ func CreateApp() *cli.App {
 						Action: cmdFileRename,
 						Flags: []cli.Flag{
 							fileEntryFlag,
-							fileNameFlag,
+							fileTitleFlag,
 							&cli.StringFlag{
-								Name:  "new-name",
-								Usage: "new name for the file",
+								Name:  "new-title",
+								Usage: "new display name for the file",
 							},
 						},
 					},
