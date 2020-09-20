@@ -99,7 +99,7 @@ func TestGetEntry(t *testing.T) {
 		t.Error("Expected 'note #42', got", entry.Name)
 	}
 	entry, err = memApp.GetEntry("invalid")
-	if err == nil || !model.IsNotFound(err) {
+	if err == nil || !model.IsEntryNotFound(err) {
 		t.Error("Expected nil entry, got", entry.Name, err)
 	}
 }
@@ -119,7 +119,7 @@ func TestGetNote(t *testing.T) {
 		t.Error("Did not get expected note name (test #3) or description (desc #3):", note.Name, ",", note.Description)
 	}
 	_, err = memApp.GetEntry("not found")
-	if err == nil || !model.IsNotFound(err) {
+	if err == nil || !model.IsEntryNotFound(err) {
 		t.Error("Expected exists for invalid note name", err)
 	}
 }

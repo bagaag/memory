@@ -142,7 +142,7 @@ var cmdEdit = func(c *cli.Context) error {
 	name := c.String("name")
 	origEntry, err := memApp.GetEntry(util.GetSlug(name))
 	origEntry.Description = links.RenderLinks(origEntry.Description, memApp.EntryExists)
-	if model.IsNotFound(err) {
+	if model.IsEntryNotFound(err) {
 		return fmt.Errorf("there is no entry named '%s'", name)
 	} else if err != nil {
 		return err
@@ -331,27 +331,50 @@ func cmdFiles(c *cli.Context) error {
 	return nil
 }
 
-// cmdFileAdd adds a file
+// cmdFileAdd adds a file to an entry
 func cmdFileAdd(c *cli.Context) error {
+	// get arguments
+	entryName := c.String("entry")
+	path := c.String("path")
+	_ = path
+	fileName := c.String("name")
+	_ = fileName
+	// get entry
+	slug := util.GetSlug(entryName)
+	entry, err := memApp.GetEntry(slug)
+	if err != nil {
+		return err
+	}
+	// add file
+	//file, err := memApp.Files.Add(slug, path, fileName)
+	if err != nil {
+		return err
+	}
+	// attach to entry
+	//entry.Files := append(entry.Files, file)
+	err = memApp.PutEntry(entry)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-// cmdFileDetail
+// cmdFileDetail displays metadata and sub-commands for an existing file
 func cmdFileDetail(c *cli.Context) error {
 	return nil
 }
 
-// cmdFileOpen
+// cmdFileOpen opens a file attachment in the default viewer, or using a given command
 func cmdFileOpen(c *cli.Context) error {
 	return nil
 }
 
-// cmdFileDelete
+// cmdFileDelete deletes a file attachment
 func cmdFileDelete(c *cli.Context) error {
 	return nil
 }
 
-// cmdFileRename
+// cmdFileRename renames a file attachment
 func cmdFileRename(c *cli.Context) error {
 	return nil
 }

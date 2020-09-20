@@ -175,8 +175,8 @@ type EntryNotFound struct {
 	Slug string
 }
 
-// IsNotFound returns true if err is an EntryNotFound error.
-func IsNotFound(err error) bool {
+// IsEntryNotFound returns true if err is an EntryNotFound error.
+func IsEntryNotFound(err error) bool {
 	if err != nil {
 		if _, notFound := err.(EntryNotFound); notFound {
 			return true
