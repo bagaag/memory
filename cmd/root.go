@@ -10,11 +10,10 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package cmd
 
 import (
-	"memory/app/memory"
-	"sort"
-
 	"github.com/chzyer/readline"
 	"github.com/urfave/cli"
+	"memory/app/memory"
+	"sort"
 )
 
 // the rl library provides bash-like completion in interactive mode
@@ -78,6 +77,31 @@ var completer = readline.NewPrefixCompleter(
 		readline.PcItem("-from"),
 		readline.PcItem("-to"),
 	),
+	readline.PcItem("file",
+		readline.PcItem("-entry"),
+		readline.PcItem("-name"),
+		readline.PcItem("add",
+			readline.PcItem("-entry"),
+			readline.PcItem("-path"),
+			readline.PcItem("-name"),
+		),
+		readline.PcItem("view",
+			readline.PcItem("-entry"),
+			readline.PcItem("-name"),
+		),
+		readline.PcItem("delete",
+			readline.PcItem("-entry"),
+			readline.PcItem("-name"),
+		),
+		readline.PcItem("rename",
+			readline.PcItem("-entry"),
+			readline.PcItem("-from"),
+			readline.PcItem("-to"),
+		),
+	),
+	readline.PcItem("files",
+		readline.PcItem("-entry"),
+	),
 )
 
 var cliApp *cli.App
@@ -92,6 +116,16 @@ func CreateApp() *cli.App {
 		Name:     "name",
 		Usage:    "optional name for the new entry",
 		Required: false,
+	}
+	fileEntryFlag := &cli.StringFlag{
+		Name:     "entry",
+		Usage:    "name of the entry associated with the file",
+		Required: true,
+	}
+	fileNameFlag := &cli.StringFlag{
+		Name:     "name",
+		Usage:    "name of the file",
+		Required: true,
 	}
 	cliApp = &cli.App{
 		Name:  "memory",
@@ -300,6 +334,74 @@ func CreateApp() *cli.App {
 					&cli.StringFlag{
 						Name:  "to",
 						Usage: "exclusive end date as YYYY, YYYY-MM or YYYY-MM-DD",
+					},
+				},
+			},
+			{
+				Name:   "files",
+				Usage:  "displays a list of files associated with an entry",
+				Action: cmdFiles,
+				Flags: []cli.Flag{
+					fileEntryFlag,
+				},
+			},
+			{
+				Name:   "file",
+				Usage:  "list file details and associated commands",
+				Action: cmdFileDetail,
+				Flags: []cli.Flag{
+					fileEntryFlag,
+					fileNameFlag,
+				},
+				Subcommands: []cli.Command{
+					{
+						Name:   "add",
+						Usage:  "add a new template",
+						Action: cmdFileAdd,
+						Flags: []cli.Flag{
+							fileEntryFlag,
+							&cli.StringFlag{
+								Name:     "path",
+								Usage:    "location of file to add",
+								Required: true,
+							},
+							fileNameFlag,
+						},
+					},
+					{
+						Name:   "open",
+						Usage:  "opens a file for viewing or editing",
+						Action: cmdFileOpen,
+						Flags: []cli.Flag{
+							fileEntryFlag,
+							fileNameFlag,
+							&cli.StringFlag{
+								Name:  "command",
+								Usage: "optional command to execute where % is the file path",
+							},
+						},
+					},
+					{
+						Name:   "delete",
+						Usage:  "deletes a file",
+						Action: cmdFileDelete,
+						Flags: []cli.Flag{
+							fileEntryFlag,
+							fileNameFlag,
+						},
+					},
+					{
+						Name:   "rename",
+						Usage:  "renames a file",
+						Action: cmdFileRename,
+						Flags: []cli.Flag{
+							fileEntryFlag,
+							fileNameFlag,
+							&cli.StringFlag{
+								Name:  "new-name",
+								Usage: "new name for the file",
+							},
+						},
 					},
 				},
 			},

@@ -1,5 +1,5 @@
 - file management - add
-    memory add file -entry Bagaag -source filename.png -name "Jim's Omni"
+    memory file add -entry Bagaag -path filename.png -name "Jim's Omni"
 - file management - list
     memory files -entry Bagaag (lists files in entry)
         1. (.png) Jim's Omni
@@ -9,24 +9,27 @@
         File: jims-omni.png
         Name: Jim's Omni
         [V]iew, [R]ename, [D]elete
-- file management - view
-    memory file -entry Bagaag -name "Jim's Omni" -view [-command "cp \"%\" ~/file.png"]
+- file management - open
+    memory file open -entry Bagaag -name "Jim's Omni" [-command "cp \"%\" ~/file.png"]
         Linux: xdg-open "%"
         Win: start "" "%"
         Mac: open "%"
         Use this to determine default launch cmd:
         https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
 - file management - delete
-    memory file -entry Bagaag -name "Jim's Omni" -delete
+    memory file delete -entry Bagaag -name "Jim's Omni"
 - file management - rename
-    memory file -entry Bagaag -name "Jim's Omni" -rename "Something else"
+    memory file rename -entry Bagaag -name "Jim's Omni" -newname "Something else"
 - file management - in-entry editing
     when editing, allow renames and deletes with metadata line for each file:
         file[/\]jims-omni.png: Jim's Omni
         link: [](file.ext) => <a href="file.ext">File Name</a>
         image: ![](file.png] => <img alt="File name" src="file.png">
+- update help text
+- entry rename command
 - display entry Name instead of Slug in Links list
 - bleve contrib: add match and match_phrase query types to cmd/query
 - bleve contrib: keyword mapping test case & ask/report
 - bleve contrib: date mapping storage example in docs
 - refactor tests to simply call each pkg method - current tests are all over the place
+- handle deadlock if 2nd instance is run

@@ -325,3 +325,33 @@ func cmdTimeline(c *cli.Context) error {
 	}
 	return nil
 }
+
+// cmdFiles lists files associated with an entry
+func cmdFiles(c *cli.Context) error {
+	return nil
+}
+
+// cmdFileAdd adds a file
+func cmdFileAdd(c *cli.Context) error {
+	return nil
+}
+
+// cmdFileDetail
+func cmdFileDetail(c *cli.Context) error {
+	return nil
+}
+
+// cmdFileOpen
+func cmdFileOpen(c *cli.Context) error {
+	return nil
+}
+
+// cmdFileDelete
+func cmdFileDelete(c *cli.Context) error {
+	return nil
+}
+
+// cmdFileRename
+func cmdFileRename(c *cli.Context) error {
+	return nil
+}
