@@ -7,24 +7,29 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 
 package model
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Handles metadata for entry file attachments
 
-type FileX struct {
-    Name string
-    Path string
+type Attachment struct {
+	Name string
+	Path string
 }
 
 // Extension returns the file extension without a leading period,
 // or empty string if the file name doesn't contain a period.
-func (f *FileX) Extension() string {
-    if f.Path.Contains(".") {
-        parts := strings.Split(f.Path, ".")
-        return parts[len(parts)-1]
-    }
-    return ""
+func (f *Attachment) Extension() string {
+	if strings.Contains(f.Path, ".") {
+		parts := strings.Split(f.Path, ".")
+		return parts[len(parts)-1]
+	}
+	return ""
 }
 
-// EntryNotFound is a custom error type to indicate that a requested entry is not found in storage.
+// FileNotFound is a custom error type to indicate that a requested entry is not found in storage.
 type FileNotFound struct {
 	Path string
 }
