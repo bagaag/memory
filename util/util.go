@@ -203,3 +203,13 @@ func Pad(s string, length int, padding string, before bool) string {
 	}
 	return s
 }
+
+// Extension returns the file extension without a leading period,
+// or empty string if the file name doesn't contain a period.
+func Extension(path string) string {
+	if strings.Contains(path, ".") {
+		parts := strings.Split(path, ".")
+		return parts[len(parts)-1]
+	}
+	return ""
+}

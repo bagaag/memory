@@ -30,7 +30,7 @@ type Entry struct {
 	Longitude   string    // Place
 	Address     string    // Place
 	Custom      map[string]string
-	Files       []File
+	Attachments []Attachment
 	populated   bool // Indicates that full details are populated
 }
 
@@ -60,7 +60,7 @@ func NewEntry(entryType EntryType, name string, description string, tags []strin
 		Modified:    now,
 		Type:        entryType,
 		Custom:      make(map[string]string),
-		Files:       []File{},
+		Attachments: []Attachment{},
 	}
 	return entry
 }

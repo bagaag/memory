@@ -9,13 +9,14 @@ package attachment
 
 import (
 	"errors"
+	"memory/app/localfs"
 	"memory/app/model"
 )
 
 // Attacher is an interface for managing entry attachments.
 type Attacher interface {
-	// Path returns the complete file system path for an attachment.
-	Path(entrySlug string, filePath string) (string, error)
+	// GetAttachment returns the complete file system path for an attachment for viewing or editing.
+	GetAttachment(entrySlug string, fileName string) (string, error)
 	// Add returns a file object after copying a local file path into the attachment store.
 	Add(entrySlug string, physicalPath string, friendlyName string) (model.Attachment, error)
 	// Update commits a modified attachment file to the attachment store.
@@ -28,15 +29,29 @@ type Attacher interface {
 
 // LocalAttachmentStore implements the Attacher interface using local file storage.
 type LocalAttachmentStore struct {
+	// StoragePath is the file system location where attachments will be stored, should not end with a slash.
+	StoragePath string
 }
 
-// Path returns the complete file system path for an attachment.
-func (a *LocalAttachmentStore) Path(entrySlug string, filePath string) (string, error) {
-	return "", errors.New("not implemented")
+// resolvePath returns the file system path for an attachment and a boolean indicating its existence..
+func (a *LocalAttachmentStore) resolvePath(entrySlug string, fileName string) (string, bool) {
+	path := a.StoragePath + localfs.Slash + fileName
+	return path, localfs.PathExists(path)
+}
+
+// GetAttachment returns the complete file system path for an attachment for viewing or editing.
+func (a *LocalAttachmentStore) GetAttachment(entrySlug string, fileName string) (string, error) {
+	path, exists := a.resolvePath(entrySlug, fileName)
+	if !exists {
+		return "", model.FileNotFound{Path: path}
+	}
+	return path, nil
 }
 
 // Add returns a file object after copying a local file path into the attachment store.
 func (a *LocalAttachmentStore) Add(entrySlug string, physicalPath string, friendlyName string) (model.Attachment, error) {
+
+	path := a.resolvePath(entrySlug)
 	return model.Attachment{}, errors.New("not implemented")
 }
 

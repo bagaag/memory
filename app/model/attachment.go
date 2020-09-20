@@ -9,7 +9,6 @@ package model
 
 import (
 	"fmt"
-	"strings"
 )
 
 // Handles metadata for entry file attachments
@@ -17,16 +16,6 @@ import (
 type Attachment struct {
 	Name string
 	Path string
-}
-
-// Extension returns the file extension without a leading period,
-// or empty string if the file name doesn't contain a period.
-func (f *Attachment) Extension() string {
-	if strings.Contains(f.Path, ".") {
-		parts := strings.Split(f.Path, ".")
-		return parts[len(parts)-1]
-	}
-	return ""
 }
 
 // FileNotFound is a custom error type to indicate that a requested entry is not found in storage.
