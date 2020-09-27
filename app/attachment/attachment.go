@@ -43,7 +43,7 @@ func (a *LocalAttachmentStore) resolvePath(attachment model.Attachment) string {
 func (a *LocalAttachmentStore) GetAttachmentPath(attachment model.Attachment) (string, error) {
 	path := a.resolvePath(attachment)
 	if !localfs.PathExists(path) {
-		return "", model.FileNotFound{Path: path}
+		return path, model.FileNotFound{Path: path}
 	}
 	return path, nil
 }
