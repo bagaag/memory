@@ -35,7 +35,8 @@ End: {{.End}}
 Latitude: {{.Latitude}}
 Longitude: {{.Longitude}}
 {{end}}{{range $key, $val := .Custom}}{{$key}}: {{$val}}
-{{end}}---
+{{end}}{{range $ix, $att := .Attachments}}file/{{$att.DisplayFileName}}: {{$att.Name}}
+{{end}}---	
 
 {{.Description}}
 `

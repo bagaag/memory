@@ -331,13 +331,8 @@ func CreateApp() *cli.App {
 				},
 			},
 			{
-				Name:   "file",
-				Usage:  "list file details and associated commands",
-				Action: cmdFileDetail,
-				Flags: []cli.Flag{
-					fileEntryFlag,
-					fileTitleFlag,
-				},
+				Name:  "file",
+				Usage: "list file details and associated commands",
 				Subcommands: []cli.Command{
 					{
 						Name:   "add",

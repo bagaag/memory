@@ -11,12 +11,13 @@ import (
 	"errors"
 	"memory/app/localfs"
 	"memory/app/model"
+	"memory/util"
 )
 
 // Attacher is an interface for managing entry attachments.
 type Attacher interface {
-	// GetAttachment returns the complete file system path for an attachment for viewing or editing.
-	GetAttachment(entrySlug string, fileName string) (string, error)
+	// GetAttachmentPath returns the complete file system path for an attachment for viewing or editing.
+	GetAttachmentPath(attachment model.Attachment) (string, error)
 	// Add returns a file object after copying a local file path into the attachment store.
 	Add(entrySlug string, physicalPath string, friendlyName string) (model.Attachment, error)
 	// Update commits a modified attachment file to the attachment store.
@@ -33,16 +34,15 @@ type LocalAttachmentStore struct {
 	StoragePath string
 }
 
-// resolvePath returns the file system path for an attachment and a boolean indicating its existence..
-func (a *LocalAttachmentStore) resolvePath(entrySlug string, fileName string) (string, bool) {
-	path := a.StoragePath + localfs.Slash + fileName
-	return path, localfs.PathExists(path)
+// resolvePath returns the file system path for an attachment.
+func (a *LocalAttachmentStore) resolvePath(attachment model.Attachment) string {
+	return a.StoragePath + localfs.Slash + attachment.EntrySlug + "-" + util.GetSlug(attachment.Name) + attachment.ExtensionWithPeriod()
 }
 
-// GetAttachment returns the complete file system path for an attachment for viewing or editing.
-func (a *LocalAttachmentStore) GetAttachment(entrySlug string, fileName string) (string, error) {
-	path, exists := a.resolvePath(entrySlug, fileName)
-	if !exists {
+// GetAttachmentPath returns the complete file system path for an attachment for viewing or editing.
+func (a *LocalAttachmentStore) GetAttachmentPath(attachment model.Attachment) (string, error) {
+	path := a.resolvePath(attachment)
+	if !localfs.PathExists(path) {
 		return "", model.FileNotFound{Path: path}
 	}
 	return path, nil
@@ -50,9 +50,15 @@ func (a *LocalAttachmentStore) GetAttachment(entrySlug string, fileName string) 
 
 // Add returns a file object after copying a local file path into the attachment store.
 func (a *LocalAttachmentStore) Add(entrySlug string, physicalPath string, friendlyName string) (model.Attachment, error) {
-
-	path := a.resolvePath(entrySlug)
-	return model.Attachment{}, errors.New("not implemented")
+	attachment := model.Attachment{EntrySlug: entrySlug, Name: friendlyName, Extension: util.Extension(physicalPath)}
+	path := a.resolvePath(attachment)
+	if localfs.PathExists(path) {
+		return attachment, errors.New("an attachment with this name already exists")
+	}
+	if err := localfs.CopyFile(physicalPath, path); err != nil {
+		return attachment, err
+	}
+	return attachment, nil
 }
 
 // Update commits a modified attachment file to the attachment store.

@@ -11,6 +11,7 @@ package memory
 
 import (
 	"fmt"
+	"memory/app/attachment"
 	"memory/app/config"
 	"memory/app/localfs"
 	"memory/app/model"
@@ -21,8 +22,9 @@ import (
 )
 
 type Memory struct {
-	Persist persist.Persister // stores Entries
-	Search  search.Searcher   // provides Entry search
+	Persist persist.Persister   // provides Entry storage
+	Search  search.Searcher     // provides Entry search
+	Attach  attachment.Attacher // provides Attachment storage
 }
 
 // Init reads data stored on the file system and initializes application variables.
@@ -73,6 +75,9 @@ func Init(homeDir string) (*Memory, error) {
 	} else {
 		m.Search = &searcher
 	}
+	// load attachment provider
+	attacher := attachment.LocalAttachmentStore{StoragePath: config.FilesPath()}
+	m.Attach = &attacher
 	return &m, nil
 }
 

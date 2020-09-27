@@ -28,7 +28,7 @@ import (
 )
 
 // cmdInit runs before any of the cli-invoked cmd functions; exits program on error
-var cmdInit = func(c *cli.Context) error {
+func cmdInit(c *cli.Context) error {
 	if inited {
 		return nil
 	}
@@ -70,7 +70,7 @@ var cmdInit = func(c *cli.Context) error {
 }
 
 // cmdDefault command enters the interactive command loop.
-var cmdDefault = func(c *cli.Context) error {
+func cmdDefault(c *cli.Context) error {
 	if len(c.Args()) > 0 && firstCommand {
 		cli.ShowAppHelpAndExit(c, 1)
 	} else {
@@ -85,7 +85,7 @@ var cmdDefault = func(c *cli.Context) error {
 }
 
 // cmdAdd adds a new entry. Requires a sub-command indicating type.
-var cmdAdd = func(c *cli.Context) error {
+func cmdAdd(c *cli.Context) error {
 	var entry model.Entry
 	var success = false
 	// validate entry type
@@ -109,7 +109,7 @@ var cmdAdd = func(c *cli.Context) error {
 }
 
 // cmdPut adds or updates an entry from the given file.
-var cmdPut = func(c *cli.Context) error {
+func cmdPut(c *cli.Context) error {
 	// read from file if -file is provided
 	// TODO: support .md/txt and .json
 	content, _, err := localfs.ReadFile(c.String("file"))
@@ -138,7 +138,7 @@ var cmdPut = func(c *cli.Context) error {
 }
 
 // cmdEdit edits an existing entry, identified by name.
-var cmdEdit = func(c *cli.Context) error {
+func cmdEdit(c *cli.Context) error {
 	name := c.String("name")
 	origEntry, err := memApp.GetEntry(util.GetSlug(name))
 	origEntry.Description = links.RenderLinks(origEntry.Description, memApp.EntryExists)
@@ -165,7 +165,7 @@ var cmdEdit = func(c *cli.Context) error {
 }
 
 // cmdDelete deletes an existing entry, identified by name.
-var cmdDelete = func(c *cli.Context) error {
+func cmdDelete(c *cli.Context) error {
 	name := c.String("name")
 	ask := !c.Bool("yes")
 	deleteEntry(name, ask)
@@ -173,7 +173,7 @@ var cmdDelete = func(c *cli.Context) error {
 }
 
 // cmdList lists entries, optionally filtered and sorted.
-var cmdList = func(c *cli.Context) error {
+func cmdList(c *cli.Context) error {
 	keywords := c.String("search")
 	anyTags := []string{}
 	if c.IsSet("tags") {
@@ -230,7 +230,7 @@ var cmdList = func(c *cli.Context) error {
 }
 
 // cmdLinks lists the entries linked to and from an existing entry, identified by name.
-var cmdLinks = func(c *cli.Context) error {
+func cmdLinks(c *cli.Context) error {
 	name := c.String("name")
 	entry, err := memApp.GetEntry(util.GetSlug(name))
 	if err != nil {
@@ -246,7 +246,7 @@ var cmdLinks = func(c *cli.Context) error {
 }
 
 // cmdSeeds lists links to entries that don't exist yet
-var cmdSeeds = func(c *cli.Context) error {
+func cmdSeeds(c *cli.Context) error {
 	brokenLinks, err := memApp.Search.BrokenLinks()
 	if err != nil {
 		return err
@@ -336,9 +336,7 @@ func cmdFileAdd(c *cli.Context) error {
 	// get arguments
 	entryName := c.String("entry")
 	path := c.String("path")
-	_ = path
-	fileName := c.String("name")
-	_ = fileName
+	name := c.String("title")
 	// get entry
 	slug := util.GetSlug(entryName)
 	entry, err := memApp.GetEntry(slug)
@@ -346,16 +344,17 @@ func cmdFileAdd(c *cli.Context) error {
 		return err
 	}
 	// add file
-	//file, err := memApp.Files.Add(slug, path, fileName)
+	attachment, err := memApp.Attach.Add(slug, path, name)
 	if err != nil {
 		return err
 	}
-	// attach to entry
-	//entry.Files := append(entry.Files, file)
+	// attach to entry and save
+	entry.Attachments = append(entry.Attachments, attachment)
 	err = memApp.PutEntry(entry)
 	if err != nil {
 		return err
 	}
+	fmt.Println("File attached successfully.")
 	return nil
 }
 

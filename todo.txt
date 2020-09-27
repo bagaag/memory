@@ -4,11 +4,6 @@
     memory files -entry Bagaag (lists files in entry)
         1. (.png) Jim's Omni
         2. (.doc) Contract template
-- file management - detail
-    memory file -entry Bagaag -name "Jim's Omni"
-        File: jims-omni.png
-        Name: Jim's Omni
-        [V]iew, [R]ename, [D]elete
 - file management - open
     memory file open -entry Bagaag -name "Jim's Omni" [-command "cp \"%\" ~/file.png"]
         Linux: xdg-open "%"

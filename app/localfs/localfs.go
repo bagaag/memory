@@ -137,3 +137,15 @@ func PathExists(path string) bool {
 	}
 	return true
 }
+
+// CopyFile performs a file copy operation.
+func CopyFile(sourceFile, destinationFile string) error {
+	input, err := ioutil.ReadFile(sourceFile)
+	if err != nil {
+		return err
+	}
+	if PathExists(destinationFile) {
+		return errors.New("destination file already exists")
+	}
+	return ioutil.WriteFile(destinationFile, input, 0644)
+}
