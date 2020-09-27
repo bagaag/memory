@@ -10,7 +10,6 @@ License: https://www.gnu.org/licenses/gpl-3.0.txt
 package util
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -82,9 +81,9 @@ func TestPad(t *testing.T) {
 	left := Pad(s, 3, " ", true)
 	right := Pad(s, 3, " ", false)
 	if left != "  x" {
-		fmt.Errorf("Expected '  x' got ''%s", left)
+		t.Errorf("Expected '  x' got ''%s", left)
 	}
 	if right != "x  " {
-		fmt.Errorf("Expected 'x  ' got ''%s", right)
+		t.Errorf("Expected 'x  ' got ''%s", right)
 	}
 }

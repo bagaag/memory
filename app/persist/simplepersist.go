@@ -62,7 +62,7 @@ func (p *SimplePersist) EntryExists(slug string) bool {
 func (p *SimplePersist) ReadEntry(slug string) (model.Entry, error) {
 	path := p.slugToStoragePath(slug)
 	if !localfs.PathExists(path) {
-		return model.Entry{}, model.EntryNotFound{slug}
+		return model.Entry{}, model.EntryNotFound{Slug: slug}
 	}
 	var entry model.Entry
 	err := p.load(path, &entry)

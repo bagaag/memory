@@ -180,13 +180,13 @@ func TruncateAtWhitespace(s string, maxLen int) string {
 	return strings.Join(words[:ix], " ")
 }
 
-// Max date allowed in bleve queries
+// MaxRFC3339Time returns the max date allowed in bleve queries
 func MaxRFC3339Time() time.Time {
 	d, _ := time.Parse(time.RFC3339, "2262-04-11T11:59:59Z")
 	return d
 }
 
-// Min date allowed in bleve queries
+// MinRFC3339Time returns the min date allowed in bleve queries
 func MinRFC3339Time() time.Time {
 	d, _ := time.Parse(time.RFC3339, "1677-12-01T00:00:00Z")
 	return d
