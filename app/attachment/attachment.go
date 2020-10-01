@@ -21,11 +21,11 @@ type Attacher interface {
 	// Add returns a file object after copying a local file path into the attachment store.
 	Add(entrySlug string, physicalPath string, friendlyName string) (model.Attachment, error)
 	// Update commits a modified attachment file to the attachment store.
-	Update(entrySlug string, physicalPath string, friendlyName string) (model.Attachment, error)
+	Update(attachment model.Attachment, physicalPath string) (model.Attachment, error)
 	// Delete removes an attachment from the store.
-	Delete(entrySlug string, fileName string) error
+	Delete(attachment model.Attachment) error
 	// Rename updates an attachment to reflect a new friendly name and returns an updated File object.
-	Rename(entrySlug string, fileName string, newName string) (model.Attachment, error)
+	Rename(attachment model.Attachment, newName string) (model.Attachment, error)
 }
 
 // LocalAttachmentStore implements the Attacher interface using local file storage.
@@ -62,16 +62,45 @@ func (a *LocalAttachmentStore) Add(entrySlug string, physicalPath string, friend
 }
 
 // Update commits a modified attachment file to the attachment store.
-func (a *LocalAttachmentStore) Update(entrySlug string, physicalPath string, friendlyName string) (model.Attachment, error) {
-	return model.Attachment{}, errors.New("not implemented")
+func (a *LocalAttachmentStore) Update(attachment model.Attachment, physicalPath string) (model.Attachment, error) {
+	path := a.resolvePath(attachment)
+	if !localfs.PathExists(path) {
+		return attachment, model.FileNotFound{Path: path}
+	}
+	if err := localfs.RemoveFile(path); err != nil {
+		return attachment, err
+	}
+	if err := localfs.CopyFile(physicalPath, path); err != nil {
+		return attachment, err
+	}
+	return attachment, nil
 }
 
 // Delete removes an attachment from the store.
-func (a *LocalAttachmentStore) Delete(entrySlug string, fileName string) error {
-	return errors.New("not implemented")
+func (a *LocalAttachmentStore) Delete(attachment model.Attachment) error {
+	path := a.resolvePath(attachment)
+	if !localfs.PathExists(path) {
+		return model.FileNotFound{Path: path}
+	}
+	return localfs.RemoveFile(path)
 }
 
 // Rename updates an attachment to reflect a new friendly name and returns an updated File object.
-func (a *LocalAttachmentStore) Rename(entrySlug string, fileName string, newName string) (model.Attachment, error) {
-	return model.Attachment{}, errors.New("not implemented")
+func (a *LocalAttachmentStore) Rename(attachment model.Attachment, newName string) (model.Attachment, error) {
+	oldPath := a.resolvePath(attachment)
+	newAttachment := model.Attachment{EntrySlug: attachment.EntrySlug, Extension: attachment.Extension, Name: newName}
+	newPath := a.resolvePath(newAttachment)
+	if !localfs.PathExists(oldPath) {
+		return attachment, model.FileNotFound{Path: oldPath}
+	}
+	if localfs.PathExists(newPath) {
+		return newAttachment, errors.New("attachment with this name already exists")
+	}
+	if err := localfs.CopyFile(oldPath, newPath); err != nil {
+		return attachment, err
+	}
+	if err := localfs.RemoveFile(oldPath); err != nil {
+		return newAttachment, err
+	}
+	return newAttachment, nil
 }

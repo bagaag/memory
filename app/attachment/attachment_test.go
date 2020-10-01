@@ -10,6 +10,7 @@ package attachment
 import (
 	"fmt"
 	"io/ioutil"
+	"memory/app/localfs"
 	"memory/app/model"
 	"memory/util"
 	"os"
@@ -128,30 +129,61 @@ func TestCRUD(t *testing.T) {
 		t.Error("Expected 'test-attachment.txt', got", s)
 	}
 	attPath, err := atts.GetAttachmentPath(att)
+	defer localfs.RemoveFile(attPath)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	if s := readFile(attPath); s != "test" {
 		t.Error("Expected 'test', got", s)
+		return
 	}
 	// test Update
 	path2, err := createTestFile("test 2")
+	defer localfs.RemoveFile(path2)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	_, err = atts.Update(slug, path2, "Not Exists")
-	if !model.IsFileNotFound(err) {
-		t.Error("expected FileNotFound, got", err)
+	att2, err := atts.Update(att, path2)
+	if err != nil {
+		t.Error(err)
+		return
 	}
-	att2, err := atts.Update(slug, path2, "Test Attachment")
 	attPath2, err := atts.GetAttachmentPath(att2)
+	defer localfs.RemoveFile(attPath2)
 	if s := readFile(attPath2); s != "test 2" {
 		t.Error("expected 'test 2', got", s)
+		return
 	}
 	// test Rename
-	//Rename(entrySlug string, fileName string, newName string) (model.Attachment, error)
+	att3, err := atts.Rename(att2, "Test Attachment 2")
+	attPath3, err := atts.GetAttachmentPath(att3)
+	defer localfs.RemoveFile(attPath3)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if localfs.PathExists(attPath2) {
+		t.Error("expected path to not exist after rename:", attPath2)
+		return
+	}
+	if !localfs.PathExists(attPath3) {
+		t.Error("expected path to exist after rename:", attPath3)
+		return
+	}
+	if att3.Name != "Test Attachment 2" {
+		t.Error("expected 'Test Attachment 2', got", att3.Name)
+		return
+	}
 	// test Delete
-	//Delete(entrySlug string, fileName string) error
+	err = atts.Delete(att3)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if localfs.PathExists(attPath3) {
+		t.Error("expected path to not exist after delete:", attPath3)
+		return
+	}
 }

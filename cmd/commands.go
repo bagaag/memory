@@ -358,11 +358,6 @@ func cmdFileAdd(c *cli.Context) error {
 	return nil
 }
 
-// cmdFileDetail displays metadata and sub-commands for an existing file
-func cmdFileDetail(c *cli.Context) error {
-	return nil
-}
-
 // cmdFileOpen opens a file attachment in the default viewer, or using a given command
 func cmdFileOpen(c *cli.Context) error {
 	return nil
@@ -370,10 +365,40 @@ func cmdFileOpen(c *cli.Context) error {
 
 // cmdFileDelete deletes a file attachment
 func cmdFileDelete(c *cli.Context) error {
-	return nil
+	entryName := c.String("entry")
+	title := c.String("title")
+	slug := util.GetSlug(entryName)
+	entry, err := memApp.GetEntry(slug)
+	if err != nil {
+		return err
+	}
+	for _, att := range entry.Attachments {
+		if att.Name == title {
+			return memApp.Attach.Delete(att)
+		}
+	}
+	return model.FileNotFound{Path: title}
 }
 
 // cmdFileRename renames a file attachment
 func cmdFileRename(c *cli.Context) error {
-	return nil
+	entryName := c.String("entry")
+	slug := util.GetSlug(entryName)
+	title := c.String("title")
+	newTitle := c.String("new-title")
+	entry, err := memApp.GetEntry(slug)
+	if err != nil {
+		return err
+	}
+	for _, att := range entry.Attachments {
+		if att.Name == title {
+			renamed, err := memApp.Attach.Rename(att, newTitle)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Renamed attachment to" + renamed.DisplayFileName())
+			return nil
+		}
+	}
+	return model.FileNotFound{Path: title}
 }
