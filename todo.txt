@@ -1,3 +1,4 @@
+- bug: Error after renaming entry even though it works
 - file management - add
     memory file add -entry Bagaag -path filename.png -name "Jim's Omni"
 - file management - list

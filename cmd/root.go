@@ -345,7 +345,11 @@ func CreateApp() *cli.App {
 								Usage:    "location of file to add",
 								Required: true,
 							},
-							fileTitleFlag,
+							&cli.StringFlag{
+								Name:     "title",
+								Usage:    "optional display name of the file",
+								Required: false,
+							},
 						},
 					},
 					{

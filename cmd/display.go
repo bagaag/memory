@@ -342,6 +342,17 @@ func EntryTables(entries []model.Entry) {
 	fmt.Println("") // finish with blank line
 }
 
+// AttachmentsTable displays a table of attachments.
+func AttachmentsTable(atts []model.Attachment) {
+	data := [][]string{}
+	for _, att := range atts {
+		data = append(data, []string{att.DisplayFileName(), att.Name})
+	}
+	table := tablewriter.NewWriter(os.Stdout)
+	table.AppendBulk(data)
+	table.Render()
+}
+
 // EntryTable displays a single entry with full detail
 func EntryTable(entry model.Entry) {
 	entries := []model.Entry{entry}

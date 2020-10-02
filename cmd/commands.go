@@ -328,6 +328,12 @@ func cmdTimeline(c *cli.Context) error {
 
 // cmdFiles lists files associated with an entry
 func cmdFiles(c *cli.Context) error {
+	entryName := c.String("entry")
+	entry, err := memApp.GetEntry(util.GetSlug(entryName))
+	if err != nil {
+		return err
+	}
+	AttachmentsTable(entry.Attachments)
 	return nil
 }
 
@@ -337,6 +343,9 @@ func cmdFileAdd(c *cli.Context) error {
 	entryName := c.String("entry")
 	path := c.String("path")
 	name := c.String("title")
+	if name == "" {
+		name = util.StripExtension(path)
+	}
 	// get entry
 	slug := util.GetSlug(entryName)
 	entry, err := memApp.GetEntry(slug)
@@ -372,8 +381,16 @@ func cmdFileDelete(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, att := range entry.Attachments {
+	for ix, att := range entry.Attachments {
 		if att.Name == title {
+			// remove from entry
+			atts := entry.Attachments
+			copy(atts[ix:], atts[ix+1:])           // Shift a[i+1:] left one index.
+			atts[len(atts)-1] = model.Attachment{} // Erase last element (write zero value).
+			atts = atts[:len(atts)-1]              // Truncate slice.
+			entry.Attachments = atts
+			memApp.PutEntry(entry)
+			// delete attachment
 			return memApp.Attach.Delete(att)
 		}
 	}

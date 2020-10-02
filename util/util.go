@@ -213,3 +213,17 @@ func Extension(path string) string {
 	}
 	return ""
 }
+
+// StripExtension returns the file name from the given path without the extension.
+func StripExtension(path string) string {
+	if strings.Contains(path, "/") {
+		parts := strings.Split(path, "/")
+		path = parts[len(parts)-1]
+	}
+	if strings.Contains(path, ".") {
+		parts := strings.Split(path, ".")
+		parts = parts[:len(parts)-1]
+		path = strings.Join(parts, ".")
+	}
+	return path
+}
