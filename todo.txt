@@ -1,7 +1,5 @@
-- Fix: file rename doesn't update entry data
-- don't store entry slug in attachment model
-- Fix: attachments left behind on entry rename
 - Fix: current file naming scheme can lead to conflicts during entry rename; need to have folders for entries rather than filename prefix
+- Fix: attachments left behind on entry rename
 - Fix: Error after renaming entry even though it works
 - make file open platform specific (Win: start "" "%"; Mac open "%")
     - https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go

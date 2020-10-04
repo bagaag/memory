@@ -14,8 +14,6 @@ import (
 
 // Attachment handles metadata for entry file attachments.
 type Attachment struct {
-	// EntrySlug is the slug of the entry this file is attached to.
-	EntrySlug string
 	// Name is the friendly/display name of the attachment.
 	Name string
 	// Extension is the file extension of the attachment (without period)

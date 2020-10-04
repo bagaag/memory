@@ -387,7 +387,7 @@ func cmdFileDelete(c *cli.Context) error {
 			entry.Attachments = atts
 			memApp.PutEntry(entry)
 			// delete attachment
-			return memApp.Attach.Delete(att)
+			return memApp.Attach.Delete(entry.Slug(), att)
 		}
 	}
 	return model.FileNotFound{Path: title}
@@ -405,7 +405,7 @@ func cmdFileRename(c *cli.Context) error {
 	}
 	for ix, att := range entry.Attachments {
 		if att.Name == title {
-			renamed, err := memApp.Attach.Rename(att, newTitle)
+			renamed, err := memApp.Attach.Rename(entry.Slug(), att, newTitle)
 			if err != nil {
 				return err
 			}
@@ -433,7 +433,7 @@ func cmdFileOpen(c *cli.Context) error {
 	}
 	for _, att := range entry.Attachments {
 		if att.Name == title {
-			path, err := memApp.Attach.GetAttachmentPath(att)
+			path, err := memApp.Attach.GetAttachmentPath(entry.Slug(), att)
 			if err != nil {
 				return err
 			}

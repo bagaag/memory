@@ -81,7 +81,7 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 	for ix, updatedAtt := range editedEntry.Attachments {
 		origAtt := origEntry.Attachments[ix]
 		if origAtt.Name != updatedAtt.Name {
-			updatedAtt, err = memApp.Attach.Rename(origAtt, updatedAtt.Name)
+			updatedAtt, err = memApp.Attach.Rename(editedEntry.Slug(), origAtt, updatedAtt.Name)
 			if err != nil {
 				return editedEntry, tempFile, err
 			}

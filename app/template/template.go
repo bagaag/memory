@@ -159,7 +159,7 @@ func ParseYamlDown(content string) (model.Entry, error) {
 					entry.Attachments = []model.Attachment{}
 				}
 				// TODO: attachments should not have slug field
-				att := model.Attachment{EntrySlug: entry.Slug(), Name: val, Extension: util.Extension(key)}
+				att := model.Attachment{Name: val, Extension: util.Extension(key)}
 				entry.Attachments = append(entry.Attachments, att)
 			} else {
 				// treat as custom field
