@@ -334,6 +334,10 @@ func cmdFiles(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if len(entry.Attachments) == 0 {
+		fmt.Println("Entry has not attachments.")
+		return nil
+	}
 	AttachmentsTable(entry.Attachments)
 	return nil
 }
