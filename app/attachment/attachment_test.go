@@ -26,6 +26,7 @@ func setup() (LocalAttachmentStore, func() error, error) {
 	teardown := func() error {
 		return util.DelTree(tmpDir)
 	}
+	os.Mkdir(tmpDir+localfs.Slash+"entry-slug", 0700)
 	return LocalAttachmentStore{tmpDir}, teardown, nil
 }
 

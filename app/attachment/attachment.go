@@ -12,6 +12,7 @@ import (
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/util"
+	"os"
 )
 
 // Attacher is an interface for managing entry attachments.
@@ -34,9 +35,14 @@ type LocalAttachmentStore struct {
 	StoragePath string
 }
 
+// resolveEntryDir returns the path to the folder for an entry's attachments
+func (a *LocalAttachmentStore) resolveEntryDir(entrySlug string) string {
+	return a.StoragePath + localfs.Slash + entrySlug
+}
+
 // resolvePath returns the file system path for an attachment.
 func (a *LocalAttachmentStore) resolvePath(entrySlug string, attachment model.Attachment) string {
-	return a.StoragePath + localfs.Slash + entrySlug + "-" + util.GetSlug(attachment.Name) + attachment.ExtensionWithPeriod()
+	return a.StoragePath + localfs.Slash + entrySlug + localfs.Slash + util.GetSlug(attachment.Name) + attachment.ExtensionWithPeriod()
 }
 
 // GetAttachmentPath returns the complete file system path for an attachment for viewing or editing.
@@ -54,6 +60,12 @@ func (a *LocalAttachmentStore) Add(entrySlug string, physicalPath string, friend
 	path := a.resolvePath(entrySlug, attachment)
 	if localfs.PathExists(path) {
 		return attachment, errors.New("an attachment with this name already exists")
+	}
+	entryDir := a.resolveEntryDir(entrySlug)
+	if !localfs.PathExists(entryDir) {
+		if err := os.MkdirAll(entryDir, 0700); err != nil {
+			return attachment, err
+		}
 	}
 	if err := localfs.CopyFile(physicalPath, path); err != nil {
 		return attachment, err
