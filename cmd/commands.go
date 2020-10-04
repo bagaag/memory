@@ -150,15 +150,7 @@ func cmdEdit(c *cli.Context) error {
 	}
 	entry, success := editEntryValidationLoop(origEntry)
 	if !success {
-		return errors.New("failed to add a valid entry")
-	}
-	if origEntry.Name != entry.Name {
-		if entry, err = memApp.RenameEntry(origEntry.Name, entry.Name); err != nil {
-			return err
-		}
-	}
-	if err := memApp.PutEntry(entry); err != nil {
-		return err
+		return errors.New("failed to edit the entry")
 	}
 	fmt.Println("Updated entry:", entry.Name)
 	EntryTable(entry)

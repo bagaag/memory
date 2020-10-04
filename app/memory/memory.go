@@ -116,15 +116,26 @@ func (m *Memory) GetEntry(slug string) (model.Entry, error) {
 func (m *Memory) RenameEntry(oldName string, newName string) (model.Entry, error) {
 	oldSlug := util.GetSlug(oldName)
 	newSlug := util.GetSlug(newName)
+	// check entry existence
 	if m.EntryExists(newSlug) {
 		return model.Entry{}, fmt.Errorf("an entry named %s (or very similar) already exists", newName)
 	}
+	// remove from search
 	if err := m.Search.RemoveFromIndex(oldSlug); err != nil {
 		return model.Entry{}, err
 	}
+	// update entry persistence
 	var err error
 	var entry model.Entry
 	if entry, err = m.Persist.RenameEntry(oldName, newName); err != nil {
+		return entry, err
+	}
+	// update attachment persistence
+	if err = m.Attach.RenameEntry(oldSlug, newSlug); err != nil {
+		return entry, err
+	}
+	// update search index
+	if err = m.Search.IndexEntry(entry); err != nil {
 		return entry, err
 	}
 	return entry, nil

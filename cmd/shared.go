@@ -97,6 +97,9 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 			if err = memApp.DeleteEntry(origEntry.Slug()); err != nil {
 				return editedEntry, tempFile, err
 			}
+			if err = memApp.Attach.RenameEntry(origEntry.Slug(), editedEntry.Slug()); err != nil {
+				return editedEntry, tempFile, err
+			}
 			//TODO: update links on rename
 		}
 	}

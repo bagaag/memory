@@ -9,6 +9,7 @@ package attachment
 
 import (
 	"errors"
+	"fmt"
 	"memory/app/localfs"
 	"memory/app/model"
 	"memory/util"
@@ -27,6 +28,8 @@ type Attacher interface {
 	Delete(entrySlug string, attachment model.Attachment) error
 	// Rename updates an attachment to reflect a new friendly name and returns an updated File object.
 	Rename(entrySlug string, attachment model.Attachment, newName string) (model.Attachment, error)
+	// RenameEntry updates attachments when an entry is renamed
+	RenameEntry(oldSlug string, newSlug string) error
 }
 
 // LocalAttachmentStore implements the Attacher interface using local file storage.
@@ -115,4 +118,19 @@ func (a *LocalAttachmentStore) Rename(entrySlug string, attachment model.Attachm
 		return newAttachment, err
 	}
 	return newAttachment, nil
+}
+
+// RenameEntry updates attachments when an entry is renamed
+func (a *LocalAttachmentStore) RenameEntry(oldSlug string, newSlug string) error {
+	oldDir := a.resolveEntryDir(oldSlug)
+	newDir := a.resolveEntryDir(newSlug)
+	if localfs.PathExists(oldDir) {
+		if localfs.PathExists(newDir) {
+			return fmt.Errorf("attachment folder '%s' already exists", newDir)
+		}
+		if err := os.Rename(oldDir, newDir); err != nil {
+			return err
+		}
+	}
+	return nil
 }

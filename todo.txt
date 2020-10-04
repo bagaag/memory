@@ -1,10 +1,9 @@
-- Fix: put attachments in entry folders to prevent possibility of conflicts during entry rename
-- Fix: attachments left behind on entry rename
-- Fix: Error after renaming entry even though it works
+- Add files sub-menu to entry detail menu
 - make file open platform specific (Win: start "" "%"; Mac open "%")
     - https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
 - update help text
 - entry rename command
+- command line completion for entry names
 - display entry Name instead of Slug in Links list
 - bleve contrib: add match and match_phrase query types to cmd/query
 - bleve contrib: keyword mapping test case & ask/report
