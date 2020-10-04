@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"memory/app/model"
+	"memory/util"
 	"regexp"
 	"strconv"
 	"strings"
@@ -152,10 +153,21 @@ func ParseYamlDown(content string) (model.Entry, error) {
 		case "Address":
 			entry.Address = val
 		default:
-			if entry.Custom == nil {
-				entry.Custom = make(map[string]string)
+			if strings.HasPrefix(key, "file/") {
+				// treat as a file attachment
+				if entry.Attachments == nil {
+					entry.Attachments = []model.Attachment{}
+				}
+				// TODO: attachments should not have slug field
+				att := model.Attachment{EntrySlug: entry.Slug(), Name: val, Extension: util.Extension(key)}
+				entry.Attachments = append(entry.Attachments, att)
+			} else {
+				// treat as custom field
+				if entry.Custom == nil {
+					entry.Custom = make(map[string]string)
+				}
+				entry.Custom[key] = val
 			}
-			entry.Custom[key] = val
 		}
 	}
 	return entry, nil

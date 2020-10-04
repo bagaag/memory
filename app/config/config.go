@@ -36,6 +36,13 @@ var SettingsFile = "settings.json"
 // HistoryFile is the name of the file storing command line history
 var HistoryFile = "history.txt"
 
+// OpenFileCommand is the command to use when opening an attached file
+//TODO: handle cross-platform commmand
+//Linux: xdg-open"
+//Win: start "" "%"
+//Mac: open "%"
+var OpenFileCommand = "xdg-open"
+
 // SettingsFile is the name of the file storing the settings struct
 
 // MaxNameLen is the maximum length for entry identifier values

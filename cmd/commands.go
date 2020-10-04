@@ -23,6 +23,7 @@ import (
 	"memory/app/template"
 	"memory/util"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -367,11 +368,6 @@ func cmdFileAdd(c *cli.Context) error {
 	return nil
 }
 
-// cmdFileOpen opens a file attachment in the default viewer, or using a given command
-func cmdFileOpen(c *cli.Context) error {
-	return nil
-}
-
 // cmdFileDelete deletes a file attachment
 func cmdFileDelete(c *cli.Context) error {
 	entryName := c.String("entry")
@@ -415,6 +411,32 @@ func cmdFileRename(c *cli.Context) error {
 			}
 			fmt.Println("Renamed attachment to" + renamed.DisplayFileName())
 			return nil
+		}
+	}
+	return model.FileNotFound{Path: title}
+}
+
+// cmdFileOpen opens a file on the local system
+func cmdFileOpen(c *cli.Context) error {
+	entryName := c.String("entry")
+	slug := util.GetSlug(entryName)
+	title := c.String("title")
+	command := c.String("command")
+	if command == "" {
+		command = config.OpenFileCommand
+	}
+	entry, err := memApp.GetEntry(slug)
+	if err != nil {
+		return err
+	}
+	for _, att := range entry.Attachments {
+		if att.Name == title {
+			path, err := memApp.Attach.GetAttachmentPath(att)
+			if err != nil {
+				return err
+			}
+			cmd := exec.Command(command, path)
+			return cmd.Start()
 		}
 	}
 	return model.FileNotFound{Path: title}

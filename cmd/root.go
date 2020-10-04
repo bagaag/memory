@@ -98,6 +98,11 @@ var completer = readline.NewPrefixCompleter(
 			readline.PcItem("-title"),
 			readline.PcItem("-new-title"),
 		),
+		readline.PcItem("open",
+			readline.PcItem("-entry"),
+			readline.PcItem("-title"),
+			readline.PcItem("-command"),
+		),
 	),
 	readline.PcItem("files",
 		readline.PcItem("-entry"),
@@ -384,6 +389,19 @@ func CreateApp() *cli.App {
 							&cli.StringFlag{
 								Name:  "new-title",
 								Usage: "new display name for the file",
+							},
+						},
+					},
+					{
+						Name:   "open",
+						Usage:  "opens a file",
+						Action: cmdFileOpen,
+						Flags: []cli.Flag{
+							fileEntryFlag,
+							fileTitleFlag,
+							&cli.StringFlag{
+								Name:  "command",
+								Usage: "override default open command",
 							},
 						},
 					},

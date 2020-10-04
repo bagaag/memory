@@ -76,6 +76,18 @@ func editEntry(origEntry model.Entry, tempFile string) (model.Entry, string, err
 	if err != nil {
 		return model.Entry{}, tempFile, err
 	}
+	// update attachment titles
+	// TODO: figure out better way than index to connect edited file back to orig
+	for ix, updatedAtt := range editedEntry.Attachments {
+		origAtt := origEntry.Attachments[ix]
+		if origAtt.Name != updatedAtt.Name {
+			updatedAtt, err = memApp.Attach.Rename(origAtt, updatedAtt.Name)
+			if err != nil {
+				return editedEntry, tempFile, err
+			}
+			editedEntry.Attachments[ix] = updatedAtt
+		}
+	}
 	// handle name change
 	if origEntry.Name != editedEntry.Name {
 		if memApp.EntryExists(editedEntry.Slug()) {
