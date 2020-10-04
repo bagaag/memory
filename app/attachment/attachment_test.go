@@ -40,8 +40,9 @@ func TestGetAttachmentPath(t *testing.T) {
 		defer teardown()
 	}
 	// test with non-existant file
-	att := model.Attachment{Name: "Test Name", Extension: "txt", EntrySlug: "entry-slug"}
-	path, err := atts.GetAttachmentPath(att)
+	slug := "entry-slug"
+	att := model.Attachment{Name: "Test Name", Extension: "txt"}
+	path, err := atts.GetAttachmentPath(slug, att)
 	if err == nil {
 		t.Error("expected FileNotFound error, got nil")
 	} else if !model.IsFileNotFound(err) {
@@ -56,7 +57,7 @@ func TestGetAttachmentPath(t *testing.T) {
 		return
 	}
 	// test with existing file
-	path, err = atts.GetAttachmentPath(att)
+	path, err = atts.GetAttachmentPath(slug, att)
 	if err != nil {
 		t.Error("expected FileNotFound error, got nil")
 		return
@@ -119,16 +120,13 @@ func TestCRUD(t *testing.T) {
 	if att.Name != "Test Attachment" {
 		t.Error("Expected 'Test Attachment', got", att.Name)
 	}
-	if att.EntrySlug != slug {
-		t.Error("Expected 'entry-slug', got", att.EntrySlug)
-	}
 	if s := att.ExtensionWithPeriod(); s != ".txt" {
 		t.Error("Expected '.txt', got", s)
 	}
 	if s := att.DisplayFileName(); s != "test-attachment.txt" {
 		t.Error("Expected 'test-attachment.txt', got", s)
 	}
-	attPath, err := atts.GetAttachmentPath(att)
+	attPath, err := atts.GetAttachmentPath(slug, att)
 	defer localfs.RemoveFile(attPath)
 	if err != nil {
 		t.Error(err)
@@ -145,20 +143,20 @@ func TestCRUD(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	att2, err := atts.Update(att, path2)
+	att2, err := atts.Update(slug, att, path2)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	attPath2, err := atts.GetAttachmentPath(att2)
+	attPath2, err := atts.GetAttachmentPath(slug, att2)
 	defer localfs.RemoveFile(attPath2)
 	if s := readFile(attPath2); s != "test 2" {
 		t.Error("expected 'test 2', got", s)
 		return
 	}
 	// test Rename
-	att3, err := atts.Rename(att2, "Test Attachment 2")
-	attPath3, err := atts.GetAttachmentPath(att3)
+	att3, err := atts.Rename(slug, att2, "Test Attachment 2")
+	attPath3, err := atts.GetAttachmentPath(slug, att3)
 	defer localfs.RemoveFile(attPath3)
 	if err != nil {
 		t.Error(err)
@@ -177,7 +175,7 @@ func TestCRUD(t *testing.T) {
 		return
 	}
 	// test Delete
-	err = atts.Delete(att3)
+	err = atts.Delete(slug, att3)
 	if err != nil {
 		t.Error(err)
 		return
