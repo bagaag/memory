@@ -1,15 +1,10 @@
-- bug: attachments being saved to entry json as custom fields
+- Fix: file rename doesn't update entry data
 - don't store entry slug in attachment model
-- bug: attachments left behind on entry rename
-- bug: current file naming scheme can lead to conflicts during entry rename; need to have folders for entries rather than filename prefix
-- bug: Error after renaming entry even though it works
-- file management - open
-    memory file open -entry Bagaag -name "Jim's Omni" [-command "cp \"%\" ~/file.png"]
-        Linux: xdg-open "%"
-        Win: start "" "%"
-        Mac: open "%"
-        Use this to determine default launch cmd:
-        https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
+- Fix: attachments left behind on entry rename
+- Fix: current file naming scheme can lead to conflicts during entry rename; need to have folders for entries rather than filename prefix
+- Fix: Error after renaming entry even though it works
+- make file open platform specific (Win: start "" "%"; Mac open "%")
+    - https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
 - update help text
 - entry rename command
 - display entry Name instead of Slug in Links list

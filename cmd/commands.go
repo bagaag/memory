@@ -403,13 +403,15 @@ func cmdFileRename(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, att := range entry.Attachments {
+	for ix, att := range entry.Attachments {
 		if att.Name == title {
 			renamed, err := memApp.Attach.Rename(att, newTitle)
 			if err != nil {
 				return err
 			}
-			fmt.Println("Renamed attachment to" + renamed.DisplayFileName())
+			entry.Attachments[ix] = renamed
+			memApp.PutEntry(entry)
+			fmt.Println("Renamed attachment to " + renamed.Name + " (" + renamed.DisplayFileName() + ")")
 			return nil
 		}
 	}
