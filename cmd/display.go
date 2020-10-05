@@ -399,6 +399,16 @@ func LinksMenu(entry model.Entry) error {
 	return nil
 }
 
+// FilesMenu displays a list of its Attachments along with numbers for selection.
+func FilesMenu(entry model.Entry) {
+	if len(entry.Attachments) > 0 {
+		fmt.Printf("\nAttachments for %s [%s]\n\n", entry.Name, entry.Type)
+		for ix, att := range entry.Attachments {
+			fmt.Printf("  %2d. %s [%s]\n", ix+1, att.Name, att.DisplayFileName())
+		}
+	}
+}
+
 // MissingLinkMenu presents a list of entry types that can be created for
 // a non-existant entry name.
 func MissingLinkMenu(name string) {

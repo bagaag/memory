@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/chzyer/readline"
+	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 	"memory/app/config"
 	"memory/app/links"
@@ -340,6 +341,14 @@ func cmdFileAdd(c *cli.Context) error {
 	entryName := c.String("entry")
 	path := c.String("path")
 	name := c.String("title")
+	if path == "" {
+		var err error
+		path, err = subPrompt("Enter a file path: ", "", validatePathExists)
+		if err != nil {
+			return err
+		}
+		path, _ = homedir.Expand(path)
+	}
 	if name == "" {
 		name = util.StripExtension(path)
 	}

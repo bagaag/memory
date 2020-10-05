@@ -64,12 +64,13 @@ func detailInteractiveLoop(entry model.Entry) bool {
 		entryLinks, _ := memApp.Search.Links(entry.Slug())
 		reverseLinks, _ := memApp.Search.ReverseLinks(entry.Slug())
 		hasLinks := len(entryLinks)+len(reverseLinks) > 0
+		optionalCommands := ""
 		if hasLinks {
-			fmt.Println("Entry options: [e]dit, [d]elete, [l]inks, [b]ack, [Q]uit")
-		} else {
-			fmt.Println("Entry options: [e]dit, [d]elete, [b]ack, [Q]uit")
+			optionalCommands = "[l]inks"
 		}
+		fmt.Println("Entry options: [e]dit, [d]elete, " + optionalCommands + ", [a]ttachments, [b]ack, [Q]uit")
 		cmd := getSingleCharInput()
+		updateEntry := false // set to true if the update may have changed due to a sub-command
 		if strings.ToLower(cmd) == "e" {
 			// edit entry
 			edited, success := editEntryValidationLoop(entry)
@@ -81,12 +82,12 @@ func detailInteractiveLoop(entry model.Entry) bool {
 			if !linksInteractiveLoop(entry) {
 				return false
 			}
-			// update entry in case things changed in the subloops
-			var err error
-			entry, err = memApp.GetEntry(util.GetSlug(entry.Name))
-			if err != nil {
+			updateEntry = true
+		} else if strings.ToLower(cmd) == "a" {
+			if !filesInteractiveLoop(entry) {
 				return false
 			}
+			updateEntry = true
 		} else if strings.ToLower(cmd) == "d" {
 			if deleteEntry(entry.Name, true) {
 				return false
@@ -94,6 +95,89 @@ func detailInteractiveLoop(entry model.Entry) bool {
 		} else if strings.ToLower(cmd) == "b" {
 			return true
 		} else if cmd == "" || cmd == "^C" || strings.ToLower(cmd) == "q" {
+			return false
+		} else {
+			fmt.Println("Error: Unrecognized command:", cmd)
+		}
+		// update entry in case things changed in the subloops
+		if updateEntry {
+			var err error
+			entry, err = memApp.GetEntry(util.GetSlug(entry.Name))
+			if err != nil {
+				return false
+			}
+			updateEntry = false
+		}
+	}
+}
+
+// filesInteractiveLoop handles display of an entry's files and
+// commands related to them. Returns true if user selects [B]ack
+func filesInteractiveLoop(entry model.Entry) bool {
+	if !entry.Populated() {
+		var err error
+		if entry, err = memApp.GetEntry(entry.Slug()); err != nil {
+			fmt.Println(util.FormatErrorForDisplay(err))
+			return false
+		}
+	}
+	// interactive loop
+	for {
+		// display links and prompt for command
+		FilesMenu(entry)
+		detailCmd := ""
+		if len(entry.Attachments) > 0 {
+			detailCmd = "# for details, "
+		}
+		fmt.Println("\nAttachment options: " + detailCmd + "[a]dd, [b]ack or [Q]uit")
+		cmd := getSingleCharInput()
+		lcmd := strings.ToLower(cmd)
+		if num, err := strconv.Atoi(cmd); err == nil {
+			ix := num - 1
+			if ix < 0 || ix >= len(entry.Attachments) {
+				fmt.Printf("Error: %d is not a valid attachment number.\n", num)
+			} else {
+				fileInteractiveLoop(entry, ix)
+			}
+		} else if lcmd == "a" {
+			args := []string{"memory", "file", "add", "-entry", entry.Slug()}
+			err = cliApp.Run(args)
+			if err != nil {
+				fmt.Println(util.FormatErrorForDisplay(err))
+			} else {
+				fmt.Println("Attachment added.")
+				entry, _ = memApp.GetEntry(entry.Slug())
+			}
+		} else if lcmd == "b" {
+			return true
+		} else if cmd == "" || cmd == "^C" || lcmd == "q" {
+			return false
+		} else {
+			fmt.Println("Error: Unrecognized command:", cmd)
+		}
+	}
+}
+
+// fileInteractiveLoop handles display of an attachment and
+// commands related to it. Returns true if user selects [B]ack
+func fileInteractiveLoop(entry model.Entry, ix int) bool {
+	att := entry.Attachments[ix]
+	// interactive loop
+	for {
+		// display links and prompt for command
+		fmt.Println("\nAttachment: " + att.Name + " [" + att.DisplayFileName() + "]\n")
+		fmt.Println("Options: [o]pen, [r]ename, [d]elete, [b]ack or [Q]uit")
+		cmd := getSingleCharInput()
+		lcmd := strings.ToLower(cmd)
+		if lcmd == "o" {
+			fmt.Println("Open command TODO")
+		} else if lcmd == "r" {
+			fmt.Println("Rename command TODO")
+		} else if lcmd == "d" {
+			fmt.Println("Delete command TODO")
+		} else if lcmd == "b" {
+			return true
+		} else if cmd == "" || cmd == "^C" || lcmd == "q" {
 			return false
 		} else {
 			fmt.Println("Error: Unrecognized command:", cmd)

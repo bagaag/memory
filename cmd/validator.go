@@ -13,7 +13,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/mitchellh/go-homedir"
 	"memory/app/config"
+	"memory/app/localfs"
 	"memory/app/model"
 	"strings"
 )
@@ -38,6 +40,14 @@ func validateType(t string) string {
 		t != model.EntryTypeThing && t != model.EntryTypeNote {
 		return fmt.Sprintf("Type is not one of the valid entry types (%s, %s, %s, %s, %s).",
 			model.EntryTypeEvent, model.EntryTypePerson, model.EntryTypePlace, model.EntryTypeThing, model.EntryTypeNote)
+	}
+	return ""
+}
+
+func validatePathExists(path string) string {
+	path, _ = homedir.Expand(path)
+	if !localfs.PathExists(path) {
+		return "File not found."
 	}
 	return ""
 }

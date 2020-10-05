@@ -348,7 +348,7 @@ func CreateApp() *cli.App {
 							&cli.StringFlag{
 								Name:     "path",
 								Usage:    "location of file to add",
-								Required: true,
+								Required: false,
 							},
 							&cli.StringFlag{
 								Name:     "title",
