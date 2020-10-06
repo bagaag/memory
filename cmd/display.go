@@ -320,6 +320,14 @@ func EntryTables(entries []model.Entry) {
 		for key, val := range entry.Custom {
 			data = append(data, []string{key, val})
 		}
+		if len(entry.Attachments) > 0 {
+			attList := ""
+			for _, att := range entry.Attachments {
+				attList += att.DisplayFileName() + "\n"
+			}
+			attList = strings.TrimRight(attList, "\n")
+			data = append(data, []string{"Attachments", attList})
+		}
 		// create and configure table
 		table := tablewriter.NewWriter(os.Stdout)
 		// add border to top unless this is the first
