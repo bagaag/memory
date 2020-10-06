@@ -155,6 +155,8 @@ func filesInteractiveLoop(entry model.Entry) bool {
 		} else {
 			fmt.Println("Error: Unrecognized command:", cmd)
 		}
+		// refresh entry before looping
+		entry, _ = memApp.GetEntry(entry.Slug())
 	}
 }
 
@@ -170,11 +172,45 @@ func fileInteractiveLoop(entry model.Entry, ix int) bool {
 		cmd := getSingleCharInput()
 		lcmd := strings.ToLower(cmd)
 		if lcmd == "o" {
-			fmt.Println("Open command TODO")
+			// open command
+			args := []string{"memory", "file", "open",
+				"-entry", entry.Slug(),
+				"-title", att.Name}
+			if err := cliApp.Run(args); err != nil {
+				fmt.Println(util.FormatErrorForDisplay(err))
+			}
 		} else if lcmd == "r" {
-			fmt.Println("Rename command TODO")
+			// rename command
+			newTitle, err := subPrompt("Enter a new name for the attachment: ", att.Name, emptyValidator)
+			if err != nil {
+				fmt.Println(util.FormatErrorForDisplay(err))
+				continue
+			}
+			args := []string{"memory", "file", "rename", "" +
+				"-entry", entry.Slug(),
+				"-title", att.Name,
+				"-new-title", newTitle}
+			if err := cliApp.Run(args); err != nil {
+				fmt.Println(util.FormatErrorForDisplay(err))
+			}
+			return true
 		} else if lcmd == "d" {
-			fmt.Println("Delete command TODO")
+			// delete command
+			answer, err := subPrompt("Are you sure you want to delete this attachment? [y,N]: ", "", validateYesNo)
+			if err != nil {
+				fmt.Print(util.FormatErrorForDisplay(err))
+				continue
+			}
+			if answer != "y" {
+				continue
+			}
+			args := []string{"memory", "file", "delete", "" +
+				"-entry", entry.Slug(),
+				"-title", att.Name}
+			if err := cliApp.Run(args); err != nil {
+				fmt.Println(util.FormatErrorForDisplay(err))
+			}
+			return true
 		} else if lcmd == "b" {
 			return true
 		} else if cmd == "" || cmd == "^C" || lcmd == "q" {
@@ -251,7 +287,11 @@ func listInteractiveLoop(pager EntryPager) error {
 			if ix < 0 || ix >= len(pager.Results.Entries) {
 				fmt.Printf("Error: %d is not a valid result number.\n", num)
 			} else {
-				if !detailInteractiveLoop(pager.Results.Entries[ix]) {
+				entry, err := memApp.GetEntry(pager.Results.Entries[ix].Slug())
+				if err != nil {
+					return err
+				}
+				if !detailInteractiveLoop(entry) {
 					break
 				}
 			}

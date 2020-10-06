@@ -1,3 +1,4 @@
+- list files in detail view
 - make file open platform specific (Win: start "" "%"; Mac open "%")
     - https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
 - update help text
