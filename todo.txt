@@ -1,10 +1,7 @@
-- list files in detail view
-- make file open platform specific (Win: start "" "%"; Mac open "%")
-    - https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
 - update help text
-- entry rename command
 - command line completion for entry names
 - display entry Name instead of Slug in Links list
+- make file open platform specific (Win: start "" "%"; Mac open "%") https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
 - bleve contrib: add match and match_phrase query types to cmd/query
 - bleve contrib: keyword mapping test case & ask/report
 - bleve contrib: date mapping storage example in docs

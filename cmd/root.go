@@ -57,9 +57,9 @@ var completer = readline.NewPrefixCompleter(
 		readline.PcItem("-tag"),
 		readline.PcItem("-any-tag"),
 	),
-	readline.PcItem("tl",
-		readline.PcItem("-start"),
-		readline.PcItem("-end"),
+	readline.PcItem("rename",
+		readline.PcItem("-name"),
+		readline.PcItem("-new-name"),
 	),
 	readline.PcItem("delete",
 		readline.PcItem("-name"),
@@ -232,6 +232,23 @@ func CreateApp() *cli.App {
 					&cli.StringFlag{
 						Name:     "name",
 						Usage:    "name of the entry to edit",
+						Required: true,
+					},
+				},
+			},
+			{
+				Name:   "rename",
+				Usage:  "renames an entry",
+				Action: cmdRename,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "name of the entry to rename",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "new-name",
+						Usage:    "new name for the entry",
 						Required: true,
 					},
 				},

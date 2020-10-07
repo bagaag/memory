@@ -283,6 +283,23 @@ func cmdDetail(c *cli.Context) error {
 	return nil
 }
 
+// cmdRename renames an entry
+func cmdRename(c *cli.Context) error {
+	name := c.String("name")
+	newName := c.String("new-name")
+	_, err := memApp.GetEntry(util.GetSlug(name))
+	if err != nil {
+		return errors.New(util.FormatErrorForDisplay(err))
+	}
+	renamed, err := memApp.RenameEntry(name, newName)
+	if err != nil {
+		return errors.New(util.FormatErrorForDisplay(err))
+	} else {
+		EntryTable(renamed)
+	}
+	return nil
+}
+
 // cmdTags displays a list of tags in use and how many entries each has
 func cmdTags(c *cli.Context) error {
 	tags, err := memApp.GetTags()
