@@ -11,7 +11,9 @@ package cmd
 
 import (
 	"github.com/chzyer/readline"
+	"github.com/mitchellh/go-wordwrap"
 	"github.com/urfave/cli"
+	"memory/app/config"
 	"memory/app/memory"
 	"sort"
 )
@@ -133,8 +135,20 @@ func CreateApp() *cli.App {
 		Required: true,
 	}
 	cliApp = &cli.App{
-		Name:  "memory",
-		Usage: `A CLI tool to collect and browse the elements of human experience.`,
+		Name:     "memory",
+		HelpName: "memory",
+		Usage:    `A CLI tool to collect and browse the elements of human experience.`,
+		Description: wordwrap.WrapString("memory is a tool to collect, browse and manage entries. Each entry "+
+			"represents either an Event, Person, Place, Thing or Note. Each entry has a unique name and entries can "+
+			"link to other entries using an entry name in brackets, as in [Linked Entry]. When editing an entry, "+
+			"your favorite text editor is loaded with a markdown file containing YAML frontmatter defining the "+
+			"entry's attributes. Frontmatter is surrounded by three hyphens above and below, and everything below "+
+			"the frontmatter is the entry's description, which can be formatted with markdown and contain links. "+
+			"Files such as images and documents can be attached to entries. Use the --help argument to explore the "+
+			"commands available and use `memory command --help` to get command-specific help. Commands can be used "+
+			"in interactive mode (at the `memory>` prompt) or directly from your shell.", 75),
+		Version: config.Version,
+		Authors: []cli.Author{cli.Author{Name: "Matt Wiseley", Email: "wiseley@gmail.com"}},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "format",
@@ -346,7 +360,7 @@ func CreateApp() *cli.App {
 			},
 			{
 				Name:   "files",
-				Usage:  "displays a list of files associated with an entry",
+				Usage:  "displays a list of attachments associated with an entry",
 				Action: cmdFiles,
 				Flags: []cli.Flag{
 					fileEntryFlag,
@@ -358,7 +372,7 @@ func CreateApp() *cli.App {
 				Subcommands: []cli.Command{
 					{
 						Name:   "add",
-						Usage:  "add a new template",
+						Usage:  "add a new attachment",
 						Action: cmdFileAdd,
 						Flags: []cli.Flag{
 							fileEntryFlag,
@@ -369,27 +383,14 @@ func CreateApp() *cli.App {
 							},
 							&cli.StringFlag{
 								Name:     "title",
-								Usage:    "optional display name of the file",
+								Usage:    "optional display name of the attachment",
 								Required: false,
 							},
 						},
 					},
 					{
-						Name:   "open",
-						Usage:  "opens a file for viewing or editing",
-						Action: cmdFileOpen,
-						Flags: []cli.Flag{
-							fileEntryFlag,
-							fileTitleFlag,
-							&cli.StringFlag{
-								Name:  "command",
-								Usage: "optional command to execute where % is the file path",
-							},
-						},
-					},
-					{
 						Name:   "delete",
-						Usage:  "deletes a file",
+						Usage:  "deletes an attachment",
 						Action: cmdFileDelete,
 						Flags: []cli.Flag{
 							fileEntryFlag,
@@ -398,20 +399,20 @@ func CreateApp() *cli.App {
 					},
 					{
 						Name:   "rename",
-						Usage:  "renames a file",
+						Usage:  "renames an attachment",
 						Action: cmdFileRename,
 						Flags: []cli.Flag{
 							fileEntryFlag,
 							fileTitleFlag,
 							&cli.StringFlag{
 								Name:  "new-title",
-								Usage: "new display name for the file",
+								Usage: "new display name for the attachment",
 							},
 						},
 					},
 					{
 						Name:   "open",
-						Usage:  "opens a file",
+						Usage:  "opens an attachment",
 						Action: cmdFileOpen,
 						Flags: []cli.Flag{
 							fileEntryFlag,

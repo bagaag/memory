@@ -19,6 +19,8 @@ type StoredSettings struct {
 	EditorCommand string
 }
 
+const Version = "1.0"
+
 const Slash = string(os.PathSeparator)
 
 // MemoryHome is the folder path where memory stores settings and data

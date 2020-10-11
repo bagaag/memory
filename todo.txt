@@ -1,4 +1,5 @@
-- update help text
+- timeline lists non-events
+- include dates for events in ls output
 - command line completion for entry names
 - display entry Name instead of Slug in Links list
 - make file open platform specific (Win: start "" "%"; Mac open "%") https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
