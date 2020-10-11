@@ -1,4 +1,3 @@
-- timeline lists non-events
 - include dates for events in ls output
 - command line completion for entry names
 - display entry Name instead of Slug in Links list

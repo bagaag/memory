@@ -30,7 +30,7 @@ import (
 )
 
 // absurdly limited min/max dates accepted by bleve index & queries
-const bleveMinDate = "1677-12-01"      // MinRFC3339CompatibleTime
+const bleveMinDate = "1677-12-02"      // MinRFC3339CompatibleTime + 1 day to eliminate blank start dates
 const bleveMaxDateIndex = "2262-04-10" // (MaxRFC3339CompatibleTime - 1) so that exclusive queries on max date match
 const bleveMaxDateQuery = "2262-04-11" // MaxRFC3339CompatibleTime
 
@@ -536,10 +536,7 @@ func (b *BleveSearch) Timeline(start model.FlexDate, end model.FlexDate) ([]mode
 	// build query
 	startQ := bleve.NewDateRangeQuery(startDate, endDate)
 	startQ.SetField("StartDate")
-	//endQ := bleve.NewDateRangeQuery(startDate, endDate)
-	//endQ.SetField("EndDate")
 	boolQuery.AddMust(startQ)
-	//boolQuery.AddMust(endQ)
 	req := bleve.NewSearchRequestOptions(boolQuery, util.MaxInt32, 0, false)
 	req.SortBy([]string{"StartDate"})
 	// execute query
