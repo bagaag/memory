@@ -239,6 +239,14 @@ func renderEntry(pager *EntryPager, ix int, entry model.Entry) []string {
 		tagLine := blankLeftMargin + "Tags: " + strings.Join(entry.Tags, ", ")
 		lines = append(lines, tagLine)
 	}
+	// add event dates
+	if len(entry.Start) > 0 {
+		dates := blankLeftMargin + "Dates: " + entry.Start
+		if len(entry.End) > 0 {
+			dates += " - " + entry.End
+		}
+		lines = append(lines, dates)
+	}
 	// add Description, ex. "      A seaside town..." - Max 2 lines w/ elipsis if truncated
 	if entry.Description != "" {
 		descWrapped := wordwrap.WrapString(entry.Description, uint(contentWidth))
