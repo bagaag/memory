@@ -356,7 +356,7 @@ func (b *BleveSearch) Rebuild() error {
 }
 
 // IndexedSlugs returns a slice of slugs representing entries indexed for search.
-func (b *BleveSearch) IndexedSlugs() ([]string, error) {
+func (b *BleveSearch) IndexedSlugs(prefix string) ([]string, error) {
 	q := bleve.NewMatchAllQuery()
 	req := bleve.NewSearchRequestOptions(q, util.MaxInt32, 0, false)
 	result, err := b.searchIndex.Search(req)
@@ -365,9 +365,38 @@ func (b *BleveSearch) IndexedSlugs() ([]string, error) {
 	}
 	slugs := []string{}
 	for _, hit := range result.Hits {
-		slugs = append(slugs, hit.ID)
+		if strings.HasPrefix(hit.ID, prefix) {
+			slugs = append(slugs, hit.ID)
+		}
 	}
 	return slugs, nil
+}
+
+// IndexedNames returns a slice of all entry names sorted alphabetically, optionally filtered by a prefix.
+func (b *BleveSearch) IndexedNames(prefix string) ([]string, error) {
+	q := bleve.NewMatchAllQuery()
+	req := bleve.NewSearchRequestOptions(q, util.MaxInt32, 0, false)
+	result, err := b.searchIndex.Search(req)
+	if err != nil {
+		return nil, err
+	}
+	names := []string{}
+	for _, hit := range result.Hits {
+		doc, err := b.searchIndex.Document(hit.ID)
+		if err != nil || doc == nil {
+			return names, err
+		}
+		for _, field := range doc.Fields {
+			if field.Name() == "Name" {
+				name := string(field.Value())
+				if strings.HasPrefix(name, prefix) {
+					names = append(names, name)
+				}
+				break
+			}
+		}
+	}
+	return names, nil
 }
 
 // ReverseLinks returns a list of slugs that link to the entry identified by `slug`.
@@ -558,7 +587,7 @@ func (b *BleveSearch) Timeline(start model.FlexDate, end model.FlexDate) ([]mode
 // that don't match existing pages.
 func (b *BleveSearch) BrokenLinks() (map[string][]string, error) {
 	ret := make(map[string][]string)
-	slugs, err := b.IndexedSlugs()
+	slugs, err := b.IndexedSlugs("")
 	if err != nil {
 		return ret, err
 	}

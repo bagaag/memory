@@ -145,7 +145,7 @@ func (m *Memory) RenameEntry(oldName string, newName string) (model.Entry, error
 // associated entry names.
 func (m *Memory) GetTags() (map[string][]string, error) {
 	tags := make(map[string][]string)
-	slugs, err := m.Search.IndexedSlugs()
+	slugs, err := m.Search.IndexedSlugs("")
 	if err != nil {
 		return tags, err
 	}

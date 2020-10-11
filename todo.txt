@@ -1,4 +1,3 @@
-- command line completion for entry names
 - display entry Name instead of Slug in Links list
 - make file open platform specific (Win: start "" "%"; Mac open "%") https://stackoverflow.com/questions/19847594/how-to-reliably-detect-os-platform-in-go
 - bleve contrib: add match and match_phrase query types to cmd/query
@@ -6,3 +5,4 @@
 - bleve contrib: date mapping storage example in docs
 - refactor tests to simply call each pkg method - current tests are all over the place
 - handle deadlock if 2nd instance is run
+- readline contrib: escape command line completions with spaces

@@ -20,7 +20,8 @@ type Searcher interface {
 	BrokenLinks() (map[string][]string, error)
 	IndexEntry(entry model.Entry) error
 	IndexedCount() uint64
-	IndexedSlugs() ([]string, error)
+	IndexedSlugs(prefix string) ([]string, error)
+	IndexedNames(prefix string) ([]string, error)
 	Links(slug string) ([]string, error)
 	Rebuild() error
 	RefreshResults(stale EntryResults) (EntryResults, error)

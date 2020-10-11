@@ -16,6 +16,7 @@ import (
 	"memory/app/config"
 	"memory/app/memory"
 	"sort"
+	"strings"
 )
 
 // the rl library provides bash-like completion in interactive mode
@@ -29,6 +30,21 @@ var firstCommand = true
 
 // what the user typed on the main loop cmd line
 var mainLoopInput = ""
+
+// nameCompleter supports command line completion of entry names
+// https://github.com/chzyer/readline/issues/126 is preventing this from being effective as most names include spaces.
+func nameCompleter(s string) []string {
+	parts := strings.Split(s, " ")
+	prefix := parts[len(parts)-1]
+	if strings.HasPrefix(prefix, "-") {
+		return []string{}
+	}
+	if strings.HasPrefix(prefix, "\"") {
+		prefix = prefix[1:]
+	}
+	hits, _ := memApp.Search.IndexedNames(prefix)
+	return hits
+}
 
 // completer dictates the readline tab completion options
 var completer = readline.NewPrefixCompleter(
