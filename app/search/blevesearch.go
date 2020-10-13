@@ -185,7 +185,7 @@ func parseFlexDate(s model.FlexDate) (time.Time, model.Precision) {
 	return t, precision
 }
 
-// Links returns a string slice of slugs that the entry identified by slug links to.
+// Links returns a string slice of entry names that the entry identified by slug links to.
 func (b *BleveSearch) Links(slug string) ([]string, error) {
 	ret := []string{}
 	doc, err := b.searchIndex.Document(slug)
@@ -345,6 +345,7 @@ func (b *BleveSearch) Rebuild() error {
 			continue
 		}
 		indexedEntry := NewIndexedEntry(entry)
+		indexedEntry.Links = links.ExtractLinks(entry.Description)
 		if err := b.searchIndex.Index(slug, indexedEntry); err != nil {
 			fmt.Println("Error indexing:", err)
 		} else {
@@ -411,7 +412,12 @@ func (b *BleveSearch) ReverseLinks(slug string) ([]string, error) {
 	}
 	hits := result.Hits
 	for _, hit := range hits {
-		ret = append(ret, hit.ID)
+		stub, err := b.Stub(hit.ID)
+		if err != nil {
+			ret = append(ret, hit.ID)
+		} else {
+			ret = append(ret, stub.Name)
+		}
 	}
 	return ret, nil
 }

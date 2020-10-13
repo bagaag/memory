@@ -102,9 +102,9 @@ func ExtractLinks(s string) []string {
 		if strings.HasPrefix(name, "?") {
 			name = name[1:]
 		}
-		slug := util.GetSlug(name)
+		//slug := util.GetSlug(name)
 		if !util.StringSliceContains(list, name) {
-			list = append(list, slug)
+			list = append(list, name)
 		}
 	}
 	return list

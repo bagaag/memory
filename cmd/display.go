@@ -403,7 +403,7 @@ func LinksMenu(entry model.Entry) error {
 	if len(reverseLinks) > 0 {
 		fmt.Println("  Linked from:")
 		for _, name := range reverseLinks {
-			entry, _ := memApp.GetEntry(name)
+			entry, _ := memApp.GetEntry(util.GetSlug(name))
 			if entry.Type == "" {
 				entry.Type = "?"
 			}
