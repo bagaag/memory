@@ -11,7 +11,7 @@ historical study.
 
 Example output:
 
-```bash
+```
 [matt@bodhi ~]$ memory
 Welcome. You have 2 entries under management. Type 'help' for assistance.
 memory> help
