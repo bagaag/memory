@@ -167,12 +167,6 @@ func CreateApp() *cli.App {
 		Authors: []cli.Author{cli.Author{Name: "Matt Wiseley", Email: "wiseley@gmail.com"}},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "format",
-				Value:    "human",
-				Usage:    "how data returned in cli mode is formatted: human or json",
-				Required: false,
-			},
-			&cli.StringFlag{
 				Name:     "home",
 				Usage:    "directory path where data and settings are read from and saved to",
 				Required: false,
