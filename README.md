@@ -60,15 +60,17 @@ COMMANDS:
    help, h   Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --format value  how data returned in cli mode is formatted: human or json (default: "human")
-   --home value    directory path where data and settings are read from and saved to
-   --help, -h      show help
-   --version, -v   print the version
+   --home value   directory path where data and settings are read from and saved to
+   --help, -h     show help
+   --version, -v  print the version
 memory> _
 ```
 
 Binary releases are provided for Linux and MacOS Darwin. If you're interested 
-in a Windows version, let me know. Currently one of the libraries I'm using 
+in a Windows version, let me know. Currently, one of the libraries I'm using 
 for terminal control doesn't compile for Windows.
 
-I'm currently working on a web interface.
+By default, preferences, entries and attachments are stored in ~/.memory. You 
+can override this with the --home argument.
+
+Feedback is welcome. I'm currently working on a web interface.

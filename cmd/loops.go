@@ -66,9 +66,9 @@ func detailInteractiveLoop(entry model.Entry) bool {
 		hasLinks := len(entryLinks)+len(reverseLinks) > 0
 		optionalCommands := ""
 		if hasLinks {
-			optionalCommands = "[l]inks"
+			optionalCommands = ", [l]inks"
 		}
-		fmt.Println("Entry options: [e]dit, [d]elete, " + optionalCommands + ", [a]ttachments, [b]ack, [Q]uit")
+		fmt.Println("Entry options: [e]dit, [d]elete" + optionalCommands + ", [a]ttachments, [b]ack, [Q]uit")
 		cmd := getSingleCharInput()
 		updateEntry := false // set to true if the update may have changed due to a sub-command
 		if strings.ToLower(cmd) == "e" {
