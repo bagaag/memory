@@ -58,7 +58,7 @@ var SubPrompt = ": "
 
 // EditorCommand is the command to launch an external editor for long text values
 //TODO: handle editor command cross-platform
-var EditorCommand = "/usr/bin/micro"
+var EditorCommand = "/usr/bin/vim"
 
 // EntryExt is the file extension (including .) used for entry files
 var EntryExt = ".txt"

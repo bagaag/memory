@@ -73,4 +73,8 @@ for terminal control doesn't compile for Windows.
 By default, preferences, entries and attachments are stored in ~/.memory. You 
 can override this with the --home argument.
 
+Note that Memory relies on your favorite text editor to edit entries. The default 
+is `/usr/bin/vim`. If you don't want to use `vim`, you can change this in the 
+`./memory/settings.json` file after running `memory` at least once.
+
 Feedback is welcome. I'm currently working on a web interface.
